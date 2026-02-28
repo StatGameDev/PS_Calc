@@ -1,0 +1,17 @@
+{
+  "base_level": 99,
+  "job_id": 7,
+  "base_str": 120,
+  "bonus_str": 40,
+  "base_vit": 80,
+  "bonus_vit": 0,
+  "equip_def": 120,
+  "bonus_def2": 0,
+  "bonus_batk": 80,
+  "bonus_cri": 0,
+  "bonus_hit": 0,
+  "bonus_flee": 0,
+  "bonus_aspd_percent": 0,
+  "is_ranged": false,
+  "is_katar": false
+}
