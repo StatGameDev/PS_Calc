@@ -7,6 +7,7 @@ from core.models.target import Target
 from core.config import BattleConfig
 from core.data_loader import loader
 from core.calculators.modifiers.base_damage import BaseDamage
+from core.calculators.modifiers.skill_ratio import SkillRatio
 
 class BattlePipeline:
     """
@@ -25,11 +26,19 @@ class BattlePipeline:
                   build: PlayerBuild) -> DamageResult:
         result = DamageResult()
 
-        # Step 0 & 1 – input logging (always first)
+        # Step 0 & 1 – input logging (always first) – explicit Weapon + Refine for GUI clarity
         result.add_step("Status BATK", status.batk,
                         note=f"STR={status.str} DEX={status.dex}")
         result.add_step("Weapon ATK", weapon.atk,
-                        note=f"Refine +{weapon.refine} Level {weapon.level}")
+                        note="Raw weapon attack (from item data)",
+                        formula="weapon.atk",
+                        hercules_ref="battle.c: wd.damage = battle_calc_base_damage2(sstatus, &sstatus->rhw, sc, tstatus->size, sd, i);")
+        refine_bonus = loader.get_refine_bonus(weapon.level, weapon.refine)
+        result.add_step("Refine Bonus", refine_bonus,
+                        note=f"+{weapon.refine} refine on Lv {weapon.level} weapon",
+                        formula=f"get_refine_bonus({weapon.level}, {weapon.refine})",
+                        hercules_ref="battle.c: ATK_ADD2(wd.damage, sstatus->rhw.atk2);\n" +
+                                     "status.c: if (r) wa->atk2 = refine->get_bonus(wlv, r) / 100;")
 
         # Load skill data from JSON (used by skill_ratio and NK checks later)
         skill_data = loader.get_skill(skill.id)
@@ -37,23 +46,13 @@ class BattlePipeline:
         # === BASE DAMAGE (exact position in battle_calc_weapon_attack) ===
         BaseDamage.calculate(status, weapon, result)
 
-        # === PLACEHOLDERS (real modifiers replace these one by one) ===
+        # === SKILL RATIO (Phase 2.5 – full registry from skills.json) ===
+        # Called immediately after Base Damage, exactly as in battle_calc_weapon_attack
+        base_dmg = result.steps[-1].value   # Base Damage step (always present)
+        SkillRatio.calculate(skill, base_dmg, result)
 
-        # Placeholder for skill_ratio.py (Sub-step 2.5) — temporary until full modifier
-        if skill_data and skill_data.get("ratio_per_level"):
-            ratio_list = skill_data["ratio_per_level"]
-            ratio = ratio_list[skill.level - 1] if skill.level <= len(ratio_list) else 100
-        else:
-            ratio = 100
-        # Use the value from the Base Damage step we just added (exact Hercules order)
-        base_dmg = result.steps[-1].value
-        dmg_after_ratio = base_dmg * ratio // 100
-        result.add_step(f"Skill Ratio (ID {skill.id} Lv {skill.level})",
-                        dmg_after_ratio, multiplier=ratio / 100.0,
-                        note=skill_data["note"] if skill_data else "")
-
-        # Placeholder for all remaining modifiers (size, ele, card, defense)
-        final_dmg = max(1, dmg_after_ratio)   # temporary min-damage rule
+        # Temporary final until size / mastery / defense modifiers (next phases)
+        final_dmg = max(1, result.steps[-1].value)   # min-damage rule (Hercules behaviour)
 
         result.add_step("Final Damage (placeholder)", final_dmg)
 
