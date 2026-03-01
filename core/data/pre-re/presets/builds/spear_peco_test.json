@@ -15,11 +15,11 @@
   "is_ranged": false,
   "is_katar": false,
   "no_sizefix": false,
-  "is_riding_peco": false,
+  "is_riding_peco": true,
   "active_status_levels": {
     "SC_AURABLADE": 5
   },
   "mastery_levels": {
-    "SM_SWORD": 10
+    "KN_SPEARMASTERY": 10
   }
 }

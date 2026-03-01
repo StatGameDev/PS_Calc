@@ -7,5 +7,6 @@ class Target:
     size: str = "Medium"    # Small / Medium / Large
     race: str = "Formless"
     element: int = 0
+    element_level: int = 1   # 1-4 for attr_fix table
     is_boss: bool = False
     level: int = 1

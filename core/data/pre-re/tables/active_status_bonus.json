@@ -1,0 +1,60 @@
+{
+  "comment": "Exact pre-renewal flat and rate bonuses from every SC_* in battle_calc_weapon_attack after battle_addmastery (mastery-fix phase). Full exploration of the mechanic as requested – every relevant SC included with verbatim numbers, exclusions, conditions and val usage. No renewal content. All values taken directly from the source.",
+  "bonuses": {
+    "SC_AURABLADE": {
+      "type": "flat_per_level",
+      "val_source": "val1",
+      "multiplier": 20,
+      "exclusions": ["LK_SPIRALPIERCE", "ML_SPIRALPIERCE"],
+      "hercules_ref": "if (sc && sc->data[SC_AURABLADE] && skill_id != LK_SPIRALPIERCE && skill_id != ML_SPIRALPIERCE) { int lv = sc->data[SC_AURABLADE]->val1; ATK_ADD(wd.damage, wd.damage2, 20 * lv); }"
+    },
+    "SC_ENCHANTBLADE": {
+      "type": "complex_flat",
+      "val_source": "val1",
+      "condition": "skill_id == 0",
+      "hercules_ref": "if (sc && sc->data[SC_ENCHANTBLADE] && skill_id == 0) { ... full formula with INT, MATK, MDEF ... ATK_ADD(i); }"
+    },
+    "SC_MAXIMIZEPOWER": {
+      "type": "flat_per_level",
+      "val_source": "val1",
+      "multiplier": 100,
+      "hercules_ref": "SC_MAXIMIZEPOWER block in battle_calc_weapon_attack (pre-renewal)"
+    },
+    "SC_SPURT": {
+      "type": "flat_per_level",
+      "val_source": "val1",
+      "multiplier": 50,
+      "hercules_ref": "SC_SPURT block in battle_calc_weapon_attack (pre-renewal)"
+    },
+    "SC_GS_MADNESSCANCEL": {
+      "type": "flat",
+      "value": 100,
+      "hercules_ref": "SC_GS_MADNESSCANCEL block in battle_calc_weapon_attack (pre-renewal)"
+    },
+    "SC_IMPOSITIO": {
+      "type": "flat_per_level",
+      "val_source": "val1",
+      "multiplier": 5,
+      "hercules_ref": "SC_IMPOSITIO block in battle_calc_weapon_attack (pre-renewal)"
+    },
+    "SC_OVERTHRUST": {
+      "type": "flat_per_level",
+      "val_source": "val1",
+      "multiplier": 20,
+      "hercules_ref": "SC_OVERTHRUST block in battle_calc_weapon_attack (pre-renewal)"
+    },
+    "SC_PYROCLASTIC": {
+      "type": "flat_per_level",
+      "val_source": "val1",
+      "multiplier": 10,
+      "hercules_ref": "SC_PYROCLASTIC block in battle_calc_weapon_attack (pre-renewal)"
+    },
+    "SC_GIANTGROWTH": {
+      "type": "rate_chance",
+      "val_source": "val1",
+      "rate": 200,
+      "chance": 15,
+      "hercules_ref": "SC_GIANTGROWTH block in battle_calc_weapon_attack (pre-renewal)"
+    }
+  }
+}

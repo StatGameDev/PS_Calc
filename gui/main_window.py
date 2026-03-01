@@ -46,8 +46,10 @@ class MainWindow(ctk.CTk):
 
         ctk.CTkButton(btn_frame, text="Test Status Calculator (Phase 1)",
                       command=self.test_status, width=280).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Test Full Pipeline (Phase 2.2)",
+        ctk.CTkButton(btn_frame, text="Test LK Bash",
                       command=self.test_pipeline, width=280).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Test Spear Peco",
+                      command=self.test_spear_peco, width=280).pack(side="left", padx=5)
         ctk.CTkButton(btn_frame, text="Toggle Theme (Groundwork Test)",
                       command=self.toggle_theme, width=280,
                       fg_color="#1f538d", hover_color="#14375f").pack(side="left", padx=5)
@@ -143,12 +145,25 @@ class MainWindow(ctk.CTk):
 
     def test_pipeline(self):
         build = loader.get_preset_build("knight_bash_test")
+        weapon = loader.get_preset_weapon("knight_bash_weapon")
+        skill = loader.get_preset_skill_instance("knight_bash_skill")
         target = loader.get_preset_target("porcellio_test")
 
         status = StatusCalculator(self.battle_config).calculate(build)
 
-        weapon = Weapon(atk=150, refine=7, level=3)
-        skill = SkillInstance(id=5, level=10)
+        result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
+        skill_data = loader.get_skill(skill.id) or {"name": "SM_BASH", "note": ""}
+
+        self.clear_tree()
+        self._populate_tree(build, status, weapon, skill, skill_data, target, result)
+
+    def test_spear_peco(self):
+        build = loader.get_preset_build("spear_peco_test")
+        weapon = loader.get_preset_weapon("spear_peco_weapon")
+        skill = loader.get_preset_skill_instance("spear_peco_skill")
+        target = loader.get_preset_target("earth_lv3_test")
+
+        status = StatusCalculator(self.battle_config).calculate(build)
 
         result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
         skill_data = loader.get_skill(skill.id) or {"name": "SM_BASH", "note": ""}

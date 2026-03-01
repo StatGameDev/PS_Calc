@@ -1,8 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict
+
 
 @dataclass
 class PlayerBuild:
-    """Everything you type manually from @status / equipment windows"""
+    """Everything you type manually from @status / equipment windows.
+    active_status_levels added to support the full active status bonus mechanic (all SC_* from the investigation)."""
     base_level: int = 1
     job_level: int = 1
     job_id: int = 0
@@ -32,3 +35,18 @@ class PlayerBuild:
 
     is_ranged: bool = False
     is_katar: bool = False
+
+    no_sizefix: bool = False    # sd->special_state.no_sizefix – exact bypass for size fix
+
+    # Conditional mastery support – exact flags needed for KN_SPEARMASTERY etc.
+    # (pre-renewal only, mirrors pc_isridingpeco / pc_isridingdragon)
+    is_riding_peco: bool = False
+
+    # Full active status bonus support – all SC_* levels from the investigation
+    active_status_levels: Dict[str, int] = field(default_factory=dict)
+    # Key = "SC_AURABLADE", "SC_MAXIMIZEPOWER", etc.
+    # Value = skill/level that set the status
+
+    mastery_levels: Dict[str, int] = field(default_factory=dict)
+    # Key = mastery skill name (e.g. "SM_SWORD", "KN_SPEARMASTERY")
+    # Value = skill level

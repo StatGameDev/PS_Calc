@@ -8,6 +8,10 @@ from core.config import BattleConfig
 from core.data_loader import loader
 from core.calculators.modifiers.base_damage import BaseDamage
 from core.calculators.modifiers.skill_ratio import SkillRatio
+from core.calculators.modifiers.size_fix import SizeFix
+from core.calculators.modifiers.attr_fix import AttrFix
+from core.calculators.modifiers.mastery_fix import MasteryFix
+from core.calculators.modifiers.active_status_bonus import ActiveStatusBonus
 
 class BattlePipeline:
     """
@@ -49,9 +53,29 @@ class BattlePipeline:
         # === SKILL RATIO (Phase 2.5 – full registry from skills.json) ===
         # Called immediately after Base Damage, exactly as in battle_calc_weapon_attack
         base_dmg = result.steps[-1].value   # Base Damage step (always present)
-        SkillRatio.calculate(skill, base_dmg, result)
+        SkillRatio.calculate(skill, base_dmg, build, result)
 
-        # Temporary final until size / mastery / defense modifiers (next phases)
+        # === SIZE FIX (Phase 2.6 – exact hand-selected rate from battle.c) ===
+        # Called immediately after Skill Ratio (verbatim position in battle_calc_weapon_attack)
+        current_damage = result.steps[-1].value   # Skill Ratio step (always present)
+        SizeFix.calculate(weapon, build, target, current_damage, skill, result)
+
+        # === MASTERY FIX (Phase 2.7 – flat bonus from build.mastery_levels dict) ===
+        # Called immediately after Size Fix (verbatim position in battle_calc_weapon_attack)
+        current_damage = result.steps[-1].value
+        MasteryFix.calculate(weapon, build, target, current_damage, result)
+
+        # === ACTIVE STATUS BONUSES (full category – after battle_addmastery) ===
+        # Called immediately after Mastery Fix (verbatim position in battle_calc_weapon_attack)
+        current_damage = result.steps[-1].value   # Mastery Fix step (always present)
+        ActiveStatusBonus.calculate(weapon, build, skill, current_damage, result)
+
+        # === ATTR FIX (Phase 2.10 – element multiplier from attr_fix.conf) ===
+        # Called immediately after Active Status Bonuses (verbatim position in battle_calc_weapon_attack)
+        current_damage = result.steps[-1].value
+        AttrFix.calculate(weapon, target, current_damage, result)
+
+        # Temporary final until defense modifiers (next phases)
         final_dmg = max(1, result.steps[-1].value)   # min-damage rule (Hercules behaviour)
 
         result.add_step("Final Damage (placeholder)", final_dmg)

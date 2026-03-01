@@ -1,5 +1,6 @@
 from core.models.skill import SkillInstance
 from core.models.damage import DamageResult
+from core.models.build import PlayerBuild
 from core.data_loader import loader
 
 
@@ -12,7 +13,7 @@ class SkillRatio:
     battle.c: wd.damage = (int64)wd.damage * ratio / 100;"""
 
     @staticmethod
-    def calculate(skill: SkillInstance, base_dmg: int, result: DamageResult) -> None:
+    def calculate(skill: SkillInstance, base_dmg: int, build: PlayerBuild, result: DamageResult) -> None:
         """Computes ratio from skills.json registry and adds the step.
         Uses the exact same logic the previous placeholder had, now isolated."""
         skill_data = loader.get_skill(skill.id)
@@ -25,12 +26,23 @@ class SkillRatio:
 
         dmg_after_ratio = base_dmg * ratio // 100
 
+        # SC_MAXIMIZEPOWER forces ratio = 100 (exact rule from battle_calc_skillratio)
+        if "SC_MAXIMIZEPOWER" in getattr(build, 'active_status_levels', {}):
+            ratio = 100
+
+        # NK flags (loaded here – ready for future NK_IGNORE_DEF etc. checks)
+        nk_flags = skill_data.get("nk_flags", []) if skill_data else []
+
+        # Multi-hit support (hit_count from skills.json)
+        hit_count = skill_data.get("hit_count", 1) if skill_data else 1
+        dmg_after_ratio *= hit_count
+
         # Dynamic formula prepared for future JSON expansions (ratio_base, skill_get_damage, etc.)
         if skill_data and skill_data.get("ratio_per_level"):
             src = f"ratio_per_level[lv{skill.level}]"
         else:
             src = "ratio_base"
-        formula = f"base_dmg * {ratio} // 100   (from skills.json {src})"
+        formula = f"base_dmg * {ratio} // 100 * {hit_count}   (from skills.json {src})"
 
         result.add_step(
             name=f"Skill Ratio (ID {skill.id} Lv {skill.level})",

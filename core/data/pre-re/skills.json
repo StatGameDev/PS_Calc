@@ -18,7 +18,7 @@
       "nk_flags": [],
       "hit_count": 1,
       "element": "weapon",
-      "note": "Adds 30*skill_lv to base ratio (Hercules battle_calc_skillratio)"
+      "note": "Adds 30*skill_lv to base ratio (already baked into ratio_per_level)"
     }
   ]
 }

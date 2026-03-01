@@ -5,6 +5,8 @@ from functools import lru_cache
 
 from core.models.build import PlayerBuild
 from core.models.target import Target
+from core.models.weapon import Weapon
+from core.models.skill import SkillInstance
 
 
 class DataLoader:
@@ -45,6 +47,14 @@ class DataLoader:
     def get_preset_target(self, name: str) -> Target:
         data = self._load_json(f"presets/targets/{name}.json")
         return Target(**data)
+    
+    def get_preset_weapon(self, name: str) -> Weapon:
+        data = self._load_json(f"presets/weapons/{name}.json")
+        return Weapon(**data)
+
+    def get_preset_skill_instance(self, name: str) -> SkillInstance:
+        data = self._load_json(f"presets/skills/{name}.json")
+        return SkillInstance(**data)
 
     # =============================================================
     # Skills (used by skill_ratio.py, NK flags, hit_count – exact from skills.json)
@@ -70,7 +80,7 @@ class DataLoader:
             return 100  # fallback only if index missing – never invented
 
     # =============================================================
-    # Refine bonuses (exact from db/pre-re/refine_db.conf + refine.c pre-renewal)
+    # Refine bonuses
     # =============================================================
     @lru_cache(maxsize=None)
     def get_refine_bonus(self, weapon_level: int, refine: int) -> int:
@@ -81,6 +91,53 @@ class DataLoader:
         data = self._load_json("tables/refine_weapon.json")
         rate = data["bonus"][weapon_level]
         return rate * refine
+
+    # =============================================================
+    # Mastery bonuses
+    # =============================================================
+
+    def get_mastery_multiplier(self, mastery_key: str, build: "PlayerBuild") -> int:
+        """Returns the correct per-level multiplier for the current mount state.
+        Uses the extended JSON schema; falls back to default if no conditional matches.
+        Mirrors the exact if/else order in battle.c for KN_SPEARMASTERY."""
+        data = self._load_json("tables/mastery_fix.json")
+        mastery = data.get("masteries", {}).get(mastery_key)
+        if not mastery:
+            return 1
+        if build.is_riding_peco and "riding_peco" in mastery:
+            return mastery["riding_peco"]
+        return mastery.get("default", 1)
+    
+    # =============================================================
+    # Attributes
+    # =============================================================
+
+    def get_element_name(self, element_id: int) -> str:
+        """Maps element ID (0-9) to name exactly as used in battle.c / status.c."""
+        names = {
+            0: "Neutral",
+            1: "Water",
+            2: "Earth",
+            3: "Fire",
+            4: "Wind",
+            5: "Poison",
+            6: "Holy",
+            7: "Dark",
+            8: "Ghost",
+            9: "Undead"
+        }
+        return names.get(element_id, "Neutral")
+
+    # =============================================================
+    # Active status bonuses
+    # =============================================================
+
+    def get_active_status_config(self, status_key: str) -> dict:
+        """Returns the complete config dict for a given SC_* key from active_status_bonus.json.
+        Full mechanic support (all SCs from the investigation) – used by ActiveStatusBonus class.
+        Exact mirror of get_mastery_multiplier and get_size_fix_multiplier pattern."""
+        data = self._load_json("tables/active_status_bonus.json")
+        return data.get("bonuses", {}).get(status_key, {})
 
     # =============================================================
     # Cache control (for hot-reload during development)
