@@ -131,7 +131,7 @@ class MainWindow(ctk.CTk):
             self.tree.delete(item)
 
     def test_status(self):
-        build = loader.get_preset_build("knight_bash_test")
+        build = loader.get_test_preset_build("knight_bash_test")
         status = StatusCalculator(self.battle_config).calculate(build)
 
         msg = f"✅ Status Calculator Test (Phase 1)\n\n" \
@@ -144,10 +144,10 @@ class MainWindow(ctk.CTk):
         self.status_label.configure(text=msg)
 
     def test_pipeline(self):
-        build = loader.get_preset_build("knight_bash_test")
-        weapon = loader.get_preset_weapon("knight_bash_weapon")
-        skill = loader.get_preset_skill_instance("knight_bash_skill")
-        target = loader.get_preset_target("porcellio_test")
+        build = loader.get_test_preset_build("knight_bash_test")
+        weapon = loader.get_test_preset_weapon("knight_bash_weapon")
+        skill = loader.get_test_preset_skill_instance("knight_bash_skill")
+        target = loader.get_test_preset_target("porcellio_test")
 
         status = StatusCalculator(self.battle_config).calculate(build)
 
@@ -158,10 +158,10 @@ class MainWindow(ctk.CTk):
         self._populate_tree(build, status, weapon, skill, skill_data, target, result)
 
     def test_spear_peco(self):
-        build = loader.get_preset_build("spear_peco_test")
-        weapon = loader.get_preset_weapon("spear_peco_weapon")
-        skill = loader.get_preset_skill_instance("spear_peco_skill")
-        target = loader.get_preset_target("earth_lv3_test")
+        build = loader.get_test_preset_build("spear_peco_test")
+        weapon = loader.get_test_preset_weapon("spear_peco_weapon")
+        skill = loader.get_test_preset_skill_instance("spear_peco_skill")
+        target = loader.get_test_preset_target("earth_lv3_test")
 
         status = StatusCalculator(self.battle_config).calculate(build)
 

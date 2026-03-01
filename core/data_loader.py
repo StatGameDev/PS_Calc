@@ -38,23 +38,39 @@ class DataLoader:
             return json.load(f)
 
     # =============================================================
-    # Presets (used by GUI test + pipeline)
+    # Test presets (only used by development test buttons)
     # =============================================================
-    def get_preset_build(self, name: str) -> PlayerBuild:
-        data = self._load_json(f"presets/builds/{name}.json")
+    def get_test_preset_build(self, name: str) -> PlayerBuild:
+        data = self._load_json(f"test_presets/builds/{name}.json")
         return PlayerBuild(**data)
 
-    def get_preset_target(self, name: str) -> Target:
-        data = self._load_json(f"presets/targets/{name}.json")
-        return Target(**data)
-    
-    def get_preset_weapon(self, name: str) -> Weapon:
-        data = self._load_json(f"presets/weapons/{name}.json")
+    def get_test_preset_weapon(self, name: str) -> Weapon:
+        data = self._load_json(f"test_presets/weapons/{name}.json")
         return Weapon(**data)
 
-    def get_preset_skill_instance(self, name: str) -> SkillInstance:
-        data = self._load_json(f"presets/skills/{name}.json")
+    def get_test_preset_skill_instance(self, name: str) -> SkillInstance:
+        data = self._load_json(f"test_presets/skills/{name}.json")
         return SkillInstance(**data)
+
+    def get_test_preset_target(self, name: str) -> Target:
+        data = self._load_json(f"test_presets/targets/{name}.json")
+        return Target(**data)
+
+    # =============================================================
+    # User builds (saved builds – will be used by GUI in Phase 4)
+    # =============================================================
+    def save_build(self, build_name: str, build: PlayerBuild) -> None:
+        """Future user build save (Phase 4). For now just placeholder."""
+        path = self.base_path / "saves" / f"{build_name}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(build.__dict__, f, indent=2, default=str)
+        print(f"Build saved: {build_name}")
+
+    def load_build(self, build_name: str) -> PlayerBuild:
+        """Future user build load (Phase 4)."""
+        data = self._load_json(f"saves/{build_name}.json")
+        return PlayerBuild(**data)
 
     # =============================================================
     # Skills (used by skill_ratio.py, NK flags, hit_count – exact from skills.json)
