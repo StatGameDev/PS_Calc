@@ -56,19 +56,19 @@ class MainWindow(ctk.CTk):
         self.tree_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
         self.tree = ttk.Treeview(self.tree_frame,
-                                 columns=("value", "multiplier", "note", "formula", "hercules_ref"),
+                                 columns=("value", "modifier", "note", "formula", "hercules_ref"),
                                  show="tree headings",
                                  height=28)
         self.tree.heading("#0", text="Step / Section")
         self.tree.heading("value", text="Value")
-        self.tree.heading("multiplier", text="Multiplier")
+        self.tree.heading("modifier", text="Modifier")
         self.tree.heading("note", text="Note / Details")
         self.tree.heading("formula", text="Formula")
         self.tree.heading("hercules_ref", text="Hercules Ref")
 
         self.tree.column("#0", width=380, stretch=True)
         self.tree.column("value", width=110, stretch=True, anchor="center")
-        self.tree.column("multiplier", width=90, stretch=True, anchor="center")
+        self.tree.column("modifier", width=90, stretch=True, anchor="center")
         self.tree.column("note", width=260, stretch=True)
         self.tree.column("formula", width=320, stretch=True)
         self.tree.column("hercules_ref", width=520, stretch=True)

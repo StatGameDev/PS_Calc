@@ -38,6 +38,7 @@ class SkillRatio:
             multiplier=ratio / 100.0,
             note=skill_data.get("note", "") if skill_data else "",
             formula=formula,
-            hercules_ref="battle.c: int ratio = battle_calc_skillratio(src, bl, skill_id, skill_lv, (skill_get_type(skill_id) == BF_WEAPON) ? skill_get_damage(skill_id, skill_lv) : 100);\n" +
+            hercules_ref="battle.c: int ratio = battle_calc_skillratio(src, bl, skill_id, skill_lv,\n" +
+                         "    (skill_get_type(skill_id) == BF_WEAPON) ? skill_get_damage(skill_id, skill_lv) : 100);\n" +
                          "battle.c: wd.damage = (int64)wd.damage * ratio / 100;"
         )
