@@ -78,7 +78,6 @@ class BattlePipeline:
         AttrFix.calculate(weapon, target, current_damage, result)
 
         # === FINAL RATE BONUS (Phase 2.10 – weapon/short/long rates) ===
-        # Called at the very end (verbatim last multiplier in battle_calc_weapon_attack pre-renewal)
         current_damage = result.steps[-1].value
         FinalRateBonus.calculate(build, current_damage, self.config, result)
 
