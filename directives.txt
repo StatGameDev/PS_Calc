@@ -1,63 +1,214 @@
-RO Pre-Renewal Damage Calculator - Restarted March 2026 Current Phase: Phase 2.10 Defense complete and audited. Ready for Phase 2.11 (Variance + Critical).
+RO Pre-Renewal Damage Calculator - Restarted March 2026 Current Phase: Phase 2.10 Defense complete and audited. Ready for Phase 2.11 (Variance + Critical). We are making a calculator app for Ragnarok Online pre-renewal based on the Hercules Emulator with the goal to be more precise, feature-complete and user friendly than existing solutions. 
 
-We are making a calculator app for Ragnarok Online pre-renewal based on the Hercules Emulator with the goal to be more precise, feature-complete and user friendly than existing solutions.
+Project State Summary: 
 
-Project State Summary: - pre-renewal BF_WEAPON pipeline: Base Damage → Skill Ratio → Size Fix → Defense Fix → Mastery Fix → Active Status Bonuses → Attr Fix → Final Rate Bonus. - Defense mechanics fully implemented: hard DEF % reduction, soft DEF (PC/monster formulas with average), ignore_hard_def flag, VIT penalty (full config + targeted_count + SC_STEELBODY immunity on target), mastery added after defense (true-damage bypass). - Most renewal content removed - Deferred: weapon_defense_type config merge, player ignore_def array (cards), flag&1/2 (NK_IGNORE_DEF/pierce), target status-effect reductions. - BattleConfig extended for mechanics. - All test presets (knight_bash_test, spear_peco_test, etc.) load and run cleanly.
+- currently known pre-renewal BF_WEAPON pipeline: Base Damage → Skill Ratio → Size Fix → Defense Fix → Mastery Fix → Active Status Bonuses → Attr Fix → Final Rate Bonus.
 
-Permanent Research Rule: Strict tool protocol – when any Hercules source is needed, first make a tool call to https://raw.githubusercontent.com/HerculesWS/Hercules/master/src/map/battle.c or/and whatever other file is relevant with the instruction: "Return ONLY the verbatim C code blocks for the exact functions and call sites requested (pre-renewal only), line-by-line as they appear in the file, with no summarization, no explanations, no merging, no additional text whatsoever." Cross-check if needed.
+- Defense mechanics fully implemented: hard DEF % reduction, soft DEF (PC/monster formulas with average), ignore_hard_def flag, VIT penalty (full config + targeted_count + SC_STEELBODY immunity on target), mastery added after defense (true-damage bypass).
 
+- Most renewal content removed
 
+- Deferred: weapon_defense_type config merge, player ignore_def array (cards), flag&1/2 (NK_IGNORE_DEF/pierce), target status-effect reductions.
+
+- BattleConfig extended for mechanics.
+
+- All test presets (knight_bash_test, spear_peco_test, etc.) load and run cleanly. Permanent Research Rule: Strict tool protocol
+
+When any Hercules source is needed:
+1. First make tool calls to https://raw.githubusercontent.com/HerculesWS/Hercules/master/src/map/battle.c (or status.c, skill.c, etc.) and identify areas of interest, while also gaining an understanding of the implementation in Hercules through the returned summaries.
+2. Then make tool calls to https://raw.githubusercontent.com/HerculesWS/Hercules/master/src/map/battle.c (or status.c, skill.c, etc.) using the exact instruction below.
+3. Use this instruction (replace only [SEARCH INSTRUCTION] and if needed the file name):
+
+TOOL PROTOCOL OVERRIDE: Use a mixed table output format. For every requested section, return one markdown table with columns: Line, RawCode, ContextNote. Target file: https://raw.githubusercontent.com/HerculesWS/Hercules/master/src/map/battle.c [SEARCH INSTRUCTION].
+
+3. Use ONLY the text that appears inside the RawCode column as hercules_ref strings – this guarantees verbatim accuracy.
+4. If the table still does not provide enough context, ask the user to fetch manually by giving the exact URL + search string.
+5. Cross-check with additional small searches when needed.
+
+This rule replaces all previous versions of the Permanent Research Rule and is now permanent for the project.
 
 RESPONSE STYLE (permanent – updated from all directives in the previous conversation):
 
-- Be detailed and educational: explain every code block, why it is written that way, the Python best practices involved, and how it maps to the Hercules source (always using strict tool protocol). Help the user learn the code and the mechanics. Not strict when parts of the directive aren't applicable. - One complete step at a time preferred, but not absolute: if steps necessitate or benefit from large-scale coordinated changes, deliver them together with clear explanation and never deliver the next step until the user explicitly says to continue or gives new instructions. - Don't assume or rush: do not use phrases like "ready when you are", "final", "OK" prompts, "next block", or anything similar in a way that pressures the user. - Small changes: deliver only the relevant targeted code block + intended location (avoid full files unless expedient). - Testing at every step: always list the exact expected results after each change that can affect test output (what the user should see in the GUI, tree, values, etc.). - Verbatim Hercules accuracy: every hercules_ref string must contain the exact code lines from the repo (no summaries, no tags). Use strict tool protocol for all source references. - Respect existing architecture: Never mix UI into BattleConfig, or mechanics into AppConfig; Both configs may be freely extended within their domain if necessary. - Style tone: helpful, precise, patient, no fluff, no apologies for previous replies, no meta comments about the conversation history. - Start every response with a short summary of what your understanding of the user's request is. Explain what is being done and why when code is added/changed or plans are made/changed. - After any non-trivial code: explicitly explain what the code does and the practices involved.
-
-This style overrides all previous instructions and is permanent.
 
 
 
-PROJECT FILE STRUCTURE (exact current state at end of Phase 2.10 Defense audit):
 
-Root: - main.py - requirements.txt
-
-gui/   - main_window.py          # Results tab with Treeview + two test buttons (Test LK Bash, Test Spear Peco)   - app_config.py
-
-core/   - config.py               # BattleConfig (mechanics only, extended for VIT penalty per user clarification)   - data_loader.py          # singleton + cached JSON loader (test_presets + saves)   - models/     - build.py              # PlayerBuild (ignore_hard_def, active_status_levels, mastery_levels)     - status.py     - weapon.py     - target.py             # Target (is_pc, targeted_count added)     - skill.py     - damage.py   - calculators/     - battle_pipeline.py    # exact order: BaseDamage → SkillRatio → SizeFix → DefenseFix → MasteryFix → ActiveStatusBonus → AttrFix → FinalRateBonus     - status_calculator.py     - modifiers/       - base_damage.py       - skill_ratio.py       - size_fix.py       - mastery_fix.py       - active_status_bonus.py       - attr_fix.py       - defense_fix.py      # full (hard/soft DEF, ignore_hard_def, VIT penalty + SC_STEELBODY immunity)       - final_rate_bonus.py
-
-data/pre-re/   - tables/     - size_fix.json     - refine_weapon.json     - mastery_fix.json     - mastery_weapon_map.json     - active_status_bonus.json     - attr_fix.json   - test_presets/     - builds/ (knight_bash_test.json, spear_peco_test.json)     - weapons/ (knight_bash_weapon.json, spear_peco_weapon.json)     - skills/ (knight_bash_skill.json, spear_peco_skill.json)     - targets/ (porcellio_test.json, earth_lv3_test.json)   - saves/ (empty – for future user builds)   - skills.json
+Be detailed and educational: explain every code block, why it is written that way, the Python best practices involved, and how it maps to the Hercules source (always using strict tool protocol). Help the user learn the code and the mechanics. Not strict when parts of the directive aren't applicable.
 
 
 
-PHASE PLAN (updated accuracy for new conversation):
+One complete step at a time preferred, but not absolute: if steps necessitate or benefit from large-scale coordinated changes, deliver them together with clear explanation and never deliver the next step until the user explicitly says to continue or gives new instructions.
 
-Phase 2 (Core Pipeline + Professional Test Interface)
 
-* 2.1 DataLoader – Finished
 
-* 2.2 BattlePipeline skeleton – Finished
+Don't assume or rush: do not use phrases like "ready when you are", "final", "OK" prompts, "next block", or anything similar in a way that pressures the user.
 
-* 2.3 Expandable Treeview + theme – Finished
 
-* 2.4 Base Damage – Finished
 
-* 2.5 Skill Ratio – Finished
+For small changes: deliver only the relevant targeted code block + intended location (avoid full files unless expedient).
 
-* 2.6 Size Fix – Finished
 
-* 2.7 Mastery Fix – Finished
 
-* 2.8 Active Status Bonuses – Finished
+Testing at every step: List the exact expected results after each change that can affect test output (what the user should see in the GUI, tree, values, etc.).
 
-* 2.9 Attr Fix – Finished
 
-* 2.10 Defense + final rate bonus (min/max/avg still placeholder only) – Finished & fully audited
 
-* 2.11 Variance + Critical (real min/max/avg calculation) – NEXT
+Verbatim Hercules accuracy: every hercules_ref string must contain the exact code lines from the repo (no summaries, no tags). Use strict tool protocol for all source references.
 
-* 2.12 Card Fix (ignore_def array, NK flags, flag&1/2) – Planned
 
-Future phases (not started):
 
-Phase 3: Full status_calc (ASPD, job tables, job-specific bonuses)
+Respect existing architecture: Never mix UI into BattleConfig, or mechanics into AppConfig; Both configs may be freely extended within their domain if necessary.
 
-Phase 4: Save/Load system + full GUI input tabs
+
+
+Style tone: helpful, precise, patient, no fluff, no apologies for previous replies, no meta comments about the conversation history.
+
+
+
+Start every response with a short summary of what your understanding of the user's request is. Explain what is being done and why when code is added/changed or plans are made/changed.
+
+
+
+After any non-trivial code: explicitly explain what the code does and the practices involved. This style overrides all previous instructions and is permanent.
+
+
+
+
+
+PROJECT FILE STRUCTURE (exact current state at end of Phase 2.10 Defense audit): Root: 
+
+- main.py 
+
+- requirements.txt 
+
+gui/
+
+ - main_window.py # Results tab with Treeview + two test buttons (Test LK Bash, Test Spear Peco)
+
+ - app_config.py 
+
+core/
+
+ - config.py # BattleConfig
+
+ - data_loader.py # singleton + cached JSON loader (test_presets + saves)
+
+ - models/
+
+  - build.py # PlayerBuild (ignore_hard_def, active_status_levels, mastery_levels)
+
+  - status.py
+
+  - weapon.py
+
+  - target.py # Target (is_pc, targeted_count added)
+
+  - skill.py
+
+  - damage.py
+
+ calculators/
+
+  - battle_pipeline.py
+
+  - status_calculator.py
+
+   modifiers/
+
+   - base_damage.py
+
+   - skill_ratio.py
+
+   - size_fix.py
+
+   - mastery_fix.py
+
+   - active_status_bonus.py
+
+   - attr_fix.py - defense_fix.py
+
+   - final_rate_bonus.py
+
+ data/pre-re/
+
+  - tables/
+
+   - size_fix.json
+
+   - refine_weapon.json
+
+   - mastery_fix.json
+
+   - mastery_weapon_map.json
+
+   - active_status_bonus.json
+
+   - attr_fix.json
+
+  - test_presets/
+
+   - builds/ (knight_bash_test.json, spear_peco_test.json)
+
+   - weapons/ (knight_bash_weapon.json, spear_peco_weapon.json)
+
+   - skills/ (knight_bash_skill.json, spear_peco_skill.json)
+
+   - targets/ (porcellio_test.json, earth_lv3_test.json)
+
+  - saves/ (empty – for future test/user builds)
+
+  - skills.json
+
+I will post many of these files with the first post of a new conversation and the remainder on the next, ask for any missing ones.
+
+PHASE PLAN (updated accuracy for new conversation): Phase 2 (Core Pipeline + Test Interface)
+
+
+
+
+
+2.1 DataLoader – Finished
+
+
+
+2.2 BattlePipeline skeleton – Finished
+
+
+
+2.3 Expandable Treeview + theme – Finished
+
+
+
+2.4 Base Damage – Finished
+
+
+
+2.5 Skill Ratio – Finished
+
+
+
+2.6 Size Fix – Finished
+
+
+
+2.7 Mastery Fix – Finished
+
+
+
+2.8 Active Status Bonuses – Finished
+
+
+
+2.9 Attr Fix – Finished
+
+
+
+2.10 Defense + final rate bonus (min/max/avg still placeholder only) – Finished & fully audited
+
+
+
+2.11 Variance + Critical (real min/max/avg calculation) – NEXT
+
+
+
+2.12 Card Fix (ignore_def array, NK flags, flag&1/2) – Planned Future phases (not started): Phase 3: Full status_calc (ASPD, job tables, job-specific bonuses) Phase 4: Save/Load system + full GUI input tabs
