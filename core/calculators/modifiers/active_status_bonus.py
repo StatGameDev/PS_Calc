@@ -1,6 +1,6 @@
 from core.models.weapon import Weapon
 from core.models.build import PlayerBuild
-from core.models.damage import DamageResult
+from core.models.damage import DamageRange, DamageResult
 from core.models.skill import SkillInstance
 from core.data_loader import loader
 
@@ -14,16 +14,13 @@ class ActiveStatusBonus:
     battle.c: (and every other if (sc && sc->data[SC_XXX]) ATK_ADD / ATK_ADDRATE block after battle_addmastery)"""
 
     @staticmethod
-    def calculate(weapon: Weapon, build: PlayerBuild, skill: SkillInstance, current_damage: int, result: DamageResult) -> None:
-        """Processes every active SC_* from build.active_status_levels using the JSON table.
-        All variables are initialised at top (best practice for type safety and mirrors C local declarations in battle_calc_weapon_attack).
-        Handles exclusions, flat_per_level, flat, and placeholders for complex/rate types (full mechanic)."""
+    def calculate(weapon: Weapon, build: PlayerBuild, skill: SkillInstance, dmg: DamageRange, result: DamageResult) -> DamageRange:
+        """Applies flat SC_* bonuses to the full DamageRange."""
         active_status_levels = getattr(build, 'active_status_levels', {})
         total_bonus: int = 0
         applied_bonuses: list[str] = []
-        after_bonus: int = current_damage
         note: str = "No active statuses"
-        formula: str = "current_damage (no SC bonuses)"
+        formula: str = "dmg (no SC bonuses)"
 
         if active_status_levels:
             for sc_key, level in active_status_levels.items():
@@ -44,44 +41,40 @@ class ActiveStatusBonus:
                     bonus = config.get("value", 0)
 
                 # complex_flat – DEFERRED (SC_ENCHANTBLADE)
-                # Will be expanded later with:
-                #   enchant_lv = level
-                #   i = (enchant_lv * 20 + 100) * lv // 150 + status.int_ - target.mdef + status_get_matk(sd, 0)
-                #   ATK_ADD(i)
-                # Exact formula taken verbatim from battle.c SC_ENCHANTBLADE block.
+                # i = (enchant_lv*20+100)*lv//150 + status.int_ - target.mdef + status_get_matk(sd,0)
+                # Exact formula from battle.c SC_ENCHANTBLADE block.
                 elif sc_type == "complex_flat":
-                    pass  # TODO: implement in future step (will require StatusData.matk and target.mdef)
+                    pass  # TODO: requires StatusData.matk and target.mdef
 
                 # rate_chance – DEFERRED (SC_GIANTGROWTH)
-                # Will be expanded later with:
-                #   if random() % 100 < config["chance"]:
-                #       after_bonus = after_bonus * config["rate"] // 100   # or ATK_ADDRATE
-                # Exact 15% chance to apply 200% rate from battle.c SC_GIANTGROWTH block.
-                # Will use seeded RNG for reproducible Treeview results.
+                # 15% chance to apply 200% rate from battle.c SC_GIANTGROWTH block.
                 elif sc_type == "rate_chance":
-                    pass  # TODO: implement in future step (will require random module matching Hercules rand())
+                    pass  # TODO: requires seeded RNG matching Hercules rand()
 
                 # exclusions (Aura Blade on Spiral Pierce, etc.)
                 if "exclusions" in config:
-                    skill_name = skill.id  # numeric ID for exact match
-                    if skill_name in config["exclusions"]:
+                    if skill.id in config["exclusions"]:
                         bonus = 0
 
                 total_bonus += bonus
                 if bonus:
                     applied_bonuses.append(f"{sc_key} Lv{level} (+{bonus})")
 
-            after_bonus = current_damage + total_bonus
             note = f"Applied: {', '.join(applied_bonuses) or 'none'}"
-            formula = f"current_damage + sum(SC bonuses from active_status_bonus.json)"
+            formula = "dmg + sum(SC bonuses from active_status_bonus.json)"
+
+        dmg = dmg.add(total_bonus)
 
         result.add_step(
             name="Active Status Bonuses",
-            value=after_bonus,
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
             multiplier=1.0,
             note=note,
             formula=formula,
-            hercules_ref="battle.c: if (sc && sc->data[SC_AURABLADE] && skill_id != LK_SPIRALPIERCE && skill_id != ML_SPIRALPIERCE) { int lv = sc->data[SC_AURABLADE]->val1; ATK_ADD(wd.damage, wd.damage2, 20 * lv); }\n" +
-                         "battle.c: if (sc && sc->data[SC_ENCHANTBLADE] && skill_id == 0) { ... ATK_ADD(i); }\n" +
+            hercules_ref="battle.c: if (sc && sc->data[SC_AURABLADE] && skill_id != LK_SPIRALPIERCE && skill_id != ML_SPIRALPIERCE) { int lv = sc->data[SC_AURABLADE]->val1; ATK_ADD(wd.damage, wd.damage2, 20 * lv); }\n"
+                         "battle.c: if (sc && sc->data[SC_ENCHANTBLADE] && skill_id == 0) { ... ATK_ADD(i); }\n"
                          "battle.c: (and every other if (sc && sc->data[SC_XXX]) ATK_ADD / ATK_ADDRATE block after battle_addmastery)"
         )
+        return dmg

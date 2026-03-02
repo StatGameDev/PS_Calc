@@ -1,5 +1,5 @@
 from core.models.skill import SkillInstance
-from core.models.damage import DamageResult
+from core.models.damage import DamageRange, DamageResult
 from core.models.build import PlayerBuild
 from core.data_loader import loader
 
@@ -13,9 +13,8 @@ class SkillRatio:
     battle.c: wd.damage = (int64)wd.damage * ratio / 100;"""
 
     @staticmethod
-    def calculate(skill: SkillInstance, base_dmg: int, build: PlayerBuild, result: DamageResult) -> None:
-        """Computes ratio from skills.json registry and adds the step.
-        Uses the exact same logic the previous placeholder had, now isolated."""
+    def calculate(skill: SkillInstance, dmg: DamageRange, build: PlayerBuild, result: DamageResult) -> DamageRange:
+        """Applies skill ratio and hit count to the full DamageRange."""
         skill_data = loader.get_skill(skill.id)
 
         if skill_data and skill_data.get("ratio_per_level"):
@@ -28,29 +27,32 @@ class SkillRatio:
         if "SC_MAXIMIZEPOWER" in getattr(build, 'active_status_levels', {}):
             ratio = 100
 
-        dmg_after_ratio = base_dmg * ratio // 100
-
         # NK flags (loaded here – ready for future NK_IGNORE_DEF etc. checks)
-        nk_flags = skill_data.get("nk_flags", []) if skill_data else []
+        nk_flags = skill_data.get("nk_flags", []) if skill_data else []  # noqa: F841
 
         # Multi-hit support (hit_count from skills.json)
         hit_count = skill_data.get("hit_count", 1) if skill_data else 1
-        dmg_after_ratio *= hit_count
 
-        # Dynamic formula prepared for future JSON expansions (ratio_base, skill_get_damage, etc.)
+        # Two sequential scale() calls — keep separate to preserve Hercules integer rounding
+        # battle.c: wd.damage = (int64)wd.damage * ratio / 100;  (then * hit_count separately)
+        dmg = dmg.scale(ratio, 100)
+        dmg = dmg.scale(hit_count, 1)
+
         if skill_data and skill_data.get("ratio_per_level"):
             src = f"ratio_per_level[lv{skill.level}]"
         else:
             src = "ratio_base"
-        formula = f"base_dmg * {ratio} // 100 * {hit_count}   (from skills.json {src})"
 
         result.add_step(
             name=f"Skill Ratio (ID {skill.id} Lv {skill.level})",
-            value=dmg_after_ratio,
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
             multiplier=ratio / 100.0,
             note=skill_data.get("note", "") if skill_data else "",
-            formula=formula,
-            hercules_ref="battle.c: int ratio = battle_calc_skillratio(src, bl, skill_id, skill_lv,\n" +
-                         "    (skill_get_type(skill_id) == BF_WEAPON) ? skill_get_damage(skill_id, skill_lv) : 100);\n" +
+            formula=f"dmg * {ratio} // 100 * {hit_count}   (from skills.json {src})",
+            hercules_ref="battle.c: int ratio = battle_calc_skillratio(src, bl, skill_id, skill_lv,\n"
+                         "    (skill_get_type(skill_id) == BF_WEAPON) ? skill_get_damage(skill_id, skill_lv) : 100);\n"
                          "battle.c: wd.damage = (int64)wd.damage * ratio / 100;"
         )
+        return dmg
