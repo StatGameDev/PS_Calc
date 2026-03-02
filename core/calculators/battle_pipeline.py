@@ -10,8 +10,10 @@ from core.calculators.modifiers.base_damage import BaseDamage
 from core.calculators.modifiers.skill_ratio import SkillRatio
 from core.calculators.modifiers.size_fix import SizeFix
 from core.calculators.modifiers.attr_fix import AttrFix
+from core.calculators.modifiers.defense_fix import DefenseFix
 from core.calculators.modifiers.mastery_fix import MasteryFix
 from core.calculators.modifiers.active_status_bonus import ActiveStatusBonus
+from core.calculators.modifiers.final_rate_bonus import FinalRateBonus
 
 class BattlePipeline:
     """
@@ -47,40 +49,44 @@ class BattlePipeline:
         # Load skill data from JSON (used by skill_ratio and NK checks later)
         skill_data = loader.get_skill(skill.id)
 
-        # === BASE DAMAGE (exact position in battle_calc_weapon_attack) ===
+        # === BASE DAMAGE ===
         BaseDamage.calculate(status, weapon, result)
 
-        # === SKILL RATIO (Phase 2.5 – full registry from skills.json) ===
+        # === SKILL RATIO ===
         # Called immediately after Base Damage, exactly as in battle_calc_weapon_attack
         base_dmg = result.steps[-1].value   # Base Damage step (always present)
         SkillRatio.calculate(skill, base_dmg, build, result)
 
-        # === SIZE FIX (Phase 2.6 – exact hand-selected rate from battle.c) ===
-        # Called immediately after Skill Ratio (verbatim position in battle_calc_weapon_attack)
-        current_damage = result.steps[-1].value   # Skill Ratio step (always present)
+        # === SIZE FIX ===
+        current_damage = result.steps[-1].value
         SizeFix.calculate(weapon, build, target, current_damage, skill, result)
 
-        # === MASTERY FIX (Phase 2.7 – flat bonus from build.mastery_levels dict) ===
-        # Called immediately after Size Fix (verbatim position in battle_calc_weapon_attack)
+        # === DEFENSE FIX ===
+        current_damage = result.steps[-1].value
+        DefenseFix.calculate(target, build, current_damage, self.config, result)
+
+        # === MASTERY FIX ===
         current_damage = result.steps[-1].value
         MasteryFix.calculate(weapon, build, target, current_damage, result)
 
-        # === ACTIVE STATUS BONUSES (full category – after battle_addmastery) ===
-        # Called immediately after Mastery Fix (verbatim position in battle_calc_weapon_attack)
-        current_damage = result.steps[-1].value   # Mastery Fix step (always present)
+        # === ACTIVE STATUS BONUSES ===
+        current_damage = result.steps[-1].value
         ActiveStatusBonus.calculate(weapon, build, skill, current_damage, result)
 
-        # === ATTR FIX (Phase 2.10 – element multiplier from attr_fix.conf) ===
-        # Called immediately after Active Status Bonuses (verbatim position in battle_calc_weapon_attack)
+        # === ATTR FIX ===
         current_damage = result.steps[-1].value
         AttrFix.calculate(weapon, target, current_damage, result)
 
-        # Temporary final until defense modifiers (next phases)
-        final_dmg = max(1, result.steps[-1].value)   # min-damage rule (Hercules behaviour)
+        # === FINAL RATE BONUS (Phase 2.10 – weapon/short/long rates) ===
+        # Called at the very end (verbatim last multiplier in battle_calc_weapon_attack pre-renewal)
+        current_damage = result.steps[-1].value
+        FinalRateBonus.calculate(build, current_damage, self.config, result)
 
-        result.add_step("Final Damage (placeholder)", final_dmg)
+        # Final values (min/max/avg identical until variance + crit in Phase 2.11)
+        final_dmg = result.steps[-1].value
 
-        # Output values (variance/crit added later)
+        result.add_step("Final Damage", final_dmg)
+
         result.min_damage = final_dmg
         result.max_damage = final_dmg
         result.avg_damage = final_dmg

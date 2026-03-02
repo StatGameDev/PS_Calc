@@ -34,7 +34,7 @@ class ActiveStatusBonus:
                 sc_type = config.get("type")
                 bonus = 0
 
-                # flat_per_level (Aura Blade, Maximize Power, Spurt, Impositio, Overthrust, Pyroclastic)
+                # flat_per_level (Aura Blade, Maximize Power, Spurt, Impositio, Overthrust)
                 if sc_type == "flat_per_level":
                     mult = config.get("multiplier", 1)
                     bonus = level * mult
