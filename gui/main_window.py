@@ -62,14 +62,14 @@ class MainWindow(ctk.CTk):
                                  show="tree headings",
                                  height=28)
         self.tree.heading("#0", text="Step / Section")
-        self.tree.heading("value", text="Value")
+        self.tree.heading("value", text="Min / Avg / Max")
         self.tree.heading("modifier", text="Modifier")
         self.tree.heading("note", text="Note / Details")
         self.tree.heading("formula", text="Formula")
         self.tree.heading("hercules_ref", text="Hercules Ref")
 
         self.tree.column("#0", width=380, stretch=True)
-        self.tree.column("value", width=110, stretch=True, anchor="center")
+        self.tree.column("value", width=180, stretch=True, anchor="center")
         self.tree.column("modifier", width=90, stretch=True, anchor="center")
         self.tree.column("note", width=260, stretch=True)
         self.tree.column("formula", width=320, stretch=True)
@@ -201,8 +201,10 @@ class MainWindow(ctk.CTk):
         pipeline_id = self.tree.insert("", tk.END, text="=== BATTLE PIPELINE STEPS (battle_calc_weapon_attack) ===", open=True)
         for step in result.steps:
             mult_str = f"×{step.multiplier:.2f}" if step.multiplier != 1.0 else ""
+            has_variance = step.min_value != step.max_value
+            val_str = f"{step.min_value} / {step.value} / {step.max_value}" if has_variance else str(step.value)
             self.tree.insert(pipeline_id, tk.END, text=step.name, values=(
-                step.value,
+                val_str,
                 mult_str,
                 step.note,
                 step.formula,
@@ -211,8 +213,8 @@ class MainWindow(ctk.CTk):
 
         # 5. FINAL
         final_id = self.tree.insert("", tk.END, text="=== FINAL RESULT ===", open=True)
-        self.tree.insert(final_id, tk.END, text="Min / Max / Avg Damage", 
-                         values=(f"{result.min_damage} / {result.max_damage} / {result.avg_damage}", "", "placeholder – crit/variance next"))
+        self.tree.insert(final_id, tk.END, text="Min / Avg / Max Damage",
+                         values=(f"{result.min_damage} / {result.avg_damage} / {result.max_damage}", "", ""))
 
         self.tree.item(pipeline_id, open=True)
         self.tree.item(final_id, open=True)
