@@ -108,6 +108,24 @@ class DataLoader:
         rate = data["bonus"][weapon_level]
         return rate * refine
 
+    @lru_cache(maxsize=None)
+    def get_overrefine(self, weapon_level: int, refine: int) -> int:
+        """Compute sd->right_weapon.overrefine from refine level and weapon level.
+        status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
+        refine.c: rnd_bonus[level] = rnd_bonus_v * (level - rnd_bonus_lv + 2);
+                  where level is 0-indexed, rnd_bonus_lv is 1-indexed RandomBonusStartLevel.
+        Simplified: randombonus_max = rnd_bonus_v * (refine - safe_start + 1)  (when refine >= safe_start)
+        """
+        if weapon_level < 1 or weapon_level > 4 or refine <= 0:
+            return 0
+        data = self._load_json("tables/refine_weapon.json")
+        safe_start = data["safe_refine_start"][weapon_level]
+        rnd_bonus_v = data["random_bonus_value"][weapon_level]
+        if safe_start == 0 or rnd_bonus_v == 0 or refine < safe_start:
+            return 0
+        randombonus_max = rnd_bonus_v * (refine - safe_start + 1)
+        return randombonus_max // 100
+
     # =============================================================
     # Mastery bonuses
     # =============================================================

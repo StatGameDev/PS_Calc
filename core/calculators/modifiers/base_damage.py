@@ -18,7 +18,8 @@ class BaseDamage:
     #      atkmax = wa->atk; atkmin = st->dex*(80+wlv*20)/100, capped to atkmax
     #      max roll = atkmax-1 (NOT atkmax) because rnd()%(n) gives [0, n-1]
     #   2. Overrefine bonus:   rnd()%sd->right_weapon.overrefine+1  (if overrefine > 0)
-    #      range [1, overrefine]; TODO: populate weapon.overrefine once status.c logic is researched
+    #      range [1, overrefine]; computed by loader.get_overrefine(wlv, refine)
+    #      status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
     #   3. Arrow ATK (bows):   rnd()%sd->bonus.arrow_atk           (out of scope, no bow model yet)
     # FIXME: Hercules applies SizeFix inside battle_calc_base_damage2 (line ~663) before batk is
     # added. This pipeline applies SizeFix as a separate step after batk. Pre-existing architecture
@@ -57,9 +58,11 @@ class BaseDamage:
 
         # Overrefine bonus: rnd()%overrefine+1 → range [1, overrefine]
         # battle.c: if (sd->right_weapon.overrefine) damage += rnd()%sd->right_weapon.overrefine+1;
-        if weapon.overrefine > 0:
-            or_avg = (weapon.overrefine + 1) // 2
-            dmg = dmg.add_range(1, weapon.overrefine, or_avg)
+        # status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
+        overrefine = loader.get_overrefine(weapon.level, weapon.refine)
+        if overrefine > 0:
+            or_avg = (overrefine + 1) // 2
+            dmg = dmg.add_range(1, overrefine, or_avg)
 
         # batk is deterministic
         dmg = dmg.add(status.batk)
@@ -68,8 +71,8 @@ class BaseDamage:
         refine_bonus = loader.get_refine_bonus(weapon.level, weapon.refine)
         dmg = dmg.add(refine_bonus)
 
-        overrefine_note = (f" + overrefine [1,{weapon.overrefine}] avg {(weapon.overrefine+1)//2}"
-                           if weapon.overrefine > 0 else "")
+        overrefine_note = (f" + overrefine [1,{overrefine}] avg {(overrefine+1)//2}"
+                           if overrefine > 0 else "")
         result.add_step(
             name="Base Damage",
             value=dmg.avg,
