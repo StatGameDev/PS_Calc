@@ -24,11 +24,11 @@ class SkillRatio:
         else:
             ratio = skill_data.get("ratio_base", 100) if skill_data else 100
 
-        dmg_after_ratio = base_dmg * ratio // 100
-
         # SC_MAXIMIZEPOWER forces ratio = 100 (exact rule from battle_calc_skillratio)
         if "SC_MAXIMIZEPOWER" in getattr(build, 'active_status_levels', {}):
             ratio = 100
+
+        dmg_after_ratio = base_dmg * ratio // 100
 
         # NK flags (loaded here – ready for future NK_IGNORE_DEF etc. checks)
         nk_flags = skill_data.get("nk_flags", []) if skill_data else []

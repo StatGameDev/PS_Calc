@@ -34,12 +34,16 @@ class DefenseFix:
         after_hard = current_damage * (100 - def1) // 100
 
         if target.is_pc:
+            # rnd()%variance_max averages (variance_max-1)/2, not variance_max/2
+            # Hercules: vit_def = def2/2 + (vit_def>0 ? rnd()%vit_def : 0)
             variance_max = def2 * (def2 - 15) // 150
-            avg_vit_def = def2 // 2 + (variance_max // 2 if variance_max > 0 else 0)
+            avg_vit_def = def2 // 2 + ((variance_max - 1) // 2 if variance_max > 0 else 0)
             note_type = "PC"
         else:
+            # rnd()%variance_max averages (variance_max-1)/2, not variance_max/2
+            # Hercules: vit_def = def2 + (vit_def>0 ? rnd()%vit_def : 0)
             variance_max = (def2 // 20) * (def2 // 20)
-            avg_vit_def = def2 + (variance_max // 2)
+            avg_vit_def = def2 + ((variance_max - 1) // 2 if variance_max > 0 else 0)
             note_type = "monster"
 
         after_def = after_hard - avg_vit_def

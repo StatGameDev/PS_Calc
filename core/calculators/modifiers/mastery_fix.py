@@ -16,8 +16,7 @@ class MasteryFix:
         """Adds the flat mastery bonus using the JSON table (now with build passed for conditionals).
         All variables are initialised at top (best practice for type safety and Hercules-style clarity)."""
         # Mapping now loaded from JSON (data-driven)
-        data = loader._load_json("tables/mastery_weapon_map.json")
-        mastery_key = data.get("mapping", {}).get(weapon.weapon_type)
+        mastery_key = loader.get_mastery_weapon_map().get(weapon.weapon_type)
 
         # Initialise every post-conditional variable at top – required by static type checkers
         # and mirrors C local declaration style in battle.c

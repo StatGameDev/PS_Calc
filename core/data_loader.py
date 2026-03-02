@@ -144,6 +144,18 @@ class DataLoader:
         }
         return names.get(element_id, "Neutral")
 
+    def get_attr_fix_multiplier(self, weapon_element: str, target_element: str, element_level: int) -> int:
+        """Looks up the elemental damage multiplier from attr_fix.json.
+        Returns integer percentage (100 = no change, 150 = 150% damage, etc.)."""
+        data = self._load_json("tables/attr_fix.json")
+        level = str(element_level or 1)
+        return data.get("table", {}).get(target_element, {}).get(level, {}).get(weapon_element, 100)
+
+    def get_mastery_weapon_map(self) -> dict:
+        """Returns the weapon_type → mastery_key mapping from mastery_weapon_map.json."""
+        data = self._load_json("tables/mastery_weapon_map.json")
+        return data.get("mapping", {})
+
     # =============================================================
     # Active status bonuses
     # =============================================================

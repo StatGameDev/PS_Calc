@@ -11,6 +11,15 @@ class BaseDamage:
     battle.c: ATK_ADD2(wd.damage, sstatus->rhw.atk2);
     status.c: if (r) wa->atk2 = refine->get_bonus(wlv, r) / 100;"""
 
+    # TODO: Weapon ATK variance — confirmed in battle_calc_base_damage2 (battle.c ~line 650).
+    # Three rnd() calls exist for PC attacks:
+    #   1. Main weapon range:  rnd()%(atkmax-atkmin)+atkmin
+    #      atkmax = wa->atk (weapon ATK); atkmin = st->dex*(80+wlv*20)/100, capped to atkmax
+    #   2. Overrefine bonus:   rnd()%sd->right_weapon.overrefine+1  (if overrefine > 0)
+    #   3. Arrow ATK (bows):   rnd()%sd->bonus.arrow_atk           (if arrow_atk > 0)
+    # Implementing these requires the pipeline to propagate separate min/max/avg through every
+    # subsequent step. Defer until DamageResult min/max/avg propagation is designed.
+
     @staticmethod
     def calculate(status: StatusData, weapon: Weapon, result: DamageResult) -> None:
         """Computes base damage and adds the step with full debug strings."""
