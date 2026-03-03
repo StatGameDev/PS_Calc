@@ -183,4 +183,6 @@ class BuildManager:
             element=item.get("element", 0),
             weapon_type=item.get("weapon_type", "Unarmed"),
             hand=_HAND_FROM_SLOT.get(slot, "right"),
+            aegis_name=item.get("aegis_name", ""),
+            refineable=item.get("refineable", True),
         )
