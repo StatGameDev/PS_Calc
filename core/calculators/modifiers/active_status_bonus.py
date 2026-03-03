@@ -6,12 +6,15 @@ from core.data_loader import loader
 
 
 class ActiveStatusBonus:
-    """Full implementation of every active status bonus in the mastery-fix phase for pre-renewal BF_WEAPON attacks.
-    Covers the entire category from the investigation (Aura Blade, Enchant Blade, Maximize Power, Spurt, Madness Cancel, Impositio, Overthrust, Pyroclastic, Giant Growth, etc.).
-    Source lines (verbatim from repo):
-    battle.c: if (sc && sc->data[SC_AURABLADE] && skill_id != LK_SPIRALPIERCE && skill_id != ML_SPIRALPIERCE) { int lv = sc->data[SC_AURABLADE]->val1; ATK_ADD(wd.damage, wd.damage2, 20 * lv); }
-    battle.c: if (sc && sc->data[SC_ENCHANTBLADE] && skill_id == 0) { ... ATK_ADD(i); }
-    battle.c: (and every other if (sc && sc->data[SC_XXX]) ATK_ADD / ATK_ADDRATE block after battle_addmastery)"""
+    """Pre-renewal flat ATK bonuses from SC_* in the weapon-attack phase.
+    Only SC_AURABLADE is implemented here (flat_per_level, no renewal guard).
+    SC_ENCHANTBLADE (complex_flat) and SC_GIANTGROWTH (rate_chance) are deferred.
+    Removed entries (see active_status_bonus.json comment for reasons):
+      SC_MAXIMIZEPOWER — variance collapse only; handled in base_damage.py
+      SC_SPURT         — hallucinated; not present in Hercules source
+      SC_GS_MADNESSCANCEL, SC_IMPOSITIO — #ifdef RENEWAL in battle_calc_masteryfix
+      SC_OVERTHRUST, SC_OVERTHRUSTMAX   — skillratio bonus; handled in skill_ratio.py
+    Source: battle.c battle_calc_weapon_attack, after battle_addmastery call."""
 
     @staticmethod
     def calculate(weapon: Weapon, build: PlayerBuild, skill: SkillInstance, dmg: DamageRange, result: DamageResult) -> DamageRange:
@@ -31,7 +34,7 @@ class ActiveStatusBonus:
                 sc_type = config.get("type")
                 bonus = 0
 
-                # flat_per_level (Aura Blade, Maximize Power, Spurt, Impositio, Overthrust)
+                # flat_per_level (Aura Blade; others removed — see class docstring)
                 if sc_type == "flat_per_level":
                     mult = config.get("multiplier", 1)
                     bonus = level * mult

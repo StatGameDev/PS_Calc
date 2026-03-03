@@ -24,8 +24,21 @@ class SkillRatio:
             ratio = skill_data.get("ratio_base", 100) if skill_data else 100
 
         # SC_MAXIMIZEPOWER forces ratio = 100 (exact rule from battle_calc_skillratio)
-        if "SC_MAXIMIZEPOWER" in getattr(build, 'active_status_levels', {}):
+        active = getattr(build, 'active_status_levels', {})
+        if "SC_MAXIMIZEPOWER" in active:
             ratio = 100
+
+        # SC_OVERTHRUST / SC_OVERTHRUSTMAX add to skillratio (not flat ATK).
+        # status.c: SC_OVERTHRUST val3 = 5*val1 (self-cast, pre-renewal)
+        # status.c: SC_OVERTHRUSTMAX val2 = 20*val1
+        # SC_OVERTHRUSTMAX cancels SC_OVERTHRUST in the emulator — both can't be active.
+        # battle.c:2919-2922 inside battle_calc_skillratio (no RENEWAL guard):
+        #   if(sc->data[SC_OVERTHRUST])    skillratio += sc->data[SC_OVERTHRUST]->val3;
+        #   if(sc->data[SC_OVERTHRUSTMAX]) skillratio += sc->data[SC_OVERTHRUSTMAX]->val2;
+        if "SC_OVERTHRUST" in active:
+            ratio += 5 * active["SC_OVERTHRUST"]
+        if "SC_OVERTHRUSTMAX" in active:
+            ratio += 20 * active["SC_OVERTHRUSTMAX"]
 
         # NK flags (loaded here – ready for future NK_IGNORE_DEF etc. checks)
         nk_flags = skill_data.get("nk_flags", []) if skill_data else []  # noqa: F841
@@ -51,8 +64,9 @@ class SkillRatio:
             multiplier=ratio / 100.0,
             note=skill_data.get("note", "") if skill_data else "",
             formula=f"dmg * {ratio} // 100 * {hit_count}   (from skills.json {src})",
-            hercules_ref="battle.c: int ratio = battle_calc_skillratio(src, bl, skill_id, skill_lv,\n"
-                         "    (skill_get_type(skill_id) == BF_WEAPON) ? skill_get_damage(skill_id, skill_lv) : 100);\n"
+            hercules_ref="battle.c: battle_calc_skillratio — base ratio from skill_get_damage\n"
+                         "battle.c:2919-2922: if(sc->data[SC_OVERTHRUST]) skillratio += sc->data[SC_OVERTHRUST]->val3;\n"
+                         "battle.c:2921-2922: if(sc->data[SC_OVERTHRUSTMAX]) skillratio += sc->data[SC_OVERTHRUSTMAX]->val2;\n"
                          "battle.c: wd.damage = (int64)wd.damage * ratio / 100;"
         )
         return dmg

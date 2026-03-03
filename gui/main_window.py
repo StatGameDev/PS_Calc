@@ -182,7 +182,13 @@ class MainWindow(ctk.CTk):
         self.tree.insert(inputs_id, tk.END, text="base_str / bonus_str", values=(f"{build.base_str} / {build.bonus_str}", "", ""))
         self.tree.insert(inputs_id, tk.END, text="equip_def (raw)", values=(build.equip_def, "", "Hard DEF before clamp"))
         self.tree.insert(inputs_id, tk.END, text="base_vit", values=(build.base_vit, "", ""))
-        self.tree.insert(inputs_id, tk.END, text="Weapon", values=(weapon.atk, f"+{weapon.refine}", f"Lv {weapon.level}"))
+        item_id = build.equipped.get("right_hand")
+        weapon_label = f"Weapon — {weapon.aegis_name}" if weapon.aegis_name else "Weapon (Unarmed)"
+        weapon_details = (f"ID {item_id}  ·  ATK {weapon.atk}  ·  Lv{weapon.level}"
+                          f"  ·  {weapon.weapon_type}"
+                          + ("" if weapon.refineable else "  ·  NOT refineable"))
+        self.tree.insert(inputs_id, tk.END, text=weapon_label,
+                         values=(weapon_details, f"+{weapon.refine}", ""))
 
         # 2. STATUS
         status_id = self.tree.insert("", tk.END, text="=== STATUS CALCULATOR (status_calc_pc / status_calc_misc) ===", open=True)

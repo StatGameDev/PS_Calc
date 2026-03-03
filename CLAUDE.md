@@ -81,6 +81,7 @@ sed -n '2341,2450p' Hercules/src/map/battle.c
 ---
 
 ## Project Structure
+
 ```
 PS_Calc/
 ├── CLAUDE.md                        ← this file
@@ -103,7 +104,7 @@ PS_Calc/
 │   ├── models/
 │   │   ├── build.py                 ← PlayerBuild dataclass
 │   │   ├── status.py                ← StatusData dataclass
-│   │   ├── weapon.py                ← Weapon dataclass
+│   │   ├── weapon.py                ← Weapon dataclass + RANGED_WEAPON_TYPES
 │   │   ├── skill.py                 ← SkillInstance dataclass
 │   │   ├── target.py                ← Target dataclass
 │   │   └── damage.py                ← DamageResult + DamageStep
@@ -117,7 +118,7 @@ PS_Calc/
 │   │       ├── attr_fix.py          ← elemental modifier table
 │   │       ├── defense_fix.py       ← hard DEF % + soft DEF subtraction
 │   │       ├── mastery_fix.py       ← weapon mastery flat bonuses
-│   │       ├── active_status_bonus.py  ← SC_* active status bonuses
+│   │       ├── active_status_bonus.py  ← SC_AURABLADE only (all others removed)
 │   │       └── final_rate_bonus.py  ← weapon/short/long attack rate bonuses
 │   └── data/pre-re/
 │       ├── skills.json
@@ -129,7 +130,7 @@ PS_Calc/
 │       │   ├── size_fix.json
 │       │   ├── mastery_fix.json
 │       │   ├── mastery_weapon_map.json
-│       │   ├── active_status_bonus.json  ← CONTAINS BUGS — see Group B
+│       │   ├── active_status_bonus.json  ← SC_AURABLADE only ✓
 │       │   ├── element_rate.json
 │       │   ├── job_aspd_base.json
 │       │   └── refine_weapon.json
@@ -154,13 +155,16 @@ PS_Calc/
 - `active_status_levels: Dict[str, int]` — SC_* conditions e.g. `{"SC_AURABLADE": 1}`
 - `mastery_levels: Dict[str, int]` — e.g. `{"SM_SWORD": 10}`
 - `is_riding_peco: bool` — affects KN_SPEARMASTERY bonus
-- `is_ranged: bool` — **DEFERRED FOR REMOVAL** — see C5
-- `is_katar: bool` — **DEFERRED FOR REMOVAL** — see C5
+- `is_ranged_override: Optional[bool] = None` — normally None; derived automatically
+  from weapon type via `effective_is_ranged()`. Set only to force an override.
 - `no_sizefix: bool` — bypasses size fix (sd->special_state.no_sizefix)
+- `is_katar` — REMOVED. Katar detection now derived from weapon_type == W_KATAR.
 
 ### Weapon (`core/models/weapon.py`)
+- `RANGED_WEAPON_TYPES: frozenset` — W_BOW, W_MUSICAL, W_WHIP, W_REVOLVER, W_RIFLE,
+  W_GATLING, W_SHOTGUN, W_GRENADE. Used by `effective_is_ranged()`.
 - `aegis_name: str` — display name from item_db, no calculation effect
-- `refineable: bool` — if False, suppress overrefine bonus in base_damage.py (see C4)
+- `refineable: bool` — if False, overrefine bonus is suppressed in base_damage.py
 
 ### StatusData (`core/models/status.py`)
 - Use `int_` everywhere — never `int` (shadows Python built-in)
@@ -190,7 +194,7 @@ Handles all user-owned save files. DataLoader handles static databases.
 - `resolve_weapon(item_id: Optional[int]) -> Weapon` — looks up item_db; on missing
   ID logs `WARNING: Item ID {id} not found in item_db. Using Unarmed defaults.`
   and returns Unarmed (ATK 0, wlv 1, neutral element, all size modifiers 100%).
-  **Unarmed is distinct from the in-game W_FIST weapon type.**
+  Unarmed is distinct from the in-game W_FIST weapon type.
 
 ---
 
@@ -230,13 +234,14 @@ refineable flag — anything intrinsic to the item itself.
   "active_buffs": { "SC_OVERTHRUST": 5 },
   "mastery_levels": { "SM_SWORD": 10 },
   "flags": {
+    "is_ranged_override": null,
     "is_riding_peco": false,
     "no_sizefix": false
   }
 }
 ```
-Note: `is_ranged` and `is_katar` are not in the schema — they will be derived
-automatically from weapon type once C5 is implemented.
+Note: `is_katar` is not in the schema — derived from weapon_type == W_KATAR.
+`is_ranged_override` is null in normal use — derived from weapon type automatically.
 
 ---
 
@@ -248,21 +253,21 @@ automatically from weapon type once C5 is implemented.
   pipeline step order corrected (A5). A2/A3 verified correct as-is.
 - **Phase 1 — Save/load** — BuildManager, build file schema, test presets migrated
 - **Phase 2 — item_db** — 708 weapons scraped from item_db.conf via custom parser
+- **C4** — refineable flag wired up in base_damage.py
+- **C5** — is_ranged and is_katar derived from weapon type; manual flags removed
+- **Group B fixes** — active_status_bonus.json stripped to SC_AURABLADE only;
+  SC_OVERTHRUST/SC_OVERTHRUSTMAX moved to skill_ratio.py
+- **base_damage.py order fix** — overrefine now correctly applied after refine bonus;
+  Weapon ATK Range step added to DamageResult
+- **GUI weapon display** — RAW INPUTS row shows aegis_name, ID, ATK, level,
+  weapon type, refine, and refineable flag
 
-### Next: C4 + C5, then Group B, then Phase 3
-
-**Session: C4 + C5** (small, self-contained, naturally grouped)
-- C4: wire `weapon.refineable` into `base_damage.py`
-- C5: derive `is_ranged` and `is_katar` from weapon type; remove manual flags
-
-**Session: Group B** (all active_status_bonus.json corrections)
-- B1–B5: fix/remove incorrect SC entries, move SC_OVERTHRUST to skill_ratio.py
-- B2: grep both `Hercules/src/` and `Hercules/db/` for SPURT before acting
+### Next: Phase 3 — mob_db
 
 **Phase 3 — mob_db**
 - Scrape `Hercules/db/pre-re/mob_db.conf` → `mob_db.json`
 - Extend DataLoader with `get_monster(mob_id)`
-- Replace manual Target test presets
+- Replace manual Target test presets with DB-backed lookups
 
 ---
 
@@ -294,38 +299,23 @@ BaseDamage → SkillRatio → DefenseFix → ActiveStatusBonus → MasteryFix �
 
 ---
 
-### GROUP B — Data Correctness (all open)
+### GROUP B — Data Correctness (ALL DONE)
 
-#### B1. active_status_bonus.json — SC_MAXIMIZEPOWER is wrong
-SC_MAXIMIZEPOWER has NO ATK_ADD in pre-renewal `battle_calc_weapon_attack`.
-Its only effect is `atkmin = atkmax` inside `battle_calc_base_damage2` (line 648)
-— variance collapse only, no flat damage.
-Action: remove from active_status_bonus.json; handle variance collapse in BaseDamage.
+#### B1. DONE — SC_MAXIMIZEPOWER removed from active_status_bonus.json
+Variance collapse (atkmin = atkmax) now handled inside BaseDamage when
+SC_MAXIMIZEPOWER is present. Logged as a "Weapon ATK Range" step note.
 
-#### B2. active_status_bonus.json — SC_SPURT origin unverified
-Grep of `Hercules/src/map/*.c` returned zero results but `Hercules/db/` was not
-searched. Before removing, Claude Code must run:
-```
-grep -rn "SPURT" Hercules/src/
-grep -rn "SPURT" Hercules/db/
-```
-Zero results across both: remove, note as hallucinated by a previous model.
-Found in db but not src: document and determine pre-renewal applicability.
+#### B2. DONE — SC_SPURT removed (confirmed hallucinated)
+Zero results in both `Hercules/src/` and `Hercules/db/`. Never existed.
 
-#### B3. active_status_bonus.json — SC_GS_MADNESSCANCEL is RENEWAL-only
-ATK_ADD in `battle_calc_base_damage2` is wrapped in `#ifdef RENEWAL`.
-No pre-renewal ATK_ADD exists. Remove from active_status_bonus.json.
+#### B3. DONE — SC_GS_MADNESSCANCEL removed (RENEWAL-only)
+#### B4. DONE — SC_IMPOSITIO removed (RENEWAL-only)
 
-#### B4. active_status_bonus.json — SC_IMPOSITIO is RENEWAL-only
-ATK_ADD is inside `#ifdef RENEWAL` (source line ~881).
-No pre-renewal effect in the weapon damage path. Remove from active_status_bonus.json.
-
-#### B5. active_status_bonus.json — SC_OVERTHRUST belongs in skill_ratio.py
-SC_OVERTHRUST does NOT add flat ATK. In pre-renewal it adds `val3` to
-`skillratio` inside `battle_calc_skillratio` (source lines 2919-2920).
-SC_OVERTHRUSTMAX adds `val2` (source lines 2921-2922).
-Action: remove both from active_status_bonus.json; add handling to skill_ratio.py
-reading level from `build.active_status_levels` and adding to ratio.
+#### B5. DONE — SC_OVERTHRUST moved to skill_ratio.py
+SC_OVERTHRUST adds val3 (+5×level) to skillratio (battle.c:2919-2920).
+SC_OVERTHRUSTMAX adds val2 (+20×level) to skillratio (battle.c:2921-2922).
+Both removed from active_status_bonus.json and handled in skill_ratio.py.
+active_status_bonus.json comment documents all removals and reasons.
 
 #### B6. Test presets — incomplete stat fields
 Both build presets default base_agi, base_dex, base_int, base_luk, job_level to 1.
@@ -339,9 +329,9 @@ Scaffolds only.
 #### C1. Damage Variance — implement carefully
 Three confirmed variance sources:
 - **Weapon ATK range** — `rnd() % (atkmax - atkmin) + atkmin` in
-  `battle_calc_base_damage2` lines 652-655. Confirmed.
+  `battle_calc_base_damage2` lines 652-655. Confirmed. Step is now logged.
 - **Overrefine bonus** — `rnd() % sd->right_weapon.overrefine + 1`
-  (source lines ~680-685). Confirmed.
+  (source lines ~680-685). Confirmed. Step is now logged.
 - **VIT DEF soft defense** — `rnd() % variance_max` in `battle_calc_defense`.
   Current average uses `variance_max / 2`; correct is `(variance_max - 1) / 2`.
 Read exact source lines before implementing. Verify on private server.
@@ -355,26 +345,21 @@ Verify intended use before fixing.
 #### C3. StatusCalculator — ASPD, HP, SP are placeholders
 Requires `job_aspd_base.json` integration and full job HP/SP multiplier tables.
 
-#### C4. BaseDamage — refineable flag not wired up
-`weapon.refineable: bool` is populated from item_db but `base_damage.py` does
-not check it before applying the overrefine bonus.
-Fix: skip overrefine bonus when `weapon.refineable is False`. Small, low risk.
+#### C4. DONE — BaseDamage refineable flag wired up
+Overrefine block in `base_damage.py` wrapped in `if weapon.refineable:`.
+Unrefineable weapons correctly receive zero overrefine bonus.
 
-#### C5. Derived flags — is_ranged and is_katar (UNBLOCKED)
-Both should be derived from `weapon.weapon_type`, not set manually.
-
-Ranged types (from Hercules battle_calc_base_damage2 flag logic):
-W_BOW, W_MUSICAL, W_WHIP, W_REVOLVER, W_RIFLE, W_GATLING, W_SHOTGUN, W_GRENADE
-
-Katar type: W_KATAR
-
-Implementation steps:
-1. Verify ranged type list from source before coding:
-   `grep -n "W_BOW\|W_MUSICAL\|W_WHIP\|W_REVOLVER\|W_RIFLE\|W_GATLING\|W_SHOTGUN\|W_GRENADE" Hercules/src/map/battle.c | head -20`
-2. Add helper in BuildManager or StatusCalculator deriving both flags from weapon_type
-3. Remove `is_ranged` and `is_katar` from PlayerBuild dataclass and build schema
-4. Update test preset JSONs to remove those fields
-5. Update all pipeline code reading `build.is_ranged` / `build.is_katar`
+#### C5. DONE — Derived flags is_ranged and is_katar
+`RANGED_WEAPON_TYPES` frozenset defined in `weapon.py` (8 types: W_BOW, W_MUSICAL,
+W_WHIP, W_REVOLVER, W_RIFLE, W_GATLING, W_SHOTGUN, W_GRENADE).
+`is_katar` removed from PlayerBuild entirely.
+`is_ranged` replaced by `is_ranged_override: Optional[bool] = None` on PlayerBuild.
+`effective_is_ranged()` helper derives flag from weapon type, falling back to
+override only when explicitly set.
+`status_calculator.py` now takes `is_ranged: bool` directly — no longer depends on build.
+`battle_pipeline.py` pre-computes `is_ranged` via `effective_is_ranged` before calling
+FinalRateBonus. All calc calls pass `weapon` explicitly.
+Test preset JSONs updated: `is_katar`/`is_ranged` replaced by `"is_ranged_override": null`.
 
 ---
 
@@ -387,7 +372,7 @@ Clean and simple by default. Deep and technical on demand.
 - **On hover:** tooltip reveals `note` and `formula` for that step
 - **Power user toggle:** "Show Source" button expands `hercules_ref` inline per step
 - The existing ttk.Treeview must be fully replaced.
-- All DamageStep fields are already structured correctly — this is a UI layer change only.
+- All DamageStep fields are already structured correctly — UI layer change only.
 
 ### Layout
 Not yet decided — propose before implementing. Usability and fast iteration across

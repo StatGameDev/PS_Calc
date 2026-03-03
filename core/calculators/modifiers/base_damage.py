@@ -15,16 +15,13 @@ class BaseDamage:
     battle.c: ATK_ADD2(wd.damage, sstatus->rhw.atk2);
     status.c: if (r) wa->atk2 = refine->get_bonus(wlv, r) / 100;"""
 
-    # Weapon ATK variance — confirmed in battle_calc_base_damage2 (battle.c ~line 650).
-    # Three rnd() calls exist for PC attacks:
-    #   1. Main weapon range:  rnd()%(atkmax-atkmin)+atkmin
+    # Hercules battle_calc_base_damage2 computation order for PC attacks:
+    #   1. Weapon ATK range:   rnd() % (atkmax - atkmin) + atkmin  → [atkmin, atkmax-1]
     #      atkmax = wa->atk; atkmin = st->dex*(80+wlv*20)/100, capped to atkmax
-    #      max roll = atkmax-1 (NOT atkmax) because rnd()%(n) gives [0, n-1]
-    #   2. Overrefine bonus:   rnd()%sd->right_weapon.overrefine+1  (if overrefine > 0)
-    #      range [1, overrefine]; computed by loader.get_overrefine(wlv, refine)
-    #      status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
-    #   3. Arrow ATK (bows):   rnd()%sd->bonus.arrow_atk           (out of scope, no bow model yet)
-    # SizeFix is applied INSIDE this function before st->batk is added (battle.c lines 659-664).
+    #   2. SizeFix:            damage * atkmods[t_size] / 100  (weapon ATK only)
+    #   3. batk:               damage += st->batk
+    #   4. Refine bonus:       damage += sd->right_weapon.atk2   (deterministic)
+    #   5. Overrefine:         damage += rnd()%sd->right_weapon.overrefine+1  (if overrefine > 0)
 
     @staticmethod
     def calculate(status: StatusData,
@@ -34,7 +31,7 @@ class BaseDamage:
                   skill: SkillInstance,
                   result: DamageResult) -> DamageRange:
         """Computes the initial DamageRange, applies SizeFix internally before batk,
-        and logs both the Size Fix and Base Damage steps."""
+        and logs Weapon ATK Range, Size Fix, and Base Damage steps."""
         wlv = weapon.level                              # wa->wlv from inventory_data->wlv
         atkmax = weapon.atk                             # wa->atk
 
@@ -45,7 +42,8 @@ class BaseDamage:
 
         # SC_MAXIMIZEPOWER: collapses atkmin to atkmax (no weapon ATK variance)
         # battle.c: if (sc && sc->data[SC_MAXIMIZEPOWER]) atkmin = atkmax;
-        if "SC_MAXIMIZEPOWER" in build.active_status_levels:
+        maximize_active = "SC_MAXIMIZEPOWER" in build.active_status_levels
+        if maximize_active:
             atkmin = atkmax
 
         # Main weapon ATK range
@@ -58,19 +56,20 @@ class BaseDamage:
         else:
             w_min = w_max = w_avg = atkmin
 
-        dmg = DamageRange(w_min, w_max, w_avg)
+        # Step: Weapon ATK Range — value immediately before SizeFix is applied
+        result.add_step(
+            name="Weapon ATK Range",
+            value=w_avg,
+            min_value=w_min,
+            max_value=w_max,
+            note=(f"atkmin={atkmin}  atkmax={atkmax}"
+                  + ("  (SC_MAXIMIZEPOWER: collapsed to atkmax)" if maximize_active else "")),
+            formula=f"atkmin = dex*{80+wlv*20}//100 = {atkmin};  range = [atkmin, atkmax-1]",
+            hercules_ref="battle.c battle_calc_base_damage2 ~line 652:\n"
+                         "damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;"
+        )
 
-        # Overrefine bonus: rnd()%overrefine+1 → range [1, overrefine]
-        # battle.c: if (sd->right_weapon.overrefine) damage += rnd()%sd->right_weapon.overrefine+1;
-        # status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
-        # Suppressed when weapon.refineable is False (item_db: Refine: false).
-        if weapon.refineable:
-            overrefine = loader.get_overrefine(weapon.level, weapon.refine)
-            if overrefine > 0:
-                or_avg = (overrefine + 1) // 2
-                dmg = dmg.add_range(1, overrefine, or_avg)
-        else:
-            overrefine = 0
+        dmg = DamageRange(w_min, w_max, w_avg)
 
         # Size Fix — applied inside battle_calc_base_damage2 for PC, BEFORE batk is added.
         # battle.c lines 659-664:
@@ -98,12 +97,23 @@ class BaseDamage:
         # batk is deterministic — added AFTER sizefix in Hercules
         dmg = dmg.add(status.batk)
 
-        # Refine bonus is deterministic
+        # Deterministic refine bonus (atk2) — added after batk
         refine_bonus = loader.get_refine_bonus(weapon.level, weapon.refine)
         dmg = dmg.add(refine_bonus)
 
-        overrefine_note = (f" + overrefine [1,{overrefine}] avg {(overrefine+1)//2}"
-                           if overrefine > 0 else "")
+        # Overrefine bonus: rnd()%overrefine+1 → range [1, overrefine]
+        # Added LAST in battle_calc_base_damage2 — after sizefix, batk, and atk2.
+        # battle.c: if (sd->right_weapon.overrefine) damage += rnd()%sd->right_weapon.overrefine+1;
+        # status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
+        # Suppressed when weapon.refineable is False (item_db: Refine: false).
+        if weapon.refineable:
+            overrefine = loader.get_overrefine(weapon.level, weapon.refine)
+            if overrefine > 0:
+                or_avg = (overrefine + 1) // 2
+                dmg = dmg.add_range(1, overrefine, or_avg)
+        else:
+            overrefine = 0
+
         result.add_step(
             name="Base Damage",
             value=dmg.avg,
@@ -111,10 +121,11 @@ class BaseDamage:
             max_value=dmg.max,
             multiplier=1.0,
             note=(f"Weapon ATK [{w_min},{w_max}] ×{size_mult}%"
-                  + overrefine_note
-                  + f" + BATK {status.batk} + Refine {refine_bonus}"),
+                  f" + BATK {status.batk} + Refine {refine_bonus}"
+                  + (f" + Overrefine [1,{overrefine}]" if overrefine > 0 else "")),
             formula=(f"atkmin={atkmin} atkmax={atkmax} → [{w_min},{w_max}]*{size_mult}% "
-                     f"+ batk {status.batk} + refine {refine_bonus}"),
+                     f"+ batk {status.batk} + refine {refine_bonus}"
+                     + (f" + rnd()%{overrefine}+1" if overrefine > 0 else "")),
             hercules_ref="battle.c: battle_calc_base_damage2 ~line 607\n"
                          "battle.c: damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;\n"
                          "battle.c: [size fix applied — lines 659-664]\n"
