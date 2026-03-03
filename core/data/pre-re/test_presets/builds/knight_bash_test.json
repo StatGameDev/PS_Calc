@@ -41,8 +41,7 @@
     "SM_SWORD": 10
   },
   "flags": {
-    "is_katar": false,
-    "is_ranged": false,
+    "is_ranged_override": null,
     "is_riding_peco": false,
     "no_sizefix": false
   }

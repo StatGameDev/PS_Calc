@@ -33,8 +33,9 @@ class PlayerBuild:
     bonus_flee: int = 0
     bonus_aspd_percent: int = 0
 
-    is_ranged: bool = False
-    is_katar: bool = False
+    # None = derive from equipped weapon's weapon_type at calc time.
+    # Set True/False explicitly to override (e.g. musical instrument played melee).
+    is_ranged_override: Optional[bool] = None
 
     no_sizefix: bool = False    # sd->special_state.no_sizefix – exact bypass for size fix
 

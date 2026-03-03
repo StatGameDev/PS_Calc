@@ -1,4 +1,3 @@
-from core.models.build import PlayerBuild
 from core.models.damage import DamageRange, DamageResult
 from core.config import BattleConfig
 
@@ -11,9 +10,9 @@ class FinalRateBonus:
     battle.c: damage = damage * battle_config.weapon_damage_rate / 100;"""
 
     @staticmethod
-    def calculate(build: PlayerBuild, dmg: DamageRange, config: BattleConfig, result: DamageResult) -> DamageRange:
+    def calculate(is_ranged: bool, dmg: DamageRange, config: BattleConfig, result: DamageResult) -> DamageRange:
         # Step 1: short/long attack rate (Hercules applies this first)
-        if build.is_ranged:
+        if is_ranged:
             sl_rate = config.long_attack_damage_rate
             sl_label = "Long"
         else:

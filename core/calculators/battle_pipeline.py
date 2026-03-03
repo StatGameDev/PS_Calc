@@ -1,3 +1,4 @@
+from core.build_manager import effective_is_ranged
 from core.models.damage import DamageRange, DamageResult
 from core.models.build import PlayerBuild
 from core.models.status import StatusData
@@ -82,7 +83,9 @@ class BattlePipeline:
         dmg = AttrFix.calculate(weapon, target, dmg, result)
 
         # === FINAL RATE BONUS ===
-        dmg = FinalRateBonus.calculate(build, dmg, self.config, result)
+        # is_ranged is pre-computed here so FinalRateBonus has no dependency on build or weapon.
+        is_ranged = effective_is_ranged(build, weapon)
+        dmg = FinalRateBonus.calculate(is_ranged, dmg, self.config, result)
 
         # Final summary step — carries the full range
         result.add_step("Final Damage",

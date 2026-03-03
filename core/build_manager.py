@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from core.models.build import PlayerBuild
-from core.models.weapon import Weapon
+from core.models.weapon import Weapon, RANGED_WEAPON_TYPES
 
 DEFAULT_SAVES_DIR = "saves"
 
@@ -12,6 +12,17 @@ _HAND_FROM_SLOT: Dict[str, str] = {
     "right_hand": "right",
     "left_hand": "left",
 }
+
+
+def effective_is_ranged(build: PlayerBuild, weapon: Weapon) -> bool:
+    """Return the effective is_ranged flag for a build+weapon pair.
+
+    Honour build.is_ranged_override when explicitly set (True/False).
+    Fall back to weapon_type membership in RANGED_WEAPON_TYPES when None.
+    """
+    if build.is_ranged_override is not None:
+        return build.is_ranged_override
+    return weapon.weapon_type in RANGED_WEAPON_TYPES
 
 
 class BuildManager:
@@ -67,8 +78,7 @@ class BuildManager:
             "active_buffs": build.active_status_levels,
             "mastery_levels": build.mastery_levels,
             "flags": {
-                "is_katar": build.is_katar,
-                "is_ranged": build.is_ranged,
+                "is_ranged_override": build.is_ranged_override,  # null = derive from weapon_type
                 "is_riding_peco": build.is_riding_peco,
                 "no_sizefix": build.no_sizefix,
             },
@@ -136,8 +146,7 @@ class BuildManager:
             refine_levels=data.get("refine", {}),
             active_status_levels=data.get("active_buffs", {}),
             mastery_levels=data.get("mastery_levels", {}),
-            is_katar=flags.get("is_katar", False),
-            is_ranged=flags.get("is_ranged", False),
+            is_ranged_override=flags.get("is_ranged_override", None),
             is_riding_peco=flags.get("is_riding_peco", False),
             no_sizefix=flags.get("no_sizefix", False),
         )

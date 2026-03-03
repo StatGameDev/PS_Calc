@@ -132,7 +132,8 @@ class MainWindow(ctk.CTk):
 
     def test_status(self):
         build = loader.get_test_preset_build("knight_bash_test")
-        status = StatusCalculator(self.battle_config).calculate(build)
+        weapon = loader.get_test_preset_weapon("knight_bash_weapon")
+        status = StatusCalculator(self.battle_config).calculate(build, weapon)
 
         msg = f"✅ Status Calculator Test (Phase 1)\n\n" \
               f"BATK     : {status.batk}\n" \
@@ -149,7 +150,7 @@ class MainWindow(ctk.CTk):
         skill = loader.get_test_preset_skill_instance("knight_bash_skill")
         target = loader.get_test_preset_target("porcellio_test")
 
-        status = StatusCalculator(self.battle_config).calculate(build)
+        status = StatusCalculator(self.battle_config).calculate(build, weapon)
 
         result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
         skill_data = loader.get_skill(skill.id) or {"name": "SM_BASH", "note": ""}
@@ -163,7 +164,7 @@ class MainWindow(ctk.CTk):
         skill = loader.get_test_preset_skill_instance("spear_peco_skill")
         target = loader.get_test_preset_target("earth_lv3_test")
 
-        status = StatusCalculator(self.battle_config).calculate(build)
+        status = StatusCalculator(self.battle_config).calculate(build, weapon)
 
         result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
         skill_data = loader.get_skill(skill.id) or {"name": "SM_BASH", "note": ""}

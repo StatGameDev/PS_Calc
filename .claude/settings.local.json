@@ -5,7 +5,10 @@
       "Bash(grep -v \"GET_NORMAL\\\\|calc_base_damage\\\\|^[0-9]*:.*//.*SC_MAXIMIZEPOWER\")",
       "Bash(python -c \":*)",
       "Bash(python tools/import_item_db.py --dry-run)",
-      "Bash(python tools/import_item_db.py)"
+      "Bash(python tools/import_item_db.py)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(''c:/Projects/PS_Calc/core/data/pre-re/tables/size_fix.json''\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\(''c:/Projects/PS_Calc/core/data/pre-re/tables/size_fix.json''\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\(''c:/Projects/PS_Calc/core/data/pre-re/tables/size_fix.json''\\)\\); print\\(d[''weapon_types'']\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Projects\\PS_Calc\\core\\data\\pre-re"

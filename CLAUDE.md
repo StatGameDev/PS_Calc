@@ -81,12 +81,15 @@ sed -n '2341,2450p' Hercules/src/map/battle.c
 ---
 
 ## Project Structure
-
 ```
 PS_Calc/
 ├── CLAUDE.md                        ← this file
 ├── main.py                          ← entry point, launches MainWindow
 ├── requirements.txt                 ← customtkinter>=5.2.0, pyinstaller
+├── saves/                           ← user-saved builds (one JSON per build)
+│   └── .gitkeep
+├── tools/
+│   └── import_item_db.py            ← one-shot scraper: item_db.conf → item_db.json ✓
 ├── Hercules/                        ← emulator source (reference only, never modify)
 │   └── src/map/
 │       ├── battle.c
@@ -96,6 +99,7 @@ PS_Calc/
 ├── core/
 │   ├── config.py                    ← BattleConfig (all battle.conf tunables)
 │   ├── data_loader.py               ← DataLoader singleton (all data access)
+│   ├── build_manager.py             ← BuildManager: save/load/resolve builds ✓
 │   ├── models/
 │   │   ├── build.py                 ← PlayerBuild dataclass
 │   │   ├── status.py                ← StatusData dataclass
@@ -107,9 +111,9 @@ PS_Calc/
 │   │   ├── status_calculator.py     ← StatusCalculator (status.c port)
 │   │   ├── battle_pipeline.py       ← BattlePipeline orchestrator
 │   │   └── modifiers/
-│   │       ├── base_damage.py       ← battle_calc_base_damage2
+│   │       ├── base_damage.py       ← battle_calc_base_damage2 (SizeFix internal)
 │   │       ├── skill_ratio.py       ← skill damage multipliers
-│   │       ├── size_fix.py          ← size penalty table
+│   │       ├── size_fix.py          ← size penalty table (reference only, not called)
 │   │       ├── attr_fix.py          ← elemental modifier table
 │   │       ├── defense_fix.py       ← hard DEF % + soft DEF subtraction
 │   │       ├── mastery_fix.py       ← weapon mastery flat bonuses
@@ -117,18 +121,25 @@ PS_Calc/
 │   │       └── final_rate_bonus.py  ← weapon/short/long attack rate bonuses
 │   └── data/pre-re/
 │       ├── skills.json
-│       └── tables/
-│           ├── attr_fix.json
-│           ├── size_fix.json
-│           ├── mastery_fix.json
-│           ├── mastery_weapon_map.json
-│           ├── active_status_bonus.json
-│           ├── element_rate.json
-│           ├── job_aspd_base.json
-│           └── refine_weapon.json
+│       ├── db/
+│       │   ├── item_db.json         ← 708 weapons scraped from item_db.conf ✓
+│       │   └── mob_db.json          ← Phase 3 (not yet created)
+│       ├── tables/
+│       │   ├── attr_fix.json
+│       │   ├── size_fix.json
+│       │   ├── mastery_fix.json
+│       │   ├── mastery_weapon_map.json
+│       │   ├── active_status_bonus.json  ← CONTAINS BUGS — see Group B
+│       │   ├── element_rate.json
+│       │   ├── job_aspd_base.json
+│       │   └── refine_weapon.json
+│       └── test_presets/            ← development scaffolds only, not ground truth
+│           ├── builds/
+│           ├── skills/
+│           └── targets/
 └── gui/
     ├── app_config.py                ← UI-only settings (theme, appearance)
-    └── main_window.py               ← MainWindow (currently test scaffold, to be redesigned)
+    └── main_window.py               ← MainWindow (test scaffold, to be redesigned)
 ```
 
 ---
@@ -137,12 +148,19 @@ PS_Calc/
 
 ### PlayerBuild (`core/models/build.py`)
 - Stats split into `base_X` (character points) and `bonus_X` (equipment/cards/buffs)
+- `name: str` — display name for the build
+- `equipped: Dict[str, Optional[int]]` — slot → item ID, e.g. `{"right_hand": 1225}`
+- `refine_levels: Dict[str, int]` — slot → refine level, e.g. `{"right_hand": 7}`
 - `active_status_levels: Dict[str, int]` — SC_* conditions e.g. `{"SC_AURABLADE": 1}`
 - `mastery_levels: Dict[str, int]` — e.g. `{"SM_SWORD": 10}`
 - `is_riding_peco: bool` — affects KN_SPEARMASTERY bonus
-- `is_ranged: bool` — swaps STR/DEX role in BATK
-- `is_katar: bool` — doubles critical rate
+- `is_ranged: bool` — **DEFERRED FOR REMOVAL** — see C5
+- `is_katar: bool` — **DEFERRED FOR REMOVAL** — see C5
 - `no_sizefix: bool` — bypasses size fix (sd->special_state.no_sizefix)
+
+### Weapon (`core/models/weapon.py`)
+- `aegis_name: str` — display name from item_db, no calculation effect
+- `refineable: bool` — if False, suppress overrefine bonus in base_damage.py (see C4)
 
 ### StatusData (`core/models/status.py`)
 - Use `int_` everywhere — never `int` (shadows Python built-in)
@@ -162,6 +180,17 @@ Every step must include:
 - All data access must go through public methods only.
 - Never call `loader._load_json()` directly from modifier classes.
   Add a public method to DataLoader instead.
+- `get_test_preset_weapon` is **deprecated** — routes through BuildManager now.
+
+### BuildManager (`core/build_manager.py`)
+Handles all user-owned save files. DataLoader handles static databases.
+- `save_build(build: PlayerBuild, path: str) -> None`
+- `load_build(path: str) -> PlayerBuild` — applies Unarmed fallback on missing IDs
+- `list_builds(directory: str) -> List[str]`
+- `resolve_weapon(item_id: Optional[int]) -> Weapon` — looks up item_db; on missing
+  ID logs `WARNING: Item ID {id} not found in item_db. Using Unarmed defaults.`
+  and returns Unarmed (ATK 0, wlv 1, neutral element, all size modifiers 100%).
+  **Unarmed is distinct from the in-game W_FIST weapon type.**
 
 ---
 
@@ -173,22 +202,10 @@ up from the item database at runtime by ID. Never duplicate item stats inline in
 a build file.
 
 **Build file owns:** base stats, job, level, refine levels, equipped item IDs,
-active buff levels, mastery levels, flags (is_katar, is_riding_peco, etc.)
+active buff levels, mastery levels, flags (is_riding_peco, no_sizefix).
 
 **Item database owns:** weapon ATK, weapon type, weapon level, element, weight,
-size modifiers — anything intrinsic to the item itself.
-
-### File Layout
-```
-saves/
-  <build_name>.json       ← user-saved builds (one file per build)
-
-core/data/pre-re/
-  db/
-    item_db.json          ← 708 real weapons, scraped from Hercules/db/pre-re/item_db.conf ✓
-    mob_db.json           ← scraped from Hercules/db/pre-re/mob_db.conf  (Phase 3)
-  test_presets/           ← development scaffolds only (see Verification section)
-```
+refineable flag — anything intrinsic to the item itself.
 
 ### Build File Schema
 ```json
@@ -213,195 +230,151 @@ core/data/pre-re/
   "active_buffs": { "SC_OVERTHRUST": 5 },
   "mastery_levels": { "SM_SWORD": 10 },
   "flags": {
-    "is_katar": false,
-    "is_ranged": false,
     "is_riding_peco": false,
     "no_sizefix": false
   }
 }
 ```
-
-### Deferred — Derived Flags (implement after Phase 2)
-`is_ranged` is currently a manual flag on `PlayerBuild`. This is wrong —
-it should be derived automatically from the equipped weapon's type, since
-ranged vs melee is an intrinsic property of the weapon, not a character choice.
-
-**Do not fix this until item_db.json contains real weapon type data (Phase 2).**
-
-After Phase 2:
-- Read the Hercules weapon type enum (`Hercules/src/map/pc.h` or similar) to
-  confirm which `W_*` types are ranged (W_BOW, W_REVOLVER, W_RIFLE, W_GATLING,
-  W_SHOTGUN, W_GRENADE, W_MUSICAL, W_WHIP are the known candidates)
-- Derive `is_ranged` from `weapon.weapon_type` in `StatusCalculator` or
-  `BuildManager.resolve_weapon` — remove it from the build file schema
-- `is_katar` follows the same pattern (W_KATAR) and should be fixed at the
-  same time
-
-### Missing Item ID Fallback
-If a build references an item ID not found in item_db, the loader must:
-1. Log a warning naming the missing ID and the build: 
-   `WARNING: Item ID 1225 not found in item_db. Using Unarmed defaults. Build: "My LK"`
-2. Fall back to the **Unarmed** default weapon (distinct from the in-game W_FIST
-   weapon type). Unarmed = ATK 0, weapon level 1, neutral element, size modifiers
-   all 100%, no overrefine.
-
-Never silently use stale inline stats. Never crash. Always warn explicitly.
-
-### BuildManager (`core/build_manager.py`) — to be created
-Responsible for save/load of build files. DataLoader handles static databases;
-BuildManager handles user-owned save files.
-- `save_build(build: PlayerBuild, path: str) -> None`
-- `load_build(path: str) -> PlayerBuild` — applies fallback logic on missing IDs
-- `list_builds(directory: str) -> List[str]`
-Builds are saved to and loaded from `saves/` by default.
+Note: `is_ranged` and `is_katar` are not in the schema — they will be derived
+automatically from weapon type once C5 is implemented.
 
 ---
 
-## Known Bugs — Fix These Before Adding Features
+## Phase Plan
 
-Bugs are grouped by priority. Fix Group A entirely before touching Group B or C.
-Do not add new features until Group A is resolved.
+### Completed
+- **Pipeline core** — BattlePipeline, all modifier files, StatusCalculator
+- **Group A fixes** — int_ rename (A1), SizeFix double-apply removed (A4),
+  pipeline step order corrected (A5). A2/A3 verified correct as-is.
+- **Phase 1 — Save/load** — BuildManager, build file schema, test presets migrated
+- **Phase 2 — item_db** — 708 weapons scraped from item_db.conf via custom parser
+
+### Next: C4 + C5, then Group B, then Phase 3
+
+**Session: C4 + C5** (small, self-contained, naturally grouped)
+- C4: wire `weapon.refineable` into `base_damage.py`
+- C5: derive `is_ranged` and `is_katar` from weapon type; remove manual flags
+
+**Session: Group B** (all active_status_bonus.json corrections)
+- B1–B5: fix/remove incorrect SC entries, move SC_OVERTHRUST to skill_ratio.py
+- B2: grep both `Hercules/src/` and `Hercules/db/` for SPURT before acting
+
+**Phase 3 — mob_db**
+- Scrape `Hercules/db/pre-re/mob_db.conf` → `mob_db.json`
+- Extend DataLoader with `get_monster(mob_id)`
+- Replace manual Target test presets
 
 ---
 
-### GROUP A — Formula Correctness (highest priority)
+## Known Bugs
 
-#### A1. StatusCalculator — status.int_ naming (CRITICAL)
-`core/models/status.py` declares `int: int = 0` — shadows Python's builtin.
-`core/calculators/status_calculator.py` assigns `status.int = ...` throughout.
-Rename field to `int_` in both files and every reference across the codebase.
-Enforce this rule on all new code — never use `int` as a field name.
+### GROUP A — Formula Correctness (ALL DONE)
 
-#### A2. StatusCalculator — HIT formula (VERIFIED — current formula is correct)
-LUK contributing to HIT is **renewal-only**. Verified in-game on private server.
-The current formula `status.hit = build.base_level + status.dex + build.bonus_hit`
-is correct for pre-renewal. No change needed. Remove the TODO comment if present.
+#### A1. DONE — status.int_ rename
+`status.py` and `status_calculator.py` updated. `int_` enforced throughout.
 
-#### A3. StatusCalculator — FLEE formula (VERIFIED — current formula is correct)
-Same as A2. LUK contributing to FLEE is **renewal-only**. Verified in-game.
-The current formula `status.flee = build.base_level + status.agi + build.bonus_flee`
-is correct for pre-renewal. No change needed. Remove the TODO comment if present.
+#### A2. VERIFIED CORRECT — HIT formula
+LUK contributing to HIT is renewal-only (verified in-game). Current formula
+`status.hit = base_level + dex + bonus_hit` is correct for pre-renewal.
 
-#### A4. BattlePipeline — SizeFix is double-applied (CRITICAL)
-`battle_calc_base_damage2` already applies size fix internally for PC targets
-via `sd->right_weapon.atkmods[t_size]` (battle.c lines 659-664).
-The standalone `SizeFix` step in `battle_pipeline.py` applies it a second time,
-making all PC damage wrong. Remove the SizeFix step from the pipeline entirely.
-The `size_fix.py` modifier file can be kept for reference but must not be called.
+#### A3. VERIFIED CORRECT — FLEE formula
+LUK contributing to FLEE is renewal-only (verified in-game). Current formula
+`status.flee = base_level + agi + bonus_flee` is correct for pre-renewal.
 
-#### A5. BattlePipeline — wrong step order
-The correct pre-renewal order from `battle_calc_weapon_attack` source is:
+#### A4. DONE — SizeFix double-apply removed
+Standalone SizeFix step removed from pipeline. SizeFix remains internal to
+BaseDamage (battle_calc_base_damage2) as Hercules source requires.
+`size_fix.py` kept for reference but is no longer called.
+
+#### A5. DONE — Pipeline step order corrected
+Correct pre-renewal order now implemented:
 ```
-BaseDamage    ← battle_calc_base_damage2 (SizeFix is INTERNAL to this for PC)
-SkillRatio    ← battle_calc_skillratio
-DefenseFix    ← battle_calc_defense (called ~line 5725-5738)
-ActiveStatusBonus  ← SC_AURABLADE etc. applied POST-defense (lines 5770-5795)
-MasteryFix    ← calc_masteryfix (#ifndef RENEWAL, lines 5815-5818)
-AttrFix       ← calc_elefix (after mastery in pre-renewal)
-FinalRateBonus
+BaseDamage → SkillRatio → DefenseFix → ActiveStatusBonus → MasteryFix → AttrFix → FinalRateBonus
 ```
-Current pipeline has SizeFix between SkillRatio and DefenseFix (wrong),
-and MasteryFix before ActiveStatusBonus (wrong). Reorder to match source.
 
 ---
 
-### GROUP B — Data Correctness
+### GROUP B — Data Correctness (all open)
 
 #### B1. active_status_bonus.json — SC_MAXIMIZEPOWER is wrong
 SC_MAXIMIZEPOWER has NO ATK_ADD in pre-renewal `battle_calc_weapon_attack`.
-Its only effect: `atkmin = atkmax` inside `battle_calc_base_damage2` (line 648)
-— it collapses variance, it does not add flat damage.
-Remove SC_MAXIMIZEPOWER from active_status_bonus.json entirely.
-Handle variance collapse in BaseDamage when this SC is present in build.
+Its only effect is `atkmin = atkmax` inside `battle_calc_base_damage2` (line 648)
+— variance collapse only, no flat damage.
+Action: remove from active_status_bonus.json; handle variance collapse in BaseDamage.
 
 #### B2. active_status_bonus.json — SC_SPURT origin unverified
-Grep of `Hercules/src/map/*.c` returned zero results for SC_SPURT.
-However, the `Hercules/db/` directory (conf/txt files) was NOT searched.
-Before removing SC_SPURT or declaring it hallucinated, Claude Code must run:
-  `grep -rn "SPURT" Hercules/db/`
-  `grep -rn "SPURT" Hercules/src/`
-If zero results across both: remove from active_status_bonus.json and note it
-was hallucinated by a previous model. If found in db but not src: document what
-it is and whether it applies to pre-renewal. Do not remove without checking both.
+Grep of `Hercules/src/map/*.c` returned zero results but `Hercules/db/` was not
+searched. Before removing, Claude Code must run:
+```
+grep -rn "SPURT" Hercules/src/
+grep -rn "SPURT" Hercules/db/
+```
+Zero results across both: remove, note as hallucinated by a previous model.
+Found in db but not src: document and determine pre-renewal applicability.
 
 #### B3. active_status_bonus.json — SC_GS_MADNESSCANCEL is RENEWAL-only
-The ATK_ADD for SC_GS_MADNESSCANCEL in `battle_calc_base_damage2` is wrapped
-in `#ifdef RENEWAL`. No pre-renewal ATK_ADD exists anywhere in the source.
-Remove from active_status_bonus.json.
+ATK_ADD in `battle_calc_base_damage2` is wrapped in `#ifdef RENEWAL`.
+No pre-renewal ATK_ADD exists. Remove from active_status_bonus.json.
 
 #### B4. active_status_bonus.json — SC_IMPOSITIO is RENEWAL-only
-Same issue — SC_IMPOSITIO ATK_ADD is inside `#ifdef RENEWAL` (source line ~881).
-No pre-renewal effect in the weapon damage path.
-Remove from active_status_bonus.json.
+ATK_ADD is inside `#ifdef RENEWAL` (source line ~881).
+No pre-renewal effect in the weapon damage path. Remove from active_status_bonus.json.
 
 #### B5. active_status_bonus.json — SC_OVERTHRUST belongs in skill_ratio.py
 SC_OVERTHRUST does NOT add flat ATK. In pre-renewal it adds `val3` to
 `skillratio` inside `battle_calc_skillratio` (source lines 2919-2920).
 SC_OVERTHRUSTMAX adds `val2` (source lines 2921-2922).
-Remove both from active_status_bonus.json.
-Add handling to skill_ratio.py: read level from `build.active_status_levels`,
-look up val3/val2 from config, and add to ratio before applying to damage.
+Action: remove both from active_status_bonus.json; add handling to skill_ratio.py
+reading level from `build.active_status_levels` and adding to ratio.
 
 #### B6. Test presets — incomplete stat fields
-Both build presets are missing `base_agi`, `base_dex`, `base_int`, `base_luk`,
-`job_level` — these default to 1, making BATK, HIT, FLEE, and crit wrong.
-Do NOT fill these in with guessed values. See Verification section below —
-proper test values require verified in-game measurements first.
-Mark existing presets as known-incomplete development scaffolds only.
+Both build presets default base_agi, base_dex, base_int, base_luk, job_level to 1.
+Do NOT fill with guessed values — requires verified in-game measurements.
+Scaffolds only.
 
 ---
 
-### GROUP C — Known Gaps (implement after A and B)
+### GROUP C — Known Gaps
 
-#### C1. Damage Variance — partially confirmed, implement carefully
-Three confirmed variance sources from source reading:
+#### C1. Damage Variance — implement carefully
+Three confirmed variance sources:
 - **Weapon ATK range** — `rnd() % (atkmax - atkmin) + atkmin` in
-  `battle_calc_base_damage2` lines 652-655. `atkmax = weapon.atk`,
-  `atkmin = dex-based value`. This IS confirmed variance.
+  `battle_calc_base_damage2` lines 652-655. Confirmed.
 - **Overrefine bonus** — `rnd() % sd->right_weapon.overrefine + 1`
-  (source lines ~680-685). Adds random overrefine variance.
+  (source lines ~680-685). Confirmed.
 - **VIT DEF soft defense** — `rnd() % variance_max` in `battle_calc_defense`.
-  DefenseFix currently uses `variance_max / 2` for average but correct
-  average is `(variance_max - 1) / 2`.
-Implement only after reading exact source lines. Verify ranges on private
-server before finalising. Use controlled tests (VIT=0 target) to isolate.
+  Current average uses `variance_max / 2`; correct is `(variance_max - 1) / 2`.
+Read exact source lines before implementing. Verify on private server.
+Use VIT=0 targets to isolate weapon variance from DEF variance.
 
 #### C2. FinalRateBonus — application context unclear
 `short_damage_rate` and `long_damage_rate` in Hercules are map-level properties
-(`map->list[bl->m].short_damage_rate`), not a global BattleConfig field.
-Current implementation applies them as global config values which may not match
-Hercules behaviour. Verify the intended use before fixing.
+(`map->list[bl->m].short_damage_rate`), not global BattleConfig fields.
+Verify intended use before fixing.
 
 #### C3. StatusCalculator — ASPD, HP, SP are placeholders
 Requires `job_aspd_base.json` integration and full job HP/SP multiplier tables.
-Implement after Groups A and B are resolved.
 
 #### C4. BaseDamage — refineable flag not wired up
-`core/models/weapon.py` has `refineable: bool = True` populated from item_db.
-`base_damage.py` does not yet check this flag before applying the overrefine bonus.
-Fix: skip overrefine bonus calculation when `weapon.refineable is False`.
-Small change, low risk. Implement before Phase 3.
+`weapon.refineable: bool` is populated from item_db but `base_damage.py` does
+not check it before applying the overrefine bonus.
+Fix: skip overrefine bonus when `weapon.refineable is False`. Small, low risk.
 
-#### C5. Derived flags — is_ranged and is_katar (NOW UNBLOCKED — implement before Phase 3)
-item_db.json now contains real `weapon_type` strings for all 708 weapons.
-`is_ranged` and `is_katar` are currently manual flags on `PlayerBuild` — this is
-wrong. Both should be derived automatically from the equipped weapon's type.
+#### C5. Derived flags — is_ranged and is_katar (UNBLOCKED)
+Both should be derived from `weapon.weapon_type`, not set manually.
 
-Ranged weapon types (from Hercules `battle_calc_base_damage2` flag logic):
+Ranged types (from Hercules battle_calc_base_damage2 flag logic):
 W_BOW, W_MUSICAL, W_WHIP, W_REVOLVER, W_RIFLE, W_GATLING, W_SHOTGUN, W_GRENADE
 
-Katar weapon type: W_KATAR
+Katar type: W_KATAR
 
-**Implementation plan:**
-1. Verify the ranged type list against Hercules source before coding:
+Implementation steps:
+1. Verify ranged type list from source before coding:
    `grep -n "W_BOW\|W_MUSICAL\|W_WHIP\|W_REVOLVER\|W_RIFLE\|W_GATLING\|W_SHOTGUN\|W_GRENADE" Hercules/src/map/battle.c | head -20`
-2. Add a helper in `BuildManager` or `StatusCalculator` that derives both flags
-   from `weapon.weapon_type` at resolve time
-3. Remove `is_ranged` and `is_katar` from the `PlayerBuild` dataclass and build
-   file schema — they must no longer be set manually
-4. Update the two test preset build JSONs to remove those fields
-5. Update any pipeline code that reads `build.is_ranged` or `build.is_katar`
-   to read from the derived value instead
+2. Add helper in BuildManager or StatusCalculator deriving both flags from weapon_type
+3. Remove `is_ranged` and `is_katar` from PlayerBuild dataclass and build schema
+4. Update test preset JSONs to remove those fields
+5. Update all pipeline code reading `build.is_ranged` / `build.is_katar`
 
 ---
 
@@ -413,33 +386,29 @@ Clean and simple by default. Deep and technical on demand.
 - **Casual users see:** damage summary card + clean step list (name + value only)
 - **On hover:** tooltip reveals `note` and `formula` for that step
 - **Power user toggle:** "Show Source" button expands `hercules_ref` inline per step
-- The existing ttk.Treeview with raw column layout must be fully replaced.
+- The existing ttk.Treeview must be fully replaced.
 - All DamageStep fields are already structured correctly — this is a UI layer change only.
 
 ### Layout
-Not yet decided — propose the best layout before implementing. Consider the full
-feature set: this tool will be used repeatedly with many combinations of builds,
-skills, and targets. Usability and fast iteration between configurations is the
-top priority. Evaluate side panel + results area vs. other approaches and recommend.
+Not yet decided — propose before implementing. Usability and fast iteration across
+builds/skills/targets is the top priority. Recommend an approach before coding.
 
 ### Required Features (full product)
-1. **Outgoing damage calculator** — clean results with progressive disclosure breakdown
-2. **Incoming damage calculator** — same pipeline from target's perspective
-3. **Stat point planner** — interactive base stat allocation with live recalculation
-4. **Skill browser / selector** — searchable, select skill + level for calculation
-5. **Equipment / item database browser** — search, filter, apply gear to build
-6. **Monster database** — search and filter, select as damage target
-7. **Custom inputs** — manually configure targets, weapons, items, buffs not in DB
-8. **Saved builds** — save and load named builds (DataLoader already has stubs)
-9. **Comparison tool** — compare builds / skills / targets side by side, analyze
-   damage and other metrics across multiple configurations simultaneously
+1. Outgoing damage calculator — clean results with progressive disclosure breakdown
+2. Incoming damage calculator — same pipeline from target's perspective
+3. Stat point planner — interactive base stat allocation with live recalculation
+4. Skill browser / selector — searchable, select skill + level for calculation
+5. Equipment / item database browser — search, filter, apply gear to build
+6. Monster database — search and filter, select as damage target
+7. Custom inputs — manually configure targets, weapons, items, buffs not in DB
+8. Saved builds — save and load named builds
+9. Comparison tool — compare builds / skills / targets side by side
 
 ### Results View (replaces current treeview)
 - Summary card at top: min / max / avg damage, crit chance, hit chance
 - Step list below: name + final value per step, clean and compact
 - Hover tooltip per step: shows `note` + `formula`
 - "Show Source" toggle: reveals `hercules_ref` inline under each step
-- Design for both casual readability and power user depth
 
 ---
 
@@ -457,28 +426,18 @@ top priority. Evaluate side panel + results area vs. other approaches and recomm
 
 ### Current State
 The existing test presets (Knight Bash vs Porcellio, Spear/Peco vs Earth Lv3) are
-development scaffolds only — they were used for early pipeline testing and are not
-rigorous enough to verify formula correctness. Do not treat passing these tests as
-proof that any formula is correct.
+development scaffolds only. Do not treat them as proof any formula is correct.
 
 ### What Proper Testing Requires
-Before writing new tests, a proper test strategy needs to be designed. This is an
-open task. Key requirements for any valid test:
-
-- **Known reference values** — expected damage must come from a verified source:
-  ideally in-game measurements on a private server running stock Hercules pre-renewal,
-  or from rocalc.com with the exact same inputs confirmed to match Hercules behavior.
-- **Full input specification** — every variable that touches the pipeline must be
-  fixed and documented: base stats, bonus stats, weapon ATK, refine, weapon type,
-  skill ID + level, target DEF, target VIT, target size, target element + level,
-  active statuses, masteries, BattleConfig values.
-- **Coverage across the pipeline** — tests should isolate individual modifiers
-  (e.g. a test where only size fix varies) as well as end-to-end cases.
-- **Variance handling** — until variance is properly understood and implemented,
-  tests should use inputs that produce zero variance (e.g. VIT=0 on target where
-  possible) or compare against a known range rather than a single value.
+- **Known reference values** — from in-game measurements on a private Hercules
+  pre-renewal server, or rocalc.com with confirmed matching inputs.
+- **Full input specification** — every pipeline variable fixed and documented:
+  base stats, bonus stats, weapon ATK, refine, weapon type, skill ID + level,
+  target DEF/VIT/size/element/level, active statuses, masteries, BattleConfig.
+- **Pipeline coverage** — isolate individual modifiers as well as end-to-end cases.
+- **Variance handling** — use VIT=0 targets or compare ranges until variance is
+  fully implemented.
 
 ### Action
-Do not add more ad-hoc presets. Instead, design a proper test framework first —
-propose the structure before implementing. Consider pytest with clearly documented
-fixtures, expected value sources, and tolerance handling for variance.
+Do not add ad-hoc presets. Design a proper pytest framework first — propose
+structure before implementing. Fixtures must document expected value sources.

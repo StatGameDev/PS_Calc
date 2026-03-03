@@ -63,10 +63,14 @@ class BaseDamage:
         # Overrefine bonus: rnd()%overrefine+1 → range [1, overrefine]
         # battle.c: if (sd->right_weapon.overrefine) damage += rnd()%sd->right_weapon.overrefine+1;
         # status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
-        overrefine = loader.get_overrefine(weapon.level, weapon.refine)
-        if overrefine > 0:
-            or_avg = (overrefine + 1) // 2
-            dmg = dmg.add_range(1, overrefine, or_avg)
+        # Suppressed when weapon.refineable is False (item_db: Refine: false).
+        if weapon.refineable:
+            overrefine = loader.get_overrefine(weapon.level, weapon.refine)
+            if overrefine > 0:
+                or_avg = (overrefine + 1) // 2
+                dmg = dmg.add_range(1, overrefine, or_avg)
+        else:
+            overrefine = 0
 
         # Size Fix — applied inside battle_calc_base_damage2 for PC, BEFORE batk is added.
         # battle.c lines 659-664:

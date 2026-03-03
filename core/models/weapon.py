@@ -1,5 +1,13 @@
 from dataclasses import dataclass
 
+# Weapon types whose BATK uses DEX as the primary stat (long-range attack flag).
+# Matches the W_* cases in battle_calc_base_damage2 / battle_calc_weapon_attack.
+# Source: battle.c lines 3262-3272, 5282-5287.
+RANGED_WEAPON_TYPES: frozenset = frozenset({
+    "Bow", "MusicalInstrument", "Whip",
+    "Revolver", "Rifle", "Gatling", "Shotgun", "Grenade",
+})
+
 
 @dataclass
 class Weapon:
