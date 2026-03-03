@@ -1,12 +1,15 @@
 from core.models.status import StatusData
 from core.models.weapon import Weapon
 from core.models.build import PlayerBuild
+from core.models.target import Target
+from core.models.skill import SkillInstance
 from core.models.damage import DamageRange, DamageResult
 from core.data_loader import loader
 
 
 class BaseDamage:
-    """Exact Base Damage step — computes the initial DamageRange from weapon ATK variance.
+    """Exact port of battle_calc_base_damage2 — includes the internal SizeFix application
+    (before batk is added) exactly as Hercules does it.
     Source lines (verbatim from repo):
     battle.c: wd.damage = battle_calc_base_damage2(sstatus, &sstatus->rhw, sc, tstatus->size, sd, i);
     battle.c: ATK_ADD2(wd.damage, sstatus->rhw.atk2);
@@ -21,16 +24,17 @@ class BaseDamage:
     #      range [1, overrefine]; computed by loader.get_overrefine(wlv, refine)
     #      status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
     #   3. Arrow ATK (bows):   rnd()%sd->bonus.arrow_atk           (out of scope, no bow model yet)
-    # FIXME: Hercules applies SizeFix inside battle_calc_base_damage2 (line ~663) before batk is
-    # added. This pipeline applies SizeFix as a separate step after batk. Pre-existing architecture
-    # mismatch — do not fix here.
+    # SizeFix is applied INSIDE this function before st->batk is added (battle.c lines 659-664).
 
     @staticmethod
     def calculate(status: StatusData,
                   weapon: Weapon,
                   build: PlayerBuild,
+                  target: Target,
+                  skill: SkillInstance,
                   result: DamageResult) -> DamageRange:
-        """Computes the initial DamageRange and logs the Base Damage step."""
+        """Computes the initial DamageRange, applies SizeFix internally before batk,
+        and logs both the Size Fix and Base Damage steps."""
         wlv = weapon.level                              # wa->wlv from inventory_data->wlv
         atkmax = weapon.atk                             # wa->atk
 
@@ -64,7 +68,30 @@ class BaseDamage:
             or_avg = (overrefine + 1) // 2
             dmg = dmg.add_range(1, overrefine, or_avg)
 
-        # batk is deterministic
+        # Size Fix — applied inside battle_calc_base_damage2 for PC, BEFORE batk is added.
+        # battle.c lines 659-664:
+        #   if (!(sd->special_state.no_sizefix || (flag&8)))
+        #       damage = damage * sd->right_weapon.atkmods[t_size] / 100;
+        if not build.no_sizefix and not skill.ignore_size_fix:
+            size_mult = loader.get_size_fix_multiplier(weapon.weapon_type, target.size)
+            dmg = dmg.scale(size_mult, 100)
+        else:
+            size_mult = 100
+
+        result.add_step(
+            name="Size Fix",
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
+            multiplier=size_mult / 100.0,
+            note=f"{weapon.weapon_type} vs {target.size} target → {size_mult}% (applied before BATK)",
+            formula=f"weapon_atk * {size_mult} // 100   (size_fix table[{target.size}][{weapon.weapon_type}])",
+            hercules_ref="battle.c lines 659-664: inside battle_calc_base_damage2 (before st->batk is added)\n"
+                         "if (!(sd->special_state.no_sizefix || (flag&8)))\n"
+                         "    damage = damage * sd->right_weapon.atkmods[t_size] / 100;"
+        )
+
+        # batk is deterministic — added AFTER sizefix in Hercules
         dmg = dmg.add(status.batk)
 
         # Refine bonus is deterministic
@@ -79,13 +106,14 @@ class BaseDamage:
             min_value=dmg.min,
             max_value=dmg.max,
             multiplier=1.0,
-            note=(f"Weapon ATK [{w_min},{w_max}]"
+            note=(f"Weapon ATK [{w_min},{w_max}] ×{size_mult}%"
                   + overrefine_note
                   + f" + BATK {status.batk} + Refine {refine_bonus}"),
-            formula=(f"atkmin={atkmin} atkmax={atkmax} → range [{w_min},{w_max}], "
-                     f"avg={w_avg}, +batk {status.batk}, +refine {refine_bonus}"),
+            formula=(f"atkmin={atkmin} atkmax={atkmax} → [{w_min},{w_max}]*{size_mult}% "
+                     f"+ batk {status.batk} + refine {refine_bonus}"),
             hercules_ref="battle.c: battle_calc_base_damage2 ~line 607\n"
                          "battle.c: damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;\n"
+                         "battle.c: [size fix applied — lines 659-664]\n"
                          "battle.c: damage += st->batk;\n"
                          "battle.c: if (sd->right_weapon.overrefine) damage += rnd()%sd->right_weapon.overrefine+1;"
         )

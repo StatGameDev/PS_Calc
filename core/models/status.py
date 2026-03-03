@@ -6,7 +6,7 @@ class StatusData:
     str: int = 0
     agi: int = 0
     vit: int = 0
-    int: int = 0
+    int_: int = 0
     dex: int = 0
     luk: int = 0
 

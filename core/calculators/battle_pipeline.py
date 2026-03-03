@@ -8,7 +8,6 @@ from core.config import BattleConfig
 from core.data_loader import loader
 from core.calculators.modifiers.base_damage import BaseDamage
 from core.calculators.modifiers.skill_ratio import SkillRatio
-from core.calculators.modifiers.size_fix import SizeFix
 from core.calculators.modifiers.attr_fix import AttrFix
 from core.calculators.modifiers.defense_fix import DefenseFix
 from core.calculators.modifiers.mastery_fix import MasteryFix
@@ -22,6 +21,15 @@ class BattlePipeline:
     Calls modifiers in the exact order of Hercules battle_calc_weapon_attack.
     Each modifier receives and returns a DamageRange(min, max, avg) so that
     weapon ATK variance and VIT DEF variance propagate correctly through every step.
+
+    Correct step order (per battle_calc_weapon_attack source):
+      BaseDamage    ← battle_calc_base_damage2 (SizeFix is INTERNAL to this, before batk)
+      SkillRatio    ← battle_calc_skillratio
+      DefenseFix    ← battle->calc_defense (~lines 5725-5738)
+      ActiveStatusBonus  ← SC_AURABLADE etc., POST-defense (lines 5770-5795)
+      MasteryFix    ← battle->calc_masteryfix (#ifndef RENEWAL, lines 5815-5818)
+      AttrFix       ← calc_elefix (after mastery in pre-renewal)
+      FinalRateBonus
     """
 
     def __init__(self, config: BattleConfig):
@@ -53,23 +61,22 @@ class BattlePipeline:
         # Load skill data (used by skill_ratio and NK checks)
         loader.get_skill(skill.id)
 
-        # === BASE DAMAGE — constructs the initial DamageRange from weapon ATK variance ===
-        dmg: DamageRange = BaseDamage.calculate(status, weapon, build, result)
+        # === BASE DAMAGE — mirrors battle_calc_base_damage2 exactly ===
+        # SizeFix is applied inside this step before batk is added (A4 fix).
+        # Two steps are logged: "Size Fix" then "Base Damage" (combined result).
+        dmg: DamageRange = BaseDamage.calculate(status, weapon, build, target, skill, result)
 
         # === SKILL RATIO ===
         dmg = SkillRatio.calculate(skill, dmg, build, result)
 
-        # === SIZE FIX ===
-        dmg = SizeFix.calculate(weapon, build, target, dmg, skill, result)
-
         # === DEFENSE FIX ===
         dmg = DefenseFix.calculate(target, build, dmg, self.config, result)
 
-        # === MASTERY FIX ===
-        dmg = MasteryFix.calculate(weapon, build, target, dmg, result)
-
-        # === ACTIVE STATUS BONUSES ===
+        # === ACTIVE STATUS BONUSES — POST-defense (lines 5770-5795) ===
         dmg = ActiveStatusBonus.calculate(weapon, build, skill, dmg, result)
+
+        # === MASTERY FIX — #ifndef RENEWAL, lines 5815-5818 ===
+        dmg = MasteryFix.calculate(weapon, build, target, dmg, result)
 
         # === ATTR FIX ===
         dmg = AttrFix.calculate(weapon, target, dmg, result)

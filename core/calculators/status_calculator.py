@@ -15,7 +15,7 @@ class StatusCalculator:
         status.str = build.base_str + build.bonus_str
         status.agi = build.base_agi + build.bonus_agi
         status.vit = build.base_vit + build.bonus_vit
-        status.int = build.base_int + build.bonus_int
+        status.int_ = build.base_int + build.bonus_int
         status.dex = build.base_dex + build.bonus_dex
         status.luk = build.base_luk + build.bonus_luk
 
@@ -45,6 +45,6 @@ class StatusCalculator:
         # Placeholders (full job tables + ASPD in Phase 3)
         status.aspd = 2000 - (build.bonus_aspd_percent * 10)
         status.max_hp = 3000 + status.vit * 30
-        status.max_sp = 300 + status.int * 5
+        status.max_sp = 300 + status.int_ * 5
 
         return status
