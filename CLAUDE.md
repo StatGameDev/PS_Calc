@@ -23,8 +23,7 @@ cloned locally at `./Hercules/`. All formula decisions must be traceable to that
 
 ## Non-Negotiable Rules
 
-- **Pre-renewal only.** Always take the non-RENEWAL path. Ignore all `#ifdef RENEWAL`
-  and `#ifndef RENEWAL` blocks entirely.
+- **Pre-renewal only.** This project targets pre-renewal kRO mechanics exclusively.
 - **Hercules is the source of truth.** If a formula is uncertain, grep the source
   before guessing. Do not rely on wikis or third-party calculators alone.
 - **Every DamageStep must cite its source.** All `hercules_ref` fields must point
@@ -34,6 +33,28 @@ cloned locally at `./Hercules/`. All formula decisions must be traceable to that
   unavoidable (e.g. ttk.Treeview as a temporary scaffold — to be replaced).
 - **Use `status.int_` not `status.int`** everywhere. `int` shadows Python's built-in.
   Enforce this in all new and existing code.
+
+### CRITICAL: Renewal vs Pre-Renewal Guards
+
+Hercules source contains mechanics for both pre-renewal and renewal in the same
+files, separated by preprocessor guards. **Reading past or ignoring these guards
+is the single most common source of bugs in this project.**
+
+Rules for reading Hercules source:
+- Code inside `#ifdef RENEWAL` — **renewal only. Ignore entirely.**
+- Code inside `#ifndef RENEWAL` — **pre-renewal only. This is what we implement.**
+- Code with no guard — applies to both. Implement as-is.
+- When in doubt, check for a guard. Assume guarded until verified otherwise.
+
+Known examples of renewal-only mechanics that must NOT appear in pre-renewal code:
+- LUK contributing to HIT (verified renewal-only in-game)
+- LUK contributing to FLEE (verified renewal-only in-game)
+- SC_IMPOSITIO ATK_ADD in battle_calc_base_damage2 (inside #ifdef RENEWAL)
+- SC_GS_MADNESSCANCEL ATK_ADD in battle_calc_base_damage2 (inside #ifdef RENEWAL)
+
+When reading a Hercules function, always grep for `#ifdef RENEWAL` and `#ifndef RENEWAL`
+within that function's line range before implementing anything from it.
+Example: `sed -n '607,690p' Hercules/src/map/battle.c | grep -n "RENEWAL"`
 
 ---
 
@@ -146,38 +167,122 @@ Every step must include:
 
 ## Known Bugs — Fix These Before Adding Features
 
-### 1. FinalRateBonus — weapon_damage_rate never applied
-`rate` is assigned `config.weapon_damage_rate` then immediately overwritten by
-short/long rate, so weapon_damage_rate has no effect. Hercules applies it as a
-separate multiplier. Fix: apply both multipliers as two sequential operations.
+Bugs are grouped by priority. Fix Group A entirely before touching Group B or C.
+Do not add new features until Group A is resolved.
 
-### 2. SkillRatio — SC_MAXIMIZEPOWER check is dead code
-`ratio = 100` is set after `dmg_after_ratio` is already computed, so it has no
-effect on the output. The check must happen before the multiplication.
+---
 
-### 3. AttrFix and MasteryFix — private method access
-Both call `loader._load_json()` directly. Add public methods to DataLoader
-(`get_attr_fix_multiplier`, `get_mastery_weapon_map`) and update both classes to
-use them.
+### GROUP A — Formula Correctness (highest priority)
 
-### 4. Damage Variance — unresolved, requires source verification
-Variance is known to exist in at least two places:
-- **VIT DEF soft defense** — `rnd() % variance_max` in `battle_calc_defense`,
-  already partially modelled in DefenseFix but the average is off by one:
-  `rnd() % variance_max` averages to `(variance_max - 1) / 2`, not `variance_max / 2`.
-- **Weapon ATK / base damage** — there is believed to be a random component at or
-  before the weapon ATK addition, but this has NOT been confirmed from source.
-  Previous attempts hallucinated variance that did not exist. Do NOT implement
-  any weapon ATK variance without first reading the relevant section of
-  `battle_calc_base_damage2` verbatim from Hercules/src/map/battle.c.
+#### A1. StatusCalculator — status.int_ naming (CRITICAL)
+`core/models/status.py` declares `int: int = 0` — shadows Python's builtin.
+`core/calculators/status_calculator.py` assigns `status.int = ...` throughout.
+Rename field to `int_` in both files and every reference across the codebase.
+Enforce this rule on all new code — never use `int` as a field name.
 
-**Required action before touching variance:** grep and read the full body of
-`battle_calc_base_damage2` and `battle_calc_weapon_attack` from source, identify
-every `rnd()` call and what it applies to, and document findings before writing
-any code. When in doubt, do not implement — leave a clearly marked TODO instead.
+#### A2. StatusCalculator — HIT formula (VERIFIED — current formula is correct)
+LUK contributing to HIT is **renewal-only**. Verified in-game on private server.
+The current formula `status.hit = build.base_level + status.dex + build.bonus_hit`
+is correct for pre-renewal. No change needed. Remove the TODO comment if present.
 
-### 6. StatusCalculator — ASPD, HP, SP are placeholders
-Requires job_aspd_base.json integration and full job HP/SP multiplier tables.
+#### A3. StatusCalculator — FLEE formula (VERIFIED — current formula is correct)
+Same as A2. LUK contributing to FLEE is **renewal-only**. Verified in-game.
+The current formula `status.flee = build.base_level + status.agi + build.bonus_flee`
+is correct for pre-renewal. No change needed. Remove the TODO comment if present.
+
+#### A4. BattlePipeline — SizeFix is double-applied (CRITICAL)
+`battle_calc_base_damage2` already applies size fix internally for PC targets
+via `sd->right_weapon.atkmods[t_size]` (battle.c lines 659-664).
+The standalone `SizeFix` step in `battle_pipeline.py` applies it a second time,
+making all PC damage wrong. Remove the SizeFix step from the pipeline entirely.
+The `size_fix.py` modifier file can be kept for reference but must not be called.
+
+#### A5. BattlePipeline — wrong step order
+The correct pre-renewal order from `battle_calc_weapon_attack` source is:
+```
+BaseDamage    ← battle_calc_base_damage2 (SizeFix is INTERNAL to this for PC)
+SkillRatio    ← battle_calc_skillratio
+DefenseFix    ← battle_calc_defense (called ~line 5725-5738)
+ActiveStatusBonus  ← SC_AURABLADE etc. applied POST-defense (lines 5770-5795)
+MasteryFix    ← calc_masteryfix (#ifndef RENEWAL, lines 5815-5818)
+AttrFix       ← calc_elefix (after mastery in pre-renewal)
+FinalRateBonus
+```
+Current pipeline has SizeFix between SkillRatio and DefenseFix (wrong),
+and MasteryFix before ActiveStatusBonus (wrong). Reorder to match source.
+
+---
+
+### GROUP B — Data Correctness
+
+#### B1. active_status_bonus.json — SC_MAXIMIZEPOWER is wrong
+SC_MAXIMIZEPOWER has NO ATK_ADD in pre-renewal `battle_calc_weapon_attack`.
+Its only effect: `atkmin = atkmax` inside `battle_calc_base_damage2` (line 648)
+— it collapses variance, it does not add flat damage.
+Remove SC_MAXIMIZEPOWER from active_status_bonus.json entirely.
+Handle variance collapse in BaseDamage when this SC is present in build.
+
+#### B2. active_status_bonus.json — SC_SPURT origin unverified
+Grep of `Hercules/src/map/*.c` returned zero results for SC_SPURT.
+However, the `Hercules/db/` directory (conf/txt files) was NOT searched.
+Before removing SC_SPURT or declaring it hallucinated, Claude Code must run:
+  `grep -rn "SPURT" Hercules/db/`
+  `grep -rn "SPURT" Hercules/src/`
+If zero results across both: remove from active_status_bonus.json and note it
+was hallucinated by a previous model. If found in db but not src: document what
+it is and whether it applies to pre-renewal. Do not remove without checking both.
+
+#### B3. active_status_bonus.json — SC_GS_MADNESSCANCEL is RENEWAL-only
+The ATK_ADD for SC_GS_MADNESSCANCEL in `battle_calc_base_damage2` is wrapped
+in `#ifdef RENEWAL`. No pre-renewal ATK_ADD exists anywhere in the source.
+Remove from active_status_bonus.json.
+
+#### B4. active_status_bonus.json — SC_IMPOSITIO is RENEWAL-only
+Same issue — SC_IMPOSITIO ATK_ADD is inside `#ifdef RENEWAL` (source line ~881).
+No pre-renewal effect in the weapon damage path.
+Remove from active_status_bonus.json.
+
+#### B5. active_status_bonus.json — SC_OVERTHRUST belongs in skill_ratio.py
+SC_OVERTHRUST does NOT add flat ATK. In pre-renewal it adds `val3` to
+`skillratio` inside `battle_calc_skillratio` (source lines 2919-2920).
+SC_OVERTHRUSTMAX adds `val2` (source lines 2921-2922).
+Remove both from active_status_bonus.json.
+Add handling to skill_ratio.py: read level from `build.active_status_levels`,
+look up val3/val2 from config, and add to ratio before applying to damage.
+
+#### B6. Test presets — incomplete stat fields
+Both build presets are missing `base_agi`, `base_dex`, `base_int`, `base_luk`,
+`job_level` — these default to 1, making BATK, HIT, FLEE, and crit wrong.
+Do NOT fill these in with guessed values. See Verification section below —
+proper test values require verified in-game measurements first.
+Mark existing presets as known-incomplete development scaffolds only.
+
+---
+
+### GROUP C — Known Gaps (implement after A and B)
+
+#### C1. Damage Variance — partially confirmed, implement carefully
+Three confirmed variance sources from source reading:
+- **Weapon ATK range** — `rnd() % (atkmax - atkmin) + atkmin` in
+  `battle_calc_base_damage2` lines 652-655. `atkmax = weapon.atk`,
+  `atkmin = dex-based value`. This IS confirmed variance.
+- **Overrefine bonus** — `rnd() % sd->right_weapon.overrefine + 1`
+  (source lines ~680-685). Adds random overrefine variance.
+- **VIT DEF soft defense** — `rnd() % variance_max` in `battle_calc_defense`.
+  DefenseFix currently uses `variance_max / 2` for average but correct
+  average is `(variance_max - 1) / 2`.
+Implement only after reading exact source lines. Verify ranges on private
+server before finalising. Use controlled tests (VIT=0 target) to isolate.
+
+#### C2. FinalRateBonus — application context unclear
+`short_damage_rate` and `long_damage_rate` in Hercules are map-level properties
+(`map->list[bl->m].short_damage_rate`), not a global BattleConfig field.
+Current implementation applies them as global config values which may not match
+Hercules behaviour. Verify the intended use before fixing.
+
+#### C3. StatusCalculator — ASPD, HP, SP are placeholders
+Requires `job_aspd_base.json` integration and full job HP/SP multiplier tables.
+Implement after Groups A and B are resolved.
 
 ---
 
