@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 
 
 @dataclass
@@ -50,3 +50,10 @@ class PlayerBuild:
     mastery_levels: Dict[str, int] = field(default_factory=dict)
     # Key = mastery skill name (e.g. "SM_SWORD", "KN_SPEARMASTERY")
     # Value = skill level
+
+    # Save/load identity and equipment slots
+    name: str = ""
+    equipped: Dict[str, Optional[int]] = field(default_factory=dict)
+    # Key = slot name (e.g. "right_hand", "ammo"), value = item ID or None
+    refine_levels: Dict[str, int] = field(default_factory=dict)
+    # Key = slot name, value = refine count for that slot

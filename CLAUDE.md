@@ -165,6 +165,98 @@ Every step must include:
 
 ---
 
+## Data Architecture — Saves and Databases
+
+### Separation of Concerns
+A saved build file contains only character-owned data. Item properties are looked
+up from the item database at runtime by ID. Never duplicate item stats inline in
+a build file.
+
+**Build file owns:** base stats, job, level, refine levels, equipped item IDs,
+active buff levels, mastery levels, flags (is_katar, is_riding_peco, etc.)
+
+**Item database owns:** weapon ATK, weapon type, weapon level, element, weight,
+size modifiers — anything intrinsic to the item itself.
+
+### File Layout
+```
+saves/
+  <build_name>.json       ← user-saved builds (one file per build)
+
+core/data/pre-re/
+  db/
+    item_db.json          ← scraped from Hercules/db/pre-re/item_db.conf (Phase 2)
+    mob_db.json           ← scraped from Hercules/db/pre-re/mob_db.conf  (Phase 3)
+  test_presets/           ← development scaffolds only (see Verification section)
+```
+
+### Build File Schema
+```json
+{
+  "name": "My LK",
+  "job_id": 7,
+  "base_level": 99,
+  "base_stats": {
+    "str": 80, "agi": 30, "vit": 70, "int": 10, "dex": 50, "luk": 10
+  },
+  "bonus_stats": {
+    "str": 0, "agi": 0, "vit": 0, "int": 0, "dex": 0, "luk": 0,
+    "hit": 0, "flee": 0, "cri": 0, "batk": 0
+  },
+  "equipped": {
+    "right_hand": 1225,
+    "ammo": null
+  },
+  "refine": {
+    "right_hand": 0
+  },
+  "active_buffs": { "SC_OVERTHRUST": 5 },
+  "mastery_levels": { "SM_SWORD": 10 },
+  "flags": {
+    "is_katar": false,
+    "is_ranged": false,
+    "is_riding_peco": false,
+    "no_sizefix": false
+  }
+}
+```
+
+### Deferred — Derived Flags (implement after Phase 2)
+`is_ranged` is currently a manual flag on `PlayerBuild`. This is wrong —
+it should be derived automatically from the equipped weapon's type, since
+ranged vs melee is an intrinsic property of the weapon, not a character choice.
+
+**Do not fix this until item_db.json contains real weapon type data (Phase 2).**
+
+After Phase 2:
+- Read the Hercules weapon type enum (`Hercules/src/map/pc.h` or similar) to
+  confirm which `W_*` types are ranged (W_BOW, W_REVOLVER, W_RIFLE, W_GATLING,
+  W_SHOTGUN, W_GRENADE, W_MUSICAL, W_WHIP are the known candidates)
+- Derive `is_ranged` from `weapon.weapon_type` in `StatusCalculator` or
+  `BuildManager.resolve_weapon` — remove it from the build file schema
+- `is_katar` follows the same pattern (W_KATAR) and should be fixed at the
+  same time
+
+### Missing Item ID Fallback
+If a build references an item ID not found in item_db, the loader must:
+1. Log a warning naming the missing ID and the build: 
+   `WARNING: Item ID 1225 not found in item_db. Using Unarmed defaults. Build: "My LK"`
+2. Fall back to the **Unarmed** default weapon (distinct from the in-game W_FIST
+   weapon type). Unarmed = ATK 0, weapon level 1, neutral element, size modifiers
+   all 100%, no overrefine.
+
+Never silently use stale inline stats. Never crash. Always warn explicitly.
+
+### BuildManager (`core/build_manager.py`) — to be created
+Responsible for save/load of build files. DataLoader handles static databases;
+BuildManager handles user-owned save files.
+- `save_build(build: PlayerBuild, path: str) -> None`
+- `load_build(path: str) -> PlayerBuild` — applies fallback logic on missing IDs
+- `list_builds(directory: str) -> List[str]`
+Builds are saved to and loaded from `saves/` by default.
+
+---
+
 ## Known Bugs — Fix These Before Adding Features
 
 Bugs are grouped by priority. Fix Group A entirely before touching Group B or C.

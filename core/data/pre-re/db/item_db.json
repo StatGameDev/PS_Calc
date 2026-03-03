@@ -1,0 +1,19 @@
+{
+  "_note": "STUB — IDs 9001-9099 are test scaffolds mapped from legacy test_presets/weapons/ JSONs. Migrate to real item IDs when item_db is scraped from Hercules/db/pre-re/item_db.conf (Phase 2).",
+  "items": {
+    "9001": {
+      "name": "Test 1H Sword (STUB)",
+      "atk": 150,
+      "weapon_type": "1HSword",
+      "level": 3,
+      "element": 3
+    },
+    "9002": {
+      "name": "Test 2H Spear (STUB)",
+      "atk": 180,
+      "weapon_type": "2HSpear",
+      "level": 3,
+      "element": 3
+    }
+  }
+}

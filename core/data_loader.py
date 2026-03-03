@@ -41,10 +41,14 @@ class DataLoader:
     # Test presets (only used by development test buttons)
     # =============================================================
     def get_test_preset_build(self, name: str) -> PlayerBuild:
-        data = self._load_json(f"test_presets/builds/{name}.json")
-        return PlayerBuild(**data)
+        from core.build_manager import BuildManager  # local import — avoids circular dependency
+        path = str(self.base_path / f"test_presets/builds/{name}.json")
+        return BuildManager.load_build(path)
 
     def get_test_preset_weapon(self, name: str) -> Weapon:
+        # DEPRECATED: weapon properties now live in item_db via BuildManager.resolve_weapon.
+        # These files remain as fallbacks for the legacy test buttons in main_window.py
+        # until those buttons are replaced by the full GUI (Phase 4).
         data = self._load_json(f"test_presets/weapons/{name}.json")
         return Weapon(**data)
 
@@ -55,6 +59,18 @@ class DataLoader:
     def get_test_preset_target(self, name: str) -> Target:
         data = self._load_json(f"test_presets/targets/{name}.json")
         return Target(**data)
+
+    # =============================================================
+    # Item database
+    # =============================================================
+    def get_item(self, item_id: int) -> Optional[Dict]:
+        """Look up an item by numeric ID from db/item_db.json.
+        Returns None if the ID is not found or if item_db.json does not exist yet."""
+        try:
+            data = self._load_json("db/item_db.json")
+        except FileNotFoundError:
+            return None
+        return data.get("items", {}).get(str(item_id))
 
     # =============================================================
     # User builds (saved builds – will be used by GUI in Phase 4)
