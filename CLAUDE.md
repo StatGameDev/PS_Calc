@@ -185,7 +185,7 @@ saves/
 
 core/data/pre-re/
   db/
-    item_db.json          ← scraped from Hercules/db/pre-re/item_db.conf (Phase 2)
+    item_db.json          ← 708 real weapons, scraped from Hercules/db/pre-re/item_db.conf ✓
     mob_db.json           ← scraped from Hercules/db/pre-re/mob_db.conf  (Phase 3)
   test_presets/           ← development scaffolds only (see Verification section)
 ```
@@ -375,6 +375,33 @@ Hercules behaviour. Verify the intended use before fixing.
 #### C3. StatusCalculator — ASPD, HP, SP are placeholders
 Requires `job_aspd_base.json` integration and full job HP/SP multiplier tables.
 Implement after Groups A and B are resolved.
+
+#### C4. BaseDamage — refineable flag not wired up
+`core/models/weapon.py` has `refineable: bool = True` populated from item_db.
+`base_damage.py` does not yet check this flag before applying the overrefine bonus.
+Fix: skip overrefine bonus calculation when `weapon.refineable is False`.
+Small change, low risk. Implement before Phase 3.
+
+#### C5. Derived flags — is_ranged and is_katar (NOW UNBLOCKED — implement before Phase 3)
+item_db.json now contains real `weapon_type` strings for all 708 weapons.
+`is_ranged` and `is_katar` are currently manual flags on `PlayerBuild` — this is
+wrong. Both should be derived automatically from the equipped weapon's type.
+
+Ranged weapon types (from Hercules `battle_calc_base_damage2` flag logic):
+W_BOW, W_MUSICAL, W_WHIP, W_REVOLVER, W_RIFLE, W_GATLING, W_SHOTGUN, W_GRENADE
+
+Katar weapon type: W_KATAR
+
+**Implementation plan:**
+1. Verify the ranged type list against Hercules source before coding:
+   `grep -n "W_BOW\|W_MUSICAL\|W_WHIP\|W_REVOLVER\|W_RIFLE\|W_GATLING\|W_SHOTGUN\|W_GRENADE" Hercules/src/map/battle.c | head -20`
+2. Add a helper in `BuildManager` or `StatusCalculator` that derives both flags
+   from `weapon.weapon_type` at resolve time
+3. Remove `is_ranged` and `is_katar` from the `PlayerBuild` dataclass and build
+   file schema — they must no longer be set manually
+4. Update the two test preset build JSONs to remove those fields
+5. Update any pipeline code that reads `build.is_ranged` or `build.is_katar`
+   to read from the derived value instead
 
 ---
 

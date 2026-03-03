@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c \":*)",
-      "Bash(grep -v \"GET_NORMAL\\\\|calc_base_damage\\\\|^[0-9]*:.*//.*SC_MAXIMIZEPOWER\")"
+      "Bash(grep -v \"GET_NORMAL\\\\|calc_base_damage\\\\|^[0-9]*:.*//.*SC_MAXIMIZEPOWER\")",
+      "Bash(python -c \":*)",
+      "Bash(python tools/import_item_db.py --dry-run)",
+      "Bash(python tools/import_item_db.py)"
     ],
     "additionalDirectories": [
       "c:\\Projects\\PS_Calc\\core\\data\\pre-re"
