@@ -1,1 +1,4 @@
 Hercules/
+__pycache__/
+*.pyc
+*.pyo
