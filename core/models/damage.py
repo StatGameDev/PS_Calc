@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -95,3 +95,21 @@ class DamageResult:
             formula=formula,
             hercules_ref=hercules_ref,
         ))
+
+
+@dataclass
+class BattleResult:
+    """Full output of BattlePipeline.calculate() — carries both normal and crit branches.
+
+    normal:      Always present. Full DamageResult for the non-crit hit path.
+    crit:        None when the skill/attack is ineligible for crits (e.g. SM_BASH).
+                 Otherwise a full DamageResult for the crit hit path.
+    crit_chance: Probability (percent, 0-100) that a single hit is a crit.
+                 0.0 when crit is None.
+    hit_chance:  Placeholder — E1 (hit/miss system) not yet implemented.
+                 Always 100.0 until E1 is done.
+    """
+    normal: "DamageResult" = field(default_factory=lambda: DamageResult())
+    crit: Optional["DamageResult"] = None
+    crit_chance: float = 0.0
+    hit_chance: float = 100.0

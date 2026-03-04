@@ -15,8 +15,30 @@ class DefenseFix:
     Source: battle.c battle_calc_defense, pre-renewal path (~line 1397)."""
 
     @staticmethod
-    def calculate(target: Target, build: PlayerBuild, dmg: DamageRange, config: BattleConfig, result: DamageResult) -> DamageRange:
-        """VIT penalty applied to def1/def2 before reduction (exact source position)."""
+    def calculate(target: Target, build: PlayerBuild, dmg: DamageRange, config: BattleConfig, result: DamageResult,
+                  is_crit: bool = False) -> DamageRange:
+        """VIT penalty applied to def1/def2 before reduction (exact source position).
+
+        On crit, flag.idef = flag.idef2 = 1 (battle.c:4988-4989, #ifndef RENEWAL),
+        which makes the defense condition (!flag.idef || !flag.idef2) = false,
+        so calc_defense is entirely skipped. DEF values remain available to read
+        but neither percentage nor VIT reduction is applied.
+        """
+        if is_crit:
+            result.add_step(
+                name="Defense Fix",
+                value=dmg.avg,
+                min_value=dmg.min,
+                max_value=dmg.max,
+                multiplier=1.0,
+                note=f"BYPASSED — crit sets flag.idef=flag.idef2=1 (DEF {target.def_}, VIT {target.vit} readable but not applied)",
+                formula="no change (defense skipped on crit)",
+                hercules_ref="battle.c:4988-4989 (#ifndef RENEWAL):\n"
+                             "flag.idef = flag.idef2 = flag.hit = 1;\n"
+                             "Then: if((!flag.idef || !flag.idef2)) → false → calc_defense not called.",
+            )
+            return dmg
+
         def1 = max(0, min(100, target.def_))
         if getattr(build, 'ignore_hard_def', False):
             def1 = 0

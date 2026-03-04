@@ -6,7 +6,8 @@ class BattleConfig:
     weapon_damage_rate: int = 100
     short_attack_damage_rate: int = 100
     long_attack_damage_rate: int = 100
-    critical_rate: int = 100
+    critical_rate: int = 100     # global crit rate multiplier (status.c:3919, default 100 = no change)
+    critical_min: int = 10       # minimum crit chance in 0.1% units (calc_critical ~line 4743, default 10 = 1.0%)
     enable_critical: bool = True
     max_aspd: int = 190
     enable_perfect_flee: bool = True

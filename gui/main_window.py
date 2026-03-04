@@ -9,7 +9,7 @@ from core.models.status import StatusData
 from core.models.weapon import Weapon
 from core.models.skill import SkillInstance
 from core.models.target import Target
-from core.models.damage import DamageResult
+from core.models.damage import BattleResult
 from core.calculators.status_calculator import StatusCalculator
 from core.calculators.battle_pipeline import BattlePipeline
 from core.data_loader import loader
@@ -139,7 +139,7 @@ class MainWindow(ctk.CTk):
 
         skill = _DEFAULT_SKILL
         status = StatusCalculator(self.battle_config).calculate(build, weapon)
-        result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
+        battle = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
         skill_data = loader.get_skill(skill.id) or {"name": f"Skill {skill.id}", "note": ""}
 
         mob_info = ""
@@ -149,17 +149,19 @@ class MainWindow(ctk.CTk):
                 mob_info = f"  |  Target: {mob_entry['name']} (ID {build.target_mob_id})"
 
         pure_batk = status.batk - build.bonus_batk
+        crit_info = (f"  |  Crit: {battle.crit_chance:.1f}%"
+                     if battle.crit is not None else "  |  Crit: ineligible")
         self.status_label.configure(
             text=(
                 f"Build: {build.name}{mob_info}\n"
                 f"BATK {status.batk}  (pure {pure_batk} + bonus {build.bonus_batk})  |  "
                 f"Hard DEF {status.def_}  |  Soft DEF {status.def2}  |  "
-                f"CRI {status.cri / 10:.1f}%  |  HIT {status.hit}  |  FLEE {status.flee}"
+                f"CRI {status.cri / 10:.1f}%{crit_info}  |  HIT {status.hit}  |  FLEE {status.flee}"
             )
         )
 
         self.clear_tree()
-        self._populate_tree(build, status, weapon, skill, skill_data, target, result)
+        self._populate_tree(build, status, weapon, skill, skill_data, target, battle)
 
     # ------------------------------------------------------------------
     # Theme
@@ -211,7 +213,7 @@ class MainWindow(ctk.CTk):
             self.tree.delete(item)
 
     def _populate_tree(self, build: PlayerBuild, status: StatusData, weapon: Weapon,
-                       skill: SkillInstance, skill_data: dict, target: Target, result: DamageResult):
+                       skill: SkillInstance, skill_data: dict, target: Target, battle: BattleResult):
         """Exact 5-section hierarchy mirroring future battle_calc_weapon_attack order."""
 
         # 1. RAW INPUTS
@@ -238,31 +240,46 @@ class MainWindow(ctk.CTk):
         self.tree.insert(status_id, tk.END, text="Soft DEF (vit_def)", values=(status.def2, "", "VIT + bonus_def2"))
 
         # 3. SKILL
-        skill_id = self.tree.insert("", tk.END, text="=== SKILL FROM skills.json ===", open=True)
-        self.tree.insert(skill_id, tk.END, text=f"{skill_data.get('name', 'Unknown')} (ID {skill.id}) Lv {skill.level}",
+        skill_id_tree = self.tree.insert("", tk.END, text="=== SKILL FROM skills.json ===", open=True)
+        self.tree.insert(skill_id_tree, tk.END, text=f"{skill_data.get('name', 'Unknown')} (ID {skill.id}) Lv {skill.level}",
                          values=("", "", skill_data.get("note", "")))
 
-        # 4. PIPELINE
-        pipeline_id = self.tree.insert("", tk.END, text="=== BATTLE PIPELINE STEPS (battle_calc_weapon_attack) ===", open=True)
+        # 4. NORMAL BRANCH PIPELINE
+        normal = battle.normal
+        pipeline_id = self.tree.insert("", tk.END,
+                                       text="=== NORMAL BRANCH — battle_calc_weapon_attack ===",
+                                       open=True)
+        self._insert_branch_steps(pipeline_id, normal)
+
+        # 5. CRIT BRANCH PIPELINE (only when eligible)
+        if battle.crit is not None:
+            crit_header = f"=== CRIT BRANCH — {battle.crit_chance:.1f}% crit chance ==="
+            crit_id = self.tree.insert("", tk.END, text=crit_header, open=True)
+            self._insert_branch_steps(crit_id, battle.crit)
+
+        # 6. FINAL RESULT
+        final_id = self.tree.insert("", tk.END, text="=== FINAL RESULT ===", open=True)
+        self.tree.insert(final_id, tk.END, text="Normal — Min / Avg / Max",
+                         values=(f"{normal.min_damage} / {normal.avg_damage} / {normal.max_damage}", "", ""))
+        if battle.crit is not None:
+            crit = battle.crit
+            self.tree.insert(final_id, tk.END, text=f"Crit ({battle.crit_chance:.1f}%) — Min / Avg / Max",
+                             values=(f"{crit.min_damage} / {crit.avg_damage} / {crit.max_damage}", "", ""))
+        else:
+            self.tree.insert(final_id, tk.END, text="Crit", values=("ineligible for this skill", "", ""))
+
+    def _insert_branch_steps(self, parent_id, result):
         for step in result.steps:
             mult_str = f"×{step.multiplier:.2f}" if step.multiplier != 1.0 else ""
             has_variance = step.min_value != step.max_value
             val_str = f"{step.min_value} / {step.value} / {step.max_value}" if has_variance else str(step.value)
-            self.tree.insert(pipeline_id, tk.END, text=step.name, values=(
+            self.tree.insert(parent_id, tk.END, text=step.name, values=(
                 val_str,
                 mult_str,
                 step.note,
                 step.formula,
                 step.hercules_ref
             ))
-
-        # 5. FINAL
-        final_id = self.tree.insert("", tk.END, text="=== FINAL RESULT ===", open=True)
-        self.tree.insert(final_id, tk.END, text="Min / Avg / Max Damage",
-                         values=(f"{result.min_damage} / {result.avg_damage} / {result.max_damage}", "", ""))
-
-        self.tree.item(pipeline_id, open=True)
-        self.tree.item(final_id, open=True)
 
 
 if __name__ == "__main__":

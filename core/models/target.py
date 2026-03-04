@@ -11,5 +11,6 @@ class Target:
     element_level: int = 1   # 1-4 for attr_fix table
     is_boss: bool = False
     level: int = 1
+    luk: int = 0              # tstatus->luk — used in crit roll: cri -= luk*2 (battle.c:4957)
     is_pc: bool = False
-    targeted_count: int = 1   # NEW: unit_counttargeted(bl) value for VIT penalty (pre-renewal exact)
+    targeted_count: int = 1   # unit_counttargeted(bl) value for VIT penalty (pre-renewal exact)

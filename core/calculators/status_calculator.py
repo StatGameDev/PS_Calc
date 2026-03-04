@@ -37,9 +37,12 @@ class StatusCalculator:
         status.def2 = status.vit + build.bonus_def2      # Soft DEF (vit_def) = VIT + bonuses
 
         # === CRITICAL ===
-        status.cri = 10 + (status.luk * 10 // 3) + (build.bonus_cri * 10)  # base 1.0% + 0.333% per LUK
-        if weapon.weapon_type == "Katar":
-            status.cri *= 2                              # katar double-crit (W_KATAR, status.c)
+        # status.c:3876 — cri in 0.1% units: base 1.0% (=10) + 0.333% per LUK
+        # Katar doubling (cri <<= 1) belongs in the crit roll (crit_chance.py),
+        # NOT here, under the default Hercules config (show_katar_crit_bonus = 0).
+        # When show_katar_crit_bonus = 1, status.c doubles cri here instead, but
+        # that is the non-default path. We implement the default only.
+        status.cri = 10 + (status.luk * 10 // 3) + (build.bonus_cri * 10)
 
         # === HIT / FLEE ===
         status.hit = build.base_level + status.dex + build.bonus_hit

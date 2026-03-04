@@ -29,13 +29,23 @@ class BaseDamage:
                   build: PlayerBuild,
                   target: Target,
                   skill: SkillInstance,
-                  result: DamageResult) -> DamageRange:
+                  result: DamageResult,
+                  is_crit: bool = False) -> DamageRange:
         """Computes the initial DamageRange, applies SizeFix internally before batk,
-        and logs Weapon ATK Range, Size Fix, and Base Damage steps."""
+        and logs Weapon ATK Range, Size Fix, and Base Damage steps.
+
+        is_crit=True forces damage = atkmax (battle.c:648-651, flag&1 path):
+            if (!(flag&1))
+                damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;
+            else
+                damage = atkmax;
+        Overrefine still randomizes on crit (no flag&1 guard on that block).
+        """
         wlv = weapon.level                              # wa->wlv from inventory_data->wlv
         atkmax = weapon.atk                             # wa->atk
 
         # PC normal-attack atkmin: st->dex scaled by weapon level
+        # battle.c:635: atkmin = atkmin*(80 + wlv*20)/100  (verified A7 — correct)
         atkmin = status.dex * (80 + wlv * 20) // 100
         if atkmin > atkmax:
             atkmin = atkmax                             # cap — mirrors Hercules guard
@@ -47,9 +57,11 @@ class BaseDamage:
             atkmin = atkmax
 
         # Main weapon ATK range
-        # battle.c: damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;
-        # rnd()%(n) gives [0, n-1], so total roll is [atkmin, atkmax-1] when atkmax > atkmin
-        if atkmax > atkmin:
+        # Normal: rnd()%(atkmax-atkmin) + atkmin → [atkmin, atkmax-1]
+        # Crit (flag&1): damage = atkmax  (no roll, always max)
+        if is_crit:
+            w_min = w_max = w_avg = atkmax
+        elif atkmax > atkmin:
             w_min = atkmin
             w_max = atkmax - 1          # ← atkmax-1, NOT atkmax
             w_avg = atkmin + (atkmax - atkmin - 1) // 2
@@ -57,16 +69,20 @@ class BaseDamage:
             w_min = w_max = w_avg = atkmin
 
         # Step: Weapon ATK Range — value immediately before SizeFix is applied
+        crit_note = "  (CRIT: forced to atkmax — no roll)" if is_crit else ""
+        maximize_note = "  (SC_MAXIMIZEPOWER: collapsed to atkmax)" if maximize_active else ""
         result.add_step(
             name="Weapon ATK Range",
             value=w_avg,
             min_value=w_min,
             max_value=w_max,
-            note=(f"atkmin={atkmin}  atkmax={atkmax}"
-                  + ("  (SC_MAXIMIZEPOWER: collapsed to atkmax)" if maximize_active else "")),
-            formula=f"atkmin = dex*{80+wlv*20}//100 = {atkmin};  range = [atkmin, atkmax-1]",
-            hercules_ref="battle.c battle_calc_base_damage2 ~line 652:\n"
-                         "damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;"
+            note=f"atkmin={atkmin}  atkmax={atkmax}{crit_note}{maximize_note}",
+            formula=(f"CRIT: damage = atkmax = {atkmax}" if is_crit
+                     else f"atkmin = dex*{80+wlv*20}//100 = {atkmin};  range = [atkmin, atkmax-1]"),
+            hercules_ref=("battle.c battle_calc_base_damage2 ~line 648: if(flag&1) damage = atkmax;"
+                          if is_crit else
+                          "battle.c battle_calc_base_damage2 ~line 652:\n"
+                          "damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;")
         )
 
         dmg = DamageRange(w_min, w_max, w_avg)
@@ -97,12 +113,11 @@ class BaseDamage:
         # batk is deterministic — added AFTER sizefix in Hercules
         dmg = dmg.add(status.batk)
 
-        # Deterministic refine bonus (atk2) — added after batk
-        refine_bonus = loader.get_refine_bonus(weapon.level, weapon.refine)
-        dmg = dmg.add(refine_bonus)
-
         # Overrefine bonus: rnd()%overrefine+1 → range [1, overrefine]
-        # Added LAST in battle_calc_base_damage2 — after sizefix, batk, and atk2.
+        # Added LAST in battle_calc_base_damage2 — after sizefix and batk.
+        # NOTE: atk2 (deterministic refine bonus) is NOT part of battle_calc_base_damage2.
+        # It is added in battle_calc_weapon_attack AFTER defense (lines 5803-5805).
+        # It is handled by RefineFix in the pipeline.
         # battle.c: if (sd->right_weapon.overrefine) damage += rnd()%sd->right_weapon.overrefine+1;
         # status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;
         # Suppressed when weapon.refineable is False (item_db: Refine: false).
@@ -121,10 +136,10 @@ class BaseDamage:
             max_value=dmg.max,
             multiplier=1.0,
             note=(f"Weapon ATK [{w_min},{w_max}] ×{size_mult}%"
-                  f" + BATK {status.batk} + Refine {refine_bonus}"
+                  f" + BATK {status.batk}"
                   + (f" + Overrefine [1,{overrefine}]" if overrefine > 0 else "")),
             formula=(f"atkmin={atkmin} atkmax={atkmax} → [{w_min},{w_max}]*{size_mult}% "
-                     f"+ batk {status.batk} + refine {refine_bonus}"
+                     f"+ batk {status.batk}"
                      + (f" + rnd()%{overrefine}+1" if overrefine > 0 else "")),
             hercules_ref="battle.c: battle_calc_base_damage2 ~line 607\n"
                          "battle.c: damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;\n"
