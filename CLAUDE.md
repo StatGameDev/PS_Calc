@@ -88,11 +88,11 @@ PS_Calc/
 ├── main.py                          ← entry point, launches MainWindow
 ├── requirements.txt                 ← customtkinter>=5.2.0, pyinstaller
 ├── saves/                           ← user-saved builds (one JSON per build)
-│   ├── knight_bash.json             ← scaffold: LK Bash vs Porcellio (mob 1619) ✓
-│   └── spear_peco.json              ← scaffold: LK Spear/Peco vs Sandman (mob 1165) ✓
+│   ├── knight_bash.json             ← scaffold: LK Bash vs Porcellio (mob 1619)
+│   └── spear_peco.json              ← scaffold: LK Spear/Peco vs Sandman (mob 1165)
 ├── tools/
-│   ├── import_item_db.py            ← scraper: item_db.conf → item_db.json ✓
-│   └── import_mob_db.py             ← scraper: mob_db.conf → mob_db.json ✓
+│   ├── import_item_db.py            ← scraper: item_db.conf → item_db.json
+│   └── import_mob_db.py             ← scraper: mob_db.conf → mob_db.json
 ├── Hercules/                        ← emulator source (reference only, never modify)
 │   └── src/map/
 │       ├── battle.c
@@ -102,7 +102,7 @@ PS_Calc/
 ├── core/
 │   ├── config.py                    ← BattleConfig (all battle.conf tunables)
 │   ├── data_loader.py               ← DataLoader singleton (all data access)
-│   ├── build_manager.py             ← BuildManager: save/load/resolve builds ✓
+│   ├── build_manager.py             ← BuildManager: save/load/resolve builds
 │   ├── models/
 │   │   ├── build.py                 ← PlayerBuild dataclass
 │   │   ├── status.py                ← StatusData dataclass
@@ -125,8 +125,8 @@ PS_Calc/
 │   └── data/pre-re/
 │       ├── skills.json
 │       ├── db/
-│       │   ├── item_db.json         ← 708 weapons scraped from item_db.conf ✓
-│       │   └── mob_db.json          ← 1007 mobs scraped from mob_db.conf ✓
+│       │   ├── item_db.json         ← weapons scraped from item_db.conf
+│       │   └── mob_db.json          ← mobs scraped from mob_db.conf
 │       ├── tables/
 │       │   ├── attr_fix.json
 │       │   ├── size_fix.json
@@ -151,8 +151,10 @@ PS_Calc/
 - `name: str` — display name for the build
 - `equipped: Dict[str, Optional[int]]` — slot → item ID, e.g. `{"right_hand": 1225}`
 - `refine_levels: Dict[str, int]` — slot → refine level, e.g. `{"right_hand": 7}`
-- `weapon_elements: Dict[str, int]` — slot → element int (0-9). Overrides item_db
-  element per slot. Used for elemental imbues until a proper SC/item system is built.
+- `weapon_element: Optional[int] = None` — element int (0-9) overriding item_db for
+  the right_hand weapon. No level — attack elements never have a level. Used for
+  elemental imbues (scrolls, SCs) until a proper SC/item system is built.
+  None = use item_db element.
 - `target_mob_id: Optional[int]` — when set, pipeline caller resolves target via
   `loader.get_monster(build.target_mob_id)`. None = caller supplies Target manually.
 - `active_status_levels: Dict[str, int]` — SC_* conditions e.g. `{"SC_AURABLADE": 1}`
@@ -168,10 +170,14 @@ PS_Calc/
   W_GATLING, W_SHOTGUN, W_GRENADE. Used by `effective_is_ranged()`.
 - `aegis_name: str` — display name from item_db, no calculation effect
 - `refineable: bool` — if False, overrefine bonus is suppressed in base_damage.py
+- `element: int` — attack element (0-9). No level. Populated from item_db;
+  overridden by `build.weapon_element` when set.
 
 ### Target (`core/models/target.py`)
 Pipeline fields: `def_`, `vit`, `size`, `race`, `element`, `element_level`, `is_boss`, `level`
 Display fields: `hp`, `mdef`, `atk_min`, `atk_max`, `sprite_name`, `name`
+Element level belongs on the Target only — attack sources (weapons, skills) never have
+an element level.
 
 ### StatusData (`core/models/status.py`)
 - Use `int_` everywhere — never `int` (shadows Python built-in)
@@ -199,9 +205,10 @@ Handles all user-owned save files. DataLoader handles static databases.
 - `save_build(build: PlayerBuild, path: str) -> None`
 - `load_build(path: str) -> PlayerBuild` — applies Unarmed fallback on missing IDs
 - `list_builds(directory: str) -> List[str]`
-- `resolve_weapon(item_id: Optional[int]) -> Weapon` — looks up item_db; on missing
-  ID logs `WARNING: Item ID {id} not found in item_db. Using Unarmed defaults.`
-  and returns Unarmed (ATK 0, wlv 1, neutral element, all size modifiers 100%).
+- `resolve_weapon(item_id: Optional[int], refine: int = 0, element_override: Optional[int] = None) -> Weapon`
+  Looks up item_db; applies refine and element override; on missing ID logs
+  `WARNING: Item ID {id} not found in item_db. Using Unarmed defaults.` and returns
+  Unarmed (ATK 0, wlv 1, neutral element, all size modifiers 100%).
   Unarmed is distinct from the in-game W_FIST weapon type.
 
 ---
@@ -214,13 +221,21 @@ up from the item database at runtime by ID. Never duplicate item stats inline in
 a build file.
 
 **Build file owns:** base stats, job, level, refine levels, equipped item IDs,
-active buff levels, mastery levels, flags (is_riding_peco, no_sizefix).
+active buff levels, mastery levels, flags (is_riding_peco, no_sizefix),
+weapon_element override, target_mob_id.
 
-**Item database owns:** weapon ATK, weapon type, weapon level, element, weight,
+**Item database owns:** weapon ATK, weapon type, weapon level, base element, weight,
 refineable flag — anything intrinsic to the item itself.
 
 **Mob database owns:** all Target pipeline fields — def_, vit, size, race, element,
-element_level, is_boss, level. Never hardcode these in test presets or GUI code.
+element_level, is_boss, level. Never hardcode these in save files or GUI code.
+
+### Parser Completeness Rule
+Both `tools/import_item_db.py` and `tools/import_mob_db.py` must scrape **all**
+fields present in the source .conf file — not just the ones the pipeline currently
+uses. The JSON files are the authoritative local copy of the database. If a future
+feature needs a field that exists in the conf, it must already be in the JSON.
+Do not filter fields at scrape time. Add a `_scraped_at` timestamp to each output.
 
 ### Build File Schema
 ```json
@@ -243,9 +258,7 @@ element_level, is_boss, level. Never hardcode these in test presets or GUI code.
   "refine": {
     "right_hand": 0
   },
-  "weapon_elements": {
-    "right_hand": 3
-  },
+  "weapon_element": 3,
   "active_buffs": { "SC_OVERTHRUST": 5 },
   "mastery_levels": { "SM_SWORD": 10 },
   "flags": {
@@ -259,8 +272,8 @@ Notes:
 - `is_katar` not in schema — derived from weapon_type == W_KATAR.
 - `is_ranged_override` null in normal use — derived from weapon type automatically.
 - `target_mob_id` null/absent = caller supplies Target manually (future GUI inputs).
-- `weapon_elements` absent = use item_db element. Present = override per slot.
-  Used for elemental imbues (scrolls, SCs) until a proper system is implemented.
+- `weapon_element` absent/null = use item_db element. Integer = override.
+  Single value applies to right_hand. Attack elements never have a level.
 
 ---
 
@@ -271,7 +284,7 @@ Notes:
 - **Group A fixes** — int_ rename (A1), SizeFix double-apply removed (A4),
   pipeline step order corrected (A5). A2/A3 verified correct as-is.
 - **Phase 1 — Save/load** — BuildManager, build file schema, test presets migrated
-- **Phase 2 — item_db** — 708 weapons scraped from item_db.conf via custom parser
+- **Phase 2 — item_db** — weapons scraped from item_db.conf via custom parser
 - **C4** — refineable flag wired up in base_damage.py
 - **C5** — is_ranged and is_katar derived from weapon type; manual flags removed
 - **Group B fixes** — active_status_bonus.json stripped to SC_AURABLADE only;
@@ -280,14 +293,21 @@ Notes:
   Weapon ATK Range step added to DamageResult
 - **GUI weapon display** — RAW INPUTS row shows aegis_name, ID, ATK, level,
   weapon type, refine, and refineable flag
-- **Phase 3 — mob_db** — 1007 mobs scraped from mob_db.conf; get_monster() and
+- **Phase 3 — mob_db** — mobs scraped from mob_db.conf; get_monster() and
   get_monster_data() added to DataLoader
 - **Preset migration** — test_presets/ deleted; both scaffolds moved to saves/ with
-  real item IDs, target_mob_id, and weapon_elements override. GUI updated to a
-  build dropdown (CTkOptionMenu) that lists all files in saves/.
+  real item IDs, target_mob_id, and weapon_element override. GUI updated to build
+  dropdown (CTkOptionMenu) listing all files in saves/.
+- **D1** — both scrapers expanded to all fields; `_scraped_at` added; item_db adds
+  buy, sell, range, equip_level, loc, upper, job, gender, script; mob_db adds
+  stats nested dict, mode sparse dict, drops/mvp_drops arrays, jname, sp, exp,
+  jexp, attack_range, view/chase_range, timing, mvp_exp, damage_taken_rate.
+- **D2** — `weapon_elements: Dict[str, int]` renamed to `weapon_element: Optional[int]`;
+  `resolve_weapon` signature updated to `(item_id, refine, element_override)`.
 
 ### Next: GUI redesign
 
+**GUI redesign**
 The current `main_window.py` is a test scaffold and must be fully replaced.
 Before writing any GUI code, Claude Code must propose a layout and get approval.
 See the GUI Vision section for requirements and design philosophy.
@@ -297,7 +317,6 @@ See the GUI Vision section for requirements and design philosophy.
 ## Known Bugs and Open Items
 
 ### GROUP A — Formula Correctness (ALL DONE)
-
 #### A1. DONE — status.int_ rename
 #### A2. VERIFIED CORRECT — HIT formula (LUK contribution is renewal-only)
 #### A3. VERIFIED CORRECT — FLEE formula (LUK contribution is renewal-only)
@@ -310,21 +329,16 @@ BaseDamage → SkillRatio → DefenseFix → ActiveStatusBonus → MasteryFix �
 ---
 
 ### GROUP B — Data Correctness (ALL DONE)
-
 #### B1. DONE — SC_MAXIMIZEPOWER removed; variance collapse handled in BaseDamage
-#### B2. DONE — SC_SPURT removed (confirmed hallucinated — zero results in src/ and db/)
+#### B2. DONE — SC_SPURT removed (confirmed hallucinated)
 #### B3. DONE — SC_GS_MADNESSCANCEL removed (RENEWAL-only)
 #### B4. DONE — SC_IMPOSITIO removed (RENEWAL-only)
 #### B5. DONE — SC_OVERTHRUST/SC_OVERTHRUSTMAX moved to skill_ratio.py
-
-#### B6. DONE — Test presets migrated
-Both scaffolds moved to saves/ with real mob IDs. test_presets/ deleted.
-Target stats now resolved from mob_db at runtime via loader.get_monster(target_mob_id).
+#### B6. DONE — Test presets migrated to saves/ with real mob IDs
 
 ---
 
 ### GROUP C — Known Gaps
-
 #### C1. Damage Variance — implement carefully
 Three confirmed variance sources:
 - **Weapon ATK range** — `rnd() % (atkmax - atkmin) + atkmin` in
@@ -346,6 +360,24 @@ Requires `job_aspd_base.json` integration and full job HP/SP multiplier tables.
 
 #### C4. DONE — BaseDamage refineable flag wired up
 #### C5. DONE — Derived flags is_ranged and is_katar
+
+---
+
+### GROUP D — Data Infrastructure
+
+#### D1. DONE — Parser completeness
+Both scrapers expanded to capture every field from their respective conf files.
+item_db: added buy, sell, range, equip_level, loc, upper, job (list), gender, script (raw).
+mob_db: added stats nested dict (str/agi/vit/int/dex/luk), mode sparse dict (all 16 flags),
+drops/mvp_drops as [{item,chance}] arrays (handles duplicate keys), jname, sp, exp, jexp,
+attack_range, view_range, chase_range, move_speed, attack_delay, attack_motion,
+damage_motion, mvp_exp, damage_taken_rate. `_scraped_at` ISO timestamp added to both.
+DataLoader.get_monster() updated: reads vit from `entry["stats"]["vit"]`.
+
+#### D2. DONE — weapon_elements → weapon_element
+Renamed `PlayerBuild.weapon_elements: Dict[str, int]` to `weapon_element: Optional[int]`.
+`resolve_weapon(item_id, refine, element_override)` — no longer takes build/slot.
+Updated: build.py, build_manager.py, main_window.py, both save files.
 
 ---
 

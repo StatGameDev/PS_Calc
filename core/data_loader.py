@@ -73,7 +73,7 @@ class DataLoader:
             return Target()  # all-default: DEF 0, VIT 0, Medium, Formless, Neutral/1, not boss, level 1
         return Target(
             def_=entry["def_"],
-            vit=entry["vit"],
+            vit=entry.get("stats", {}).get("vit", entry.get("vit", 0)),
             size=entry["size"],
             race=entry["race"],
             element=entry["element"],

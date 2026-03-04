@@ -1,5 +1,5 @@
 {
-  "_scaffold": "INCOMPLETE — base_agi/dex/int/luk are placeholder 1s. weapon_elements overrides Lance's Neutral to Fire for attr_fix testing. Target is Sandman (1165): Earth/3, Medium, Formless. Do not treat results as verified. See CLAUDE.md §Verification.",
+  "_scaffold": "INCOMPLETE — base_agi/dex/int/luk are placeholder 1s. weapon_element overrides Lance's Neutral to Fire for attr_fix testing. Target is Sandman (1165): Earth/3, Medium, Formless. Do not treat results as verified. See CLAUDE.md §Verification.",
   "name": "Spear Peco (Scaffold)",
   "job_id": 7,
   "base_level": 99,
@@ -35,9 +35,7 @@
   "refine": {
     "right_hand": 7
   },
-  "weapon_elements": {
-    "right_hand": 3
-  },
+  "weapon_element": 3,
   "active_buffs": {
     "SC_AURABLADE": 5
   },

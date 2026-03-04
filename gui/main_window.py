@@ -128,7 +128,9 @@ class MainWindow(ctk.CTk):
             self.status_label.configure(text=f"Failed to load build: {exc}")
             return
 
-        weapon = BuildManager.resolve_weapon(build)
+        item_id = build.equipped.get("right_hand")
+        refine  = build.refine_levels.get("right_hand", 0)
+        weapon  = BuildManager.resolve_weapon(item_id, refine, build.weapon_element)
 
         if build.target_mob_id is not None:
             target = loader.get_monster(build.target_mob_id)

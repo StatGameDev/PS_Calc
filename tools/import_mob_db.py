@@ -14,6 +14,7 @@ Run from the PS_Calc/ project root. No external dependencies — stdlib only.
 import json
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -106,6 +107,29 @@ def extract_entries(text: str) -> list[str]:
     return entries
 
 
+def _parse_drops_block(entry: str, block_name: str) -> list[dict]:
+    """
+    Parse a MvpDrops: { ... } or Drops: { ... } block into a list of
+    {"item": str, "chance": int} dicts.
+
+    Line-by-line parsing is required to handle duplicate AegisName keys
+    (e.g. Poring has two 'Apple' entries). The (chance, "OptionDropGroup")
+    tuple form is absent in pre-re mob_db and is not parsed.
+    """
+    block_match = re.search(block_name + r':\s*\{([^}]*)\}', entry, re.DOTALL)
+    if not block_match:
+        return []
+    result: list[dict] = []
+    for line in block_match.group(1).splitlines():
+        line = line.strip()
+        if not line or line.startswith("//"):
+            continue
+        m = re.match(r'(\w+):\s*(\d+)', line)
+        if m:
+            result.append({"item": m.group(1), "chance": int(m.group(2))})
+    return result
+
+
 def parse_entry(entry: str) -> dict | None:
     """
     Parse a single mob entry block. Returns a populated dict or None on parse failure.
@@ -175,12 +199,75 @@ def parse_entry(entry: str) -> dict | None:
         element = 0        # Neutral
         element_level = 1
 
-    # --- Mode.Boss (default false) ---
-    # Use re.DOTALL to span the Mode: { ... } block
-    boss_match = re.search(r"Mode:\s*\{[^}]*?Boss:\s*true", entry, re.DOTALL)
-    is_boss = boss_match is not None
+    # --- Mode block: sparse dict (only true flags stored) + top-level is_boss ---
+    _MODE_FLAGS = [
+        "CanMove", "Looter", "Aggressive", "Assist", "CastSensorIdle", "Boss",
+        "Plant", "CanAttack", "Detector", "CastSensorChase", "ChangeChase",
+        "Angry", "ChangeTargetMelee", "ChangeTargetChase", "TargetWeak", "NoKnockback",
+    ]
+    mode: dict[str, bool] = {}
+    mode_block_match = re.search(r"Mode:\s*\{([^}]*)\}", entry, re.DOTALL)
+    if mode_block_match:
+        block_text = mode_block_match.group(1)
+        for flag in _MODE_FLAGS:
+            if re.search(r'\b' + flag + r':\s*true', block_text):
+                mode[flag] = True
+    is_boss = mode.get("Boss", False)
+
+    # --- JName (alternate display name, default "") ---
+    jname_match = re.search(r'JName:\s*"([^"]+)"', entry)
+    jname = jname_match.group(1) if jname_match else ""
+
+    # --- Sp, Exp, JExp (default 0) ---
+    sp_match   = re.search(r"\bSp:\s*(\d+)", entry)
+    exp_match  = re.search(r"\bExp:\s*(\d+)", entry)
+    jexp_match = re.search(r"\bJExp:\s*(\d+)", entry)
+    sp   = int(sp_match.group(1))   if sp_match   else 0
+    exp  = int(exp_match.group(1))  if exp_match  else 0
+    jexp = int(jexp_match.group(1)) if jexp_match else 0
+
+    # --- Ranges ---
+    arange_match = re.search(r"\bAttackRange:\s*(\d+)", entry)
+    vrange_match = re.search(r"\bViewRange:\s*(\d+)", entry)
+    crange_match = re.search(r"\bChaseRange:\s*(\d+)", entry)
+    attack_range = int(arange_match.group(1)) if arange_match else 1
+    view_range   = int(vrange_match.group(1)) if vrange_match else 1
+    chase_range  = int(crange_match.group(1)) if crange_match else 1
+
+    # --- Remaining stats from Stats block (Str, Agi, Int, Dex, Luk) ---
+    str_match = re.search(r"Stats:\s*\{[^}]*?Str:\s*(\d+)", entry, re.DOTALL)
+    agi_match = re.search(r"Stats:\s*\{[^}]*?Agi:\s*(\d+)", entry, re.DOTALL)
+    int_match = re.search(r"Stats:\s*\{[^}]*?Int:\s*(\d+)", entry, re.DOTALL)
+    dex_match = re.search(r"Stats:\s*\{[^}]*?Dex:\s*(\d+)", entry, re.DOTALL)
+    luk_match = re.search(r"Stats:\s*\{[^}]*?Luk:\s*(\d+)", entry, re.DOTALL)
+    str_ = int(str_match.group(1)) if str_match else 0
+    agi  = int(agi_match.group(1)) if agi_match else 0
+    int_ = int(int_match.group(1)) if int_match else 0
+    dex  = int(dex_match.group(1)) if dex_match else 0
+    luk  = int(luk_match.group(1)) if luk_match else 0
+
+    # --- Timing ---
+    ms_match  = re.search(r"\bMoveSpeed:\s*(\d+)", entry)
+    ad_match  = re.search(r"\bAttackDelay:\s*(\d+)", entry)
+    am_match  = re.search(r"\bAttackMotion:\s*(\d+)", entry)
+    dm_match  = re.search(r"\bDamageMotion:\s*(\d+)", entry)
+    move_speed    = int(ms_match.group(1))  if ms_match  else 0
+    attack_delay  = int(ad_match.group(1))  if ad_match  else 4000
+    attack_motion = int(am_match.group(1))  if am_match  else 2000
+    damage_motion = int(dm_match.group(1))  if dm_match  else 0
+
+    # --- MVP ---
+    mvp_exp_match = re.search(r"\bMvpExp:\s*(\d+)", entry)
+    mvp_exp   = int(mvp_exp_match.group(1)) if mvp_exp_match else 0
+    mvp_drops = _parse_drops_block(entry, "MvpDrops")
+    drops     = _parse_drops_block(entry, "Drops")
+
+    # --- DamageTakenRate (default 100; no actual pre-re entry uses this) ---
+    dtr_match = re.search(r"\bDamageTakenRate:\s*(\d+)", entry)
+    damage_taken_rate = int(dtr_match.group(1)) if dtr_match else 100
 
     return {
+        # Pipeline fields at top level (backward compatible)
         "id":            mob_id,
         "sprite_name":   sprite_name,
         "name":          name,
@@ -188,14 +275,39 @@ def parse_entry(entry: str) -> dict | None:
         "hp":            hp,
         "def_":          def_,
         "mdef":          mdef,
-        "vit":           vit,
         "atk_min":       atk_min,
         "atk_max":       atk_max,
         "size":          size,
         "race":          race,
         "element":       element,
         "element_level": element_level,
-        "is_boss":       is_boss,
+        "is_boss":       is_boss,       # kept at top level for DataLoader backward compat
+        # Stats nested dict (mirrors conf structure; vit moved here from top level)
+        "stats": {
+            "str": str_,
+            "agi": agi,
+            "vit": vit,
+            "int": int_,
+            "dex": dex,
+            "luk": luk,
+        },
+        # New display / browser fields
+        "jname":             jname,
+        "sp":                sp,
+        "exp":               exp,
+        "jexp":              jexp,
+        "attack_range":      attack_range,
+        "view_range":        view_range,
+        "chase_range":       chase_range,
+        "mode":              mode,
+        "move_speed":        move_speed,
+        "attack_delay":      attack_delay,
+        "attack_motion":     attack_motion,
+        "damage_motion":     damage_motion,
+        "mvp_exp":           mvp_exp,
+        "mvp_drops":         mvp_drops,
+        "drops":             drops,
+        "damage_taken_rate": damage_taken_rate,
     }
 
 
@@ -238,11 +350,14 @@ def main(dry_run: bool = False) -> None:
 
     output = {
         "_source": "Scraped from Hercules/db/pre-re/mob_db.conf",
+        "_scraped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "_note": (
-            "All fields needed for pipeline (def_, vit, size, race, element, element_level, "
-            "is_boss, level) plus display fields (hp, mdef, atk_min, atk_max, sprite_name, name). "
+            "Pipeline fields (def_, atk_min/max, size, race, element, element_level, is_boss, "
+            "level, hp, mdef) at top level for backward compat. Stats in nested 'stats' dict. "
+            "mode is a sparse dict (only true flags stored; absence implies false). "
+            "drops/mvp_drops stored as [{item, chance}] arrays to handle duplicate AegisName keys. "
             "element_level 0 clamped to 1 (invalid for attr_fix table). "
-            "Commented-out entries (/* ... */) are excluded."
+            "Commented-out entries (/* ... */) excluded. ViewData excluded."
         ),
         "mobs": mobs,
     }

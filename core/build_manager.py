@@ -7,11 +7,6 @@ from core.models.weapon import Weapon, RANGED_WEAPON_TYPES
 
 DEFAULT_SAVES_DIR = "saves"
 
-# Maps save-schema slot names to the Weapon.hand values used in battle.c
-_HAND_FROM_SLOT: Dict[str, str] = {
-    "right_hand": "right",
-    "left_hand": "left",
-}
 
 
 def effective_is_ranged(build: PlayerBuild, weapon: Weapon) -> bool:
@@ -76,7 +71,7 @@ class BuildManager:
             "target_mob_id": build.target_mob_id,
             "equipped": build.equipped,
             "refine": build.refine_levels,
-            "weapon_elements": build.weapon_elements,
+            "weapon_element": build.weapon_element,
             "active_buffs": build.active_status_levels,
             "mastery_levels": build.mastery_levels,
             "flags": {
@@ -147,7 +142,8 @@ class BuildManager:
             target_mob_id=data.get("target_mob_id"),
             equipped=equipped,
             refine_levels=data.get("refine", {}),
-            weapon_elements=data.get("weapon_elements", {}),
+            weapon_element=data.get("weapon_element", None),
+            # Old files used "weapon_elements": {"right_hand": N} — silently falls back to None.
             active_status_levels=data.get("active_buffs", {}),
             mastery_levels=data.get("mastery_levels", {}),
             is_ranged_override=flags.get("is_ranged_override", None),
@@ -161,45 +157,43 @@ class BuildManager:
         return [p.stem for p in Path(directory).glob("*.json")]
 
     @staticmethod
-    def resolve_weapon(build: PlayerBuild, slot: str = "right_hand") -> Weapon:
+    def resolve_weapon(
+        item_id: Optional[int],
+        refine: int = 0,
+        element_override: Optional[int] = None,
+    ) -> Weapon:
         """
-        Resolve a slot's item ID to a Weapon via item_db.
+        Resolve an item ID to a Weapon via item_db.
 
         Returns Unarmed defaults (ATK 0, level 1, neutral, no refine) if:
-        - the slot is absent from build.equipped
-        - the slot value is None (explicitly unequipped)
+        - item_id is None (slot unequipped)
         - the item ID is not found in item_db
 
-        The same C1 pattern applies to future slot types (armour, accessories,
-        ammo): add resolve_armour, resolve_accessory, etc. following this shape.
+        element_override replaces the item_db element when not None (used for
+        elemental imbues until a proper SC/item imbue system is implemented).
         """
         from core.data_loader import loader  # local import — avoids circular dependency
 
-        item_id = build.equipped.get(slot)
         if item_id is None:
             return Weapon()  # Unarmed: atk=0, level=1, element=0, weapon_type="Unarmed"
 
         item = loader.get_item(item_id)
         if item is None:
-            # Warning already fired at load_build time; log again here so
-            # callers constructing builds manually also get the message.
             print(
                 f'WARNING: Item ID {item_id} not found in item_db. '
-                f'Using Unarmed defaults. Build: "{build.name or "(unnamed)"}"'
+                f'Using Unarmed defaults.'
             )
             return Weapon()
 
-        # weapon_elements overrides item_db element (used for elemental imbues until
-        # a proper SC/item imbue system is implemented).
-        element = build.weapon_elements.get(slot, item.get("element", 0))
+        element = element_override if element_override is not None else item.get("element", 0)
 
         return Weapon(
             atk=item.get("atk", 0),
-            refine=build.refine_levels.get(slot, 0),
+            refine=refine,
             level=item.get("level", 1),
             element=element,
             weapon_type=item.get("weapon_type", "Unarmed"),
-            hand=_HAND_FROM_SLOT.get(slot, "right"),
+            hand="right",
             aegis_name=item.get("aegis_name", ""),
             refineable=item.get("refineable", True),
         )

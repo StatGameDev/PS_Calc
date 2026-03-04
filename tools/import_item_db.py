@@ -17,6 +17,7 @@ separate scraper pass for ammo when the ammo system is added.
 import json
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -186,21 +187,76 @@ def parse_entry(entry: str) -> dict | None:
 
     # Element — parsed from Script: bonus bAtkEle,Ele_<Name>
     # Absent bAtkEle = Neutral (0). One bAtkEle per IT_WEAPON entry (verified).
-    script = extract_script_content(entry)
-    ele_match = re.search(r"bonus\s+bAtkEle\s*,\s*Ele_(\w+)", script)
+    script_text = extract_script_content(entry)
+    ele_match = re.search(r"bonus\s+bAtkEle\s*,\s*Ele_(\w+)", script_text)
     element = ELEMENT_MAP.get(ele_match.group(1), 0) if ele_match else 0
 
+    # --- New fields ---
+
+    # Buy price (null for 47 weapons with no shop price)
+    buy_match = re.search(r"\bBuy:\s*(\d+)", entry)
+    buy = int(buy_match.group(1)) if buy_match else None
+
+    # Sell price: explicit field, or buy//2 if Buy is present, else null
+    sell_match = re.search(r"\bSell:\s*(\d+)", entry)
+    if sell_match:
+        sell = int(sell_match.group(1))
+    elif buy is not None:
+        sell = buy // 2
+    else:
+        sell = None
+
+    # Attack range in cells (always present in weapon entries; default 0 per schema)
+    range_match = re.search(r"\bRange:\s*(\d+)", entry)
+    range_ = int(range_match.group(1)) if range_match else 0
+
+    # Required equip level (EquipLv [min,max] array form confirmed absent in weapon entries)
+    equiplv_match = re.search(r"\bEquipLv:\s*(\d+)", entry)
+    equip_level = int(equiplv_match.group(1)) if equiplv_match else 0
+
+    # Equip location — "EQP_WEAPON" (1H) or "EQP_ARMS" (2H)
+    loc_match = re.search(r'Loc:\s*"([^"]+)"', entry)
+    loc = loc_match.group(1) if loc_match else ""
+
+    # Class tier restriction: null = ITEMUPPER_ALL; "ITEMUPPER_UPPER" = transcendent-only; etc.
+    upper_match = re.search(r'Upper:\s*"([^"]+)"', entry)
+    upper = upper_match.group(1) if upper_match else None
+
+    # Job class restrictions — dict form only (int mask form confirmed absent in weapon entries)
+    job_block_match = re.search(r'Job:\s*\{([^}]+)\}', entry, re.DOTALL)
+    job: list[str] = []
+    if job_block_match:
+        job = re.findall(r'(\w+):\s*true', job_block_match.group(1))
+
+    # Gender restriction: null = any; "SEX_MALE" / "SEX_FEMALE" if restricted
+    gender_match = re.search(r'Gender:\s*"([^"]+)"', entry)
+    gender = gender_match.group(1) if gender_match else None
+
+    # Raw Athena script text (delimiters stripped); null if no Script block
+    # element is separately extracted above; script kept for future passive bonus parsing
+    # OnEquipScript/OnUnequipScript confirmed absent from all IT_WEAPON entries — omitted
+    script = script_text if script_text else None
+
     return {
-        "id":         item_id,
-        "aegis_name": aegis_name,
-        "name":       name,
-        "atk":        atk,
-        "level":      level,
+        "id":          item_id,
+        "aegis_name":  aegis_name,
+        "name":        name,
+        "atk":         atk,
+        "level":       level,
         "weapon_type": weapon_type,
-        "element":    element,
-        "weight":     weight,
-        "slots":      slots,
-        "refineable": refineable,
+        "element":     element,
+        "weight":      weight,
+        "slots":       slots,
+        "refineable":  refineable,
+        "buy":         buy,
+        "sell":        sell,
+        "range":       range_,
+        "equip_level": equip_level,
+        "loc":         loc,
+        "upper":       upper,
+        "job":         job,
+        "gender":      gender,
+        "script":      script,
     }
 
 
@@ -239,10 +295,15 @@ def main(dry_run: bool = False) -> None:
 
     output = {
         "_source": "Scraped from Hercules/db/pre-re/item_db.conf",
+        "_scraped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "_note": (
             "IT_WEAPON entries only (Subtype W_*). "
-            "element derived from 'bonus bAtkEle,Ele_*' in Script field; "
-            "absent bAtkEle = Neutral (0). "
+            "element derived from 'bonus bAtkEle,Ele_*' in Script field; absent bAtkEle = Neutral (0). "
+            "buy null for 47 weapons with no shop price; sell inferred as buy//2 when absent. "
+            "equip_level 0 if absent. upper null = ITEMUPPER_ALL. job [] = all classes. "
+            "gender null = any gender. script is raw Athena text (delimiters stripped) or null. "
+            "OnEquipScript/OnUnequipScript absent from all IT_WEAPON entries — omitted. "
+            "EquipLv [min,max] form and Job int mask absent from all IT_WEAPON entries. "
             "IT_AMMO (Subtype A_*) excluded — implement separately when ammo system is added."
         ),
         "items": items,

@@ -58,9 +58,9 @@ class PlayerBuild:
     # Key = slot name (e.g. "right_hand", "ammo"), value = item ID or None
     refine_levels: Dict[str, int] = field(default_factory=dict)
     # Key = slot name, value = refine count for that slot
-    weapon_elements: Dict[str, int] = field(default_factory=dict)
-    # Key = slot name, value = element int (0-9). Overrides item_db element.
-    # Used until a proper weapon-imbue item/SC system is implemented.
+    weapon_element: Optional[int] = None
+    # Element override for right_hand weapon (int 0-9). None = use item_db element.
+    # Used for elemental imbues until a proper SC/item imbue system is implemented.
     target_mob_id: Optional[int] = None
     # When set, pipeline resolves target via loader.get_monster(target_mob_id).
     # None = caller supplies Target manually (used by GUI inputs once built).
