@@ -55,9 +55,11 @@ class DamageStep:
     hercules_ref: str = ""     # e.g. "battle.c: battle_calc_base_damage2 (pre-renewal)"
 
     def __post_init__(self):
-        if self.min_value == 0:
+        # Auto-fill only when BOTH are 0, meaning neither was explicitly provided
+        # (informational step). If min_value=0 but max_value≠0, the zero is a
+        # legitimate minimum damage value (e.g. size fix flooring a low-DEX roll).
+        if self.min_value == 0 and self.max_value == 0:
             self.min_value = self.value
-        if self.max_value == 0:
             self.max_value = self.value
         if not self.formula:
             self.formula = "N/A (legacy step)"

@@ -126,8 +126,35 @@ class BaseDamage:
             if overrefine > 0:
                 or_avg = (overrefine + 1) // 2
                 dmg = dmg.add_range(1, overrefine, or_avg)
+                result.add_step(
+                    name="Overrefine Bonus",
+                    value=or_avg,
+                    min_value=1,
+                    max_value=overrefine,
+                    note=f"Stochastic: rnd()%{overrefine}+1 → [1,{overrefine}]  avg≈{or_avg}",
+                    formula=f"rnd()%{overrefine}+1",
+                    hercules_ref="battle.c battle_calc_base_damage2:\n"
+                                 "if (sd->right_weapon.overrefine)\n"
+                                 "    damage += rnd()%sd->right_weapon.overrefine+1;\n"
+                                 "status.c: wd->overrefine = refine->get_randombonus_max(wlv, r) / 100;",
+                )
+            else:
+                result.add_step(
+                    name="Overrefine Bonus",
+                    value=0,
+                    note="No overrefine (refine too low for random bonus)",
+                    formula="0",
+                    hercules_ref="battle.c: overrefine block skipped (sd->right_weapon.overrefine == 0)",
+                )
         else:
             overrefine = 0
+            result.add_step(
+                name="Overrefine Bonus",
+                value=0,
+                note="Suppressed — weapon is not refineable (item_db Refine: false)",
+                formula="0",
+                hercules_ref="battle.c: overrefine block skipped (weapon not refineable)",
+            )
 
         result.add_step(
             name="Base Damage",
