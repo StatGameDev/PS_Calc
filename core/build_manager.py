@@ -73,8 +73,10 @@ class BuildManager:
                 "def2": build.bonus_def2,       # extra soft DEF from items/foods/SCs
                 "aspd_percent": build.bonus_aspd_percent,
             },
+            "target_mob_id": build.target_mob_id,
             "equipped": build.equipped,
             "refine": build.refine_levels,
+            "weapon_elements": build.weapon_elements,
             "active_buffs": build.active_status_levels,
             "mastery_levels": build.mastery_levels,
             "flags": {
@@ -142,8 +144,10 @@ class BuildManager:
             equip_def=bn.get("def", 0),
             bonus_def2=bn.get("def2", 0),
             bonus_aspd_percent=bn.get("aspd_percent", 0),
+            target_mob_id=data.get("target_mob_id"),
             equipped=equipped,
             refine_levels=data.get("refine", {}),
+            weapon_elements=data.get("weapon_elements", {}),
             active_status_levels=data.get("active_buffs", {}),
             mastery_levels=data.get("mastery_levels", {}),
             is_ranged_override=flags.get("is_ranged_override", None),
@@ -185,11 +189,15 @@ class BuildManager:
             )
             return Weapon()
 
+        # weapon_elements overrides item_db element (used for elemental imbues until
+        # a proper SC/item imbue system is implemented).
+        element = build.weapon_elements.get(slot, item.get("element", 0))
+
         return Weapon(
             atk=item.get("atk", 0),
             refine=build.refine_levels.get(slot, 0),
             level=item.get("level", 1),
-            element=item.get("element", 0),
+            element=element,
             weapon_type=item.get("weapon_type", "Unarmed"),
             hand=_HAND_FROM_SLOT.get(slot, "right"),
             aegis_name=item.get("aegis_name", ""),

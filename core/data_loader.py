@@ -6,7 +6,6 @@ from functools import lru_cache
 from core.models.build import PlayerBuild
 from core.models.target import Target
 from core.models.weapon import Weapon
-from core.models.skill import SkillInstance
 
 
 class DataLoader:
@@ -38,29 +37,6 @@ class DataLoader:
             return json.load(f)
 
     # =============================================================
-    # Test presets (only used by development test buttons)
-    # =============================================================
-    def get_test_preset_build(self, name: str) -> PlayerBuild:
-        from core.build_manager import BuildManager  # local import — avoids circular dependency
-        path = str(self.base_path / f"test_presets/builds/{name}.json")
-        return BuildManager.load_build(path)
-
-    def get_test_preset_weapon(self, name: str) -> Weapon:
-        # DEPRECATED: weapon properties now live in item_db via BuildManager.resolve_weapon.
-        # These files remain as fallbacks for the legacy test buttons in main_window.py
-        # until those buttons are replaced by the full GUI (Phase 4).
-        data = self._load_json(f"test_presets/weapons/{name}.json")
-        return Weapon(**data)
-
-    def get_test_preset_skill_instance(self, name: str) -> SkillInstance:
-        data = self._load_json(f"test_presets/skills/{name}.json")
-        return SkillInstance(**data)
-
-    def get_test_preset_target(self, name: str) -> Target:
-        data = self._load_json(f"test_presets/targets/{name}.json")
-        return Target(**data)
-
-    # =============================================================
     # Item database
     # =============================================================
     def get_item(self, item_id: int) -> Optional[Dict]:
@@ -73,20 +49,38 @@ class DataLoader:
         return data.get("items", {}).get(str(item_id))
 
     # =============================================================
-    # User builds (saved builds – will be used by GUI in Phase 4)
+    # Monster database
     # =============================================================
-    def save_build(self, build_name: str, build: PlayerBuild) -> None:
-        """Future user build save (Phase 4). For now just placeholder."""
-        path = self.base_path / "saves" / f"{build_name}.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(build.__dict__, f, indent=2, default=str)
-        print(f"Build saved: {build_name}")
+    def get_monster_data(self, mob_id: int) -> Optional[Dict]:
+        """Raw mob_db entry for GUI display (hp, atk_min/max, mdef, etc.).
+        Returns None if mob_id is not found — caller decides how to handle."""
+        try:
+            data = self._load_json("db/mob_db.json")
+        except FileNotFoundError:
+            return None
+        return data.get("mobs", {}).get(str(mob_id))
 
-    def load_build(self, build_name: str) -> PlayerBuild:
-        """Future user build load (Phase 4)."""
-        data = self._load_json(f"saves/{build_name}.json")
-        return PlayerBuild(**data)
+    def get_monster(self, mob_id: int) -> "Target":
+        """Returns a Target populated from mob_db for pipeline use.
+        Logs WARNING and returns a safe neutral default Target on missing ID.
+        Default mirrors Unarmed convention: no modifiers, pipeline never crashes."""
+        entry = self.get_monster_data(mob_id)
+        if entry is None:
+            print(
+                f"WARNING: Mob ID {mob_id} not found in mob_db. Using default Target.",
+                file=__import__("sys").stderr,
+            )
+            return Target()  # all-default: DEF 0, VIT 0, Medium, Formless, Neutral/1, not boss, level 1
+        return Target(
+            def_=entry["def_"],
+            vit=entry["vit"],
+            size=entry["size"],
+            race=entry["race"],
+            element=entry["element"],
+            element_level=entry["element_level"],
+            is_boss=entry["is_boss"],
+            level=entry["level"],
+        )
 
     # =============================================================
     # Skills (used by skill_ratio.py, NK flags, hit_count – exact from skills.json)

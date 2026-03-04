@@ -13,6 +13,10 @@ from core.models.damage import DamageResult
 from core.calculators.status_calculator import StatusCalculator
 from core.calculators.battle_pipeline import BattlePipeline
 from core.data_loader import loader
+from core.build_manager import BuildManager
+
+SAVES_DIR = "saves"
+_DEFAULT_SKILL = SkillInstance(id=5, level=10)  # SM_BASH Lv10 — placeholder until skill selector is built
 
 
 class MainWindow(ctk.CTk):
@@ -44,14 +48,24 @@ class MainWindow(ctk.CTk):
         btn_frame = ctk.CTkFrame(results_tab)
         btn_frame.pack(fill="x", padx=20, pady=10)
 
-        ctk.CTkButton(btn_frame, text="Test Status Calculator (Phase 1)",
-                      command=self.test_status, width=280).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Test LK Bash",
-                      command=self.test_pipeline, width=280).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Test Spear Peco",
-                      command=self.test_spear_peco, width=280).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Toggle Theme (Groundwork Test)",
-                      command=self.toggle_theme, width=280,
+        ctk.CTkLabel(btn_frame, text="Build:").pack(side="left", padx=(5, 2))
+
+        self._build_names = self._scan_builds()
+        self._build_var = ctk.StringVar(value=self._build_names[0] if self._build_names else "")
+        self._build_menu = ctk.CTkOptionMenu(
+            btn_frame,
+            variable=self._build_var,
+            values=self._build_names if self._build_names else ["(no builds found)"],
+            width=220,
+        )
+        self._build_menu.pack(side="left", padx=2)
+
+        ctk.CTkButton(btn_frame, text="Refresh", command=self._refresh_builds,
+                      width=80).pack(side="left", padx=2)
+        ctk.CTkButton(btn_frame, text="Run", command=self._run_build,
+                      width=80).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Toggle Theme",
+                      command=self.toggle_theme, width=140,
                       fg_color="#1f538d", hover_color="#14375f").pack(side="left", padx=5)
 
         self.tree_frame = ctk.CTkFrame(results_tab)
@@ -84,6 +98,70 @@ class MainWindow(ctk.CTk):
         self.status_label = ctk.CTkLabel(results_tab, text="", font=("", 13), justify="left")
         self.status_label.pack(pady=8, padx=20, fill="x")
 
+    # ------------------------------------------------------------------
+    # Build list helpers
+    # ------------------------------------------------------------------
+    def _scan_builds(self) -> list[str]:
+        names = BuildManager.list_builds(SAVES_DIR)
+        return sorted(names) if names else []
+
+    def _refresh_builds(self):
+        names = self._scan_builds()
+        self._build_names = names
+        self._build_menu.configure(values=names if names else ["(no builds found)"])
+        if names:
+            self._build_var.set(names[0])
+
+    # ------------------------------------------------------------------
+    # Run selected build
+    # ------------------------------------------------------------------
+    def _run_build(self):
+        name = self._build_var.get()
+        if not name or name == "(no builds found)":
+            self.status_label.configure(text="No build selected.")
+            return
+
+        path = f"{SAVES_DIR}/{name}.json"
+        try:
+            build = BuildManager.load_build(path)
+        except Exception as exc:
+            self.status_label.configure(text=f"Failed to load build: {exc}")
+            return
+
+        weapon = BuildManager.resolve_weapon(build)
+
+        if build.target_mob_id is not None:
+            target = loader.get_monster(build.target_mob_id)
+        else:
+            target = Target()  # neutral default — no target configured
+
+        skill = _DEFAULT_SKILL
+        status = StatusCalculator(self.battle_config).calculate(build, weapon)
+        result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
+        skill_data = loader.get_skill(skill.id) or {"name": f"Skill {skill.id}", "note": ""}
+
+        mob_info = ""
+        if build.target_mob_id is not None:
+            mob_entry = loader.get_monster_data(build.target_mob_id)
+            if mob_entry:
+                mob_info = f"  |  Target: {mob_entry['name']} (ID {build.target_mob_id})"
+
+        pure_batk = status.batk - build.bonus_batk
+        self.status_label.configure(
+            text=(
+                f"Build: {build.name}{mob_info}\n"
+                f"BATK {status.batk}  (pure {pure_batk} + bonus {build.bonus_batk})  |  "
+                f"Hard DEF {status.def_}  |  Soft DEF {status.def2}  |  "
+                f"CRI {status.cri / 10:.1f}%  |  HIT {status.hit}  |  FLEE {status.flee}"
+            )
+        )
+
+        self.clear_tree()
+        self._populate_tree(build, status, weapon, skill, skill_data, target, result)
+
+    # ------------------------------------------------------------------
+    # Theme
+    # ------------------------------------------------------------------
     def set_theme(self, appearance: str, color_theme: str):
         """Central theme switcher — called once at startup + on toggle."""
         ctk.set_appearance_mode(appearance)
@@ -129,48 +207,6 @@ class MainWindow(ctk.CTk):
         """Clear before re-populating — prevents duplicate rows on repeated tests."""
         for item in self.tree.get_children():
             self.tree.delete(item)
-
-    def test_status(self):
-        build = loader.get_test_preset_build("knight_bash_test")
-        weapon = loader.get_test_preset_weapon("knight_bash_weapon")
-        status = StatusCalculator(self.battle_config).calculate(build, weapon)
-
-        msg = f"✅ Status Calculator Test (Phase 1)\n\n" \
-              f"BATK     : {status.batk}\n" \
-              f"Hard DEF : {status.def_}\n" \
-              f"Soft DEF : {status.def2}\n" \
-              f"CRI      : {status.cri / 10:.1f}%\n" \
-              f"HIT      : {status.hit}\n" \
-              f"FLEE     : {status.flee}"
-        self.status_label.configure(text=msg)
-
-    def test_pipeline(self):
-        build = loader.get_test_preset_build("knight_bash_test")
-        weapon = loader.get_test_preset_weapon("knight_bash_weapon")
-        skill = loader.get_test_preset_skill_instance("knight_bash_skill")
-        target = loader.get_test_preset_target("porcellio_test")
-
-        status = StatusCalculator(self.battle_config).calculate(build, weapon)
-
-        result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
-        skill_data = loader.get_skill(skill.id) or {"name": "SM_BASH", "note": ""}
-
-        self.clear_tree()
-        self._populate_tree(build, status, weapon, skill, skill_data, target, result)
-
-    def test_spear_peco(self):
-        build = loader.get_test_preset_build("spear_peco_test")
-        weapon = loader.get_test_preset_weapon("spear_peco_weapon")
-        skill = loader.get_test_preset_skill_instance("spear_peco_skill")
-        target = loader.get_test_preset_target("earth_lv3_test")
-
-        status = StatusCalculator(self.battle_config).calculate(build, weapon)
-
-        result = BattlePipeline(self.battle_config).calculate(status, weapon, skill, target, build)
-        skill_data = loader.get_skill(skill.id) or {"name": "SM_BASH", "note": ""}
-
-        self.clear_tree()
-        self._populate_tree(build, status, weapon, skill, skill_data, target, result)
 
     def _populate_tree(self, build: PlayerBuild, status: StatusData, weapon: Weapon,
                        skill: SkillInstance, skill_data: dict, target: Target, result: DamageResult):

@@ -1,6 +1,6 @@
 {
-  "_scaffold": "INCOMPLETE — base_agi/dex/int/luk are placeholder 1s. Do not treat results as verified. See CLAUDE.md §Verification.",
-  "name": "Spear Peco Test (SCAFFOLD)",
+  "_scaffold": "INCOMPLETE — base_agi/dex/int/luk are placeholder 1s. weapon_elements overrides Flamberge's Neutral to Fire for attr_fix testing. Do not treat results as verified. See CLAUDE.md §Verification.",
+  "name": "Knight Bash (Scaffold)",
   "job_id": 7,
   "base_level": 99,
   "job_level": 1,
@@ -27,22 +27,26 @@
     "def2": 0,
     "aspd_percent": 0
   },
+  "target_mob_id": 1619,
   "equipped": {
-    "right_hand": 9002,
+    "right_hand": 1129,
     "ammo": null
   },
   "refine": {
     "right_hand": 7
   },
+  "weapon_elements": {
+    "right_hand": 3
+  },
   "active_buffs": {
     "SC_AURABLADE": 5
   },
   "mastery_levels": {
-    "KN_SPEARMASTERY": 10
+    "SM_SWORD": 10
   },
   "flags": {
     "is_ranged_override": null,
-    "is_riding_peco": true,
+    "is_riding_peco": false,
     "no_sizefix": false
   }
 }
