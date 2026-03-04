@@ -1,0 +1,122 @@
+{
+  "_import": "Imported from rocalc localStorage Slotnum02. base_stats are accurate. Equipment cross-referenced by name against Hercules item_db — see _import_notes and _todo.",
+  "_rocalc_job_id": 8,
+  "name": "Nat Crit Sin",
+  "job_id": 12,
+  "base_level": 99,
+  "job_level": 50,
+  "base_stats": {
+    "str": 80,
+    "agi": 99,
+    "vit": 6,
+    "int": 8,
+    "dex": 22,
+    "luk": 40
+  },
+  "bonus_stats": {
+    "str": 0,
+    "agi": 0,
+    "vit": 0,
+    "int": 0,
+    "dex": 0,
+    "luk": 0,
+    "hit": 0,
+    "flee": 0,
+    "cri": 0,
+    "batk": 0
+  },
+  "target_mob_id": null,
+  "equipped": {
+    "right_hand": 1264,
+    "left_hand": null,
+    "ammo": null,
+    "head_upper": 2274,
+    "head_mid": 5074,
+    "head_lower": 5548,
+    "shield": null,
+    "armor": 2336,
+    "garment": 2502,
+    "footwear": null,
+    "accessory1": 2693,
+    "accessory2": 2693
+  },
+  "refine": {
+    "right_hand": 9,
+    "head_upper": 4,
+    "armor": 4,
+    "garment": 9,
+    "footwear": 4
+  },
+  "weapon_element": null,
+  "active_buffs": {},
+  "mastery_levels": {},
+  "flags": {
+    "is_ranged_override": null,
+    "is_riding_peco": false,
+    "no_sizefix": false
+  },
+  "_import_notes": {
+    "right_hand": {
+      "rocalc_name": "Specialty Jur",
+      "rocalc_idx": 480,
+      "type": "Katar",
+      "refine": 9,
+      "cards": [
+        "* CRIT Dmg +10%, CRIT +7",
+        "Mobster",
+        "The Paper",
+        "Goblin Steamrider"
+      ]
+    },
+    "head_upper": {
+      "rocalc_name": "Ghost Bandana",
+      "rocalc_idx": 155,
+      "refine": 4
+    },
+    "head_mid": {
+      "rocalc_name": "Angel Wing Ears",
+      "rocalc_idx": 385
+    },
+    "head_lower": {
+      "rocalc_name": "Scarlet Rose",
+      "rocalc_idx": 1418
+    },
+    "armor": {
+      "rocalc_name": "Thief Clothes",
+      "rocalc_idx": 294,
+      "refine": 4,
+      "card": "Porcellio"
+    },
+    "garment": {
+      "rocalc_name": "Hood",
+      "rocalc_idx": 312,
+      "refine": 9,
+      "card": "Chung E"
+    },
+    "footwear": {
+      "rocalc_name": "Bunny Slippers",
+      "rocalc_idx": 781,
+      "refine": 4,
+      "card": "Male Thief Bug",
+      "status": "unresolved"
+    },
+    "accessory1": {
+      "rocalc_name": "Brooch",
+      "rocalc_idx": 338,
+      "card": "Kobold"
+    },
+    "accessory2": {
+      "rocalc_name": "Brooch",
+      "rocalc_idx": 338,
+      "card": "Kobold"
+    }
+  },
+  "_todo": [
+    {
+      "slot": "footwear",
+      "rocalc_name": "Bunny Slippers",
+      "rocalc_idx": 781,
+      "note": "name not in Hercules item_db"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "_import": "Imported from rocalc localStorage Slotnum01. base_stats are accurate. Equipment cross-referenced by name against Hercules item_db — see _import_notes and _todo.",
+  "_rocalc_job_id": 8,
+  "name": "DD Sin",
+  "job_id": 12,
+  "base_level": 99,
+  "job_level": 50,
+  "base_stats": {
+    "str": 99,
+    "agi": 80,
+    "vit": 3,
+    "int": 2,
+    "dex": 52,
+    "luk": 1
+  },
+  "bonus_stats": {
+    "str": 0,
+    "agi": 0,
+    "vit": 0,
+    "int": 0,
+    "dex": 0,
+    "luk": 0,
+    "hit": 0,
+    "flee": 0,
+    "cri": 0,
+    "batk": 0
+  },
+  "target_mob_id": null,
+  "equipped": {
+    "right_hand": 1221,
+    "left_hand": 1209,
+    "ammo": null,
+    "head_upper": 5122,
+    "head_mid": 5074,
+    "head_lower": 5767,
+    "shield": null,
+    "armor": 2336,
+    "garment": 2513,
+    "footwear": 2404,
+    "accessory1": 2690,
+    "accessory2": 2690
+  },
+  "refine": {
+    "right_hand": 7,
+    "left_hand": 10,
+    "head_upper": 4,
+    "armor": 4,
+    "garment": 6,
+    "footwear": 9
+  },
+  "weapon_element": null,
+  "active_buffs": {},
+  "mastery_levels": {},
+  "flags": {
+    "is_ranged_override": null,
+    "is_riding_peco": false,
+    "no_sizefix": false
+  },
+  "_import_notes": {
+    "right_hand": {
+      "rocalc_name": "Gladius",
+      "rocalc_idx": 9,
+      "type": "Dagger",
+      "refine": 7,
+      "cards": [
+        "* All Size +15%, ATK +5",
+        "* All Size +15%, ATK +5",
+        "* All Size +15%, ATK +5"
+      ]
+    },
+    "left_hand": {
+      "rocalc_name": "Main Gauche",
+      "rocalc_idx": 3,
+      "type": "Dagger",
+      "refine": 10,
+      "cards": [
+        "* All Race +20%",
+        "* All Race +20%",
+        "* All Race +20%",
+        "* All Race +20%"
+      ]
+    },
+    "head_upper": {
+      "rocalc_name": "Magni's Cap",
+      "rocalc_idx": 661,
+      "refine": 4
+    },
+    "head_mid": {
+      "rocalc_name": "Angel Wing Ears",
+      "rocalc_idx": 385
+    },
+    "head_lower": {
+      "rocalc_name": "Samurai Mask",
+      "rocalc_idx": 1523
+    },
+    "armor": {
+      "rocalc_name": "Thief Clothes",
+      "rocalc_idx": 294,
+      "refine": 4,
+      "card": "Porcellio"
+    },
+    "garment": {
+      "rocalc_name": "Heavenly Maiden Robe",
+      "rocalc_idx": 522,
+      "refine": 6,
+      "card": "Giant Whisper"
+    },
+    "footwear": {
+      "rocalc_name": "Shoes",
+      "rocalc_idx": 321,
+      "refine": 9,
+      "card": "Firelock Soldier"
+    },
+    "accessory1": {
+      "rocalc_name": "Ring",
+      "rocalc_idx": 341,
+      "card": "Mantis"
+    },
+    "accessory2": {
+      "rocalc_name": "Ring",
+      "rocalc_idx": 341,
+      "card": "Mantis"
+    }
+  }
+}

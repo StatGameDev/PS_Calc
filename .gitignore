@@ -1,4 +1,5 @@
 Hercules/
+rocalc_files/
 __pycache__/
 *.pyc
 *.pyo

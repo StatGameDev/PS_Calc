@@ -1,0 +1,118 @@
+{
+  "_import": "Imported from rocalc localStorage Slotnum04. base_stats are accurate. Equipment cross-referenced by name against Hercules item_db — see _import_notes and _todo.",
+  "_rocalc_job_id": 15,
+  "name": "Combo Monk",
+  "job_id": 15,
+  "base_level": 99,
+  "job_level": 50,
+  "base_stats": {
+    "str": 93,
+    "agi": 84,
+    "vit": 4,
+    "int": 18,
+    "dex": 50,
+    "luk": 1
+  },
+  "bonus_stats": {
+    "str": 0,
+    "agi": 0,
+    "vit": 0,
+    "int": 0,
+    "dex": 0,
+    "luk": 0,
+    "hit": 0,
+    "flee": 0,
+    "cri": 0,
+    "batk": 0
+  },
+  "target_mob_id": null,
+  "equipped": {
+    "right_hand": 1802,
+    "left_hand": null,
+    "ammo": null,
+    "head_upper": 5122,
+    "head_mid": 5074,
+    "head_lower": 5412,
+    "shield": 2114,
+    "armor": 2326,
+    "garment": 2513,
+    "footwear": 2408,
+    "accessory1": 2690,
+    "accessory2": 2655
+  },
+  "refine": {
+    "right_hand": 10,
+    "head_upper": 4,
+    "shield": 4,
+    "armor": 7,
+    "garment": 6,
+    "footwear": 7
+  },
+  "weapon_element": 1,
+  "active_buffs": {},
+  "mastery_levels": {},
+  "flags": {
+    "is_ranged_override": null,
+    "is_riding_peco": false,
+    "no_sizefix": false
+  },
+  "_import_notes": {
+    "right_hand": {
+      "rocalc_name": "Waghnak",
+      "rocalc_idx": 123,
+      "type": "Knuckle",
+      "refine": 10,
+      "cards": [
+        "Goblin",
+        "Goblin",
+        "Minorous",
+        "Minorous"
+      ]
+    },
+    "head_upper": {
+      "rocalc_name": "Magni's Cap",
+      "rocalc_idx": 661,
+      "refine": 4
+    },
+    "head_mid": {
+      "rocalc_name": "Angel Wing Ears",
+      "rocalc_idx": 385
+    },
+    "head_lower": {
+      "rocalc_name": "Sweet Candy",
+      "rocalc_idx": 1049
+    },
+    "shield": {
+      "rocalc_name": "Stone Buckler",
+      "rocalc_idx": 691,
+      "refine": 4,
+      "card": "* All Race -30%"
+    },
+    "armor": {
+      "rocalc_name": "Saint's Robe",
+      "rocalc_idx": 295,
+      "refine": 7,
+      "card": "Angeling"
+    },
+    "garment": {
+      "rocalc_name": "Heavenly Maiden Robe",
+      "rocalc_idx": 522,
+      "refine": 6,
+      "card": "Giant Whisper"
+    },
+    "footwear": {
+      "rocalc_name": "Shackles",
+      "rocalc_idx": 323,
+      "refine": 7
+    },
+    "accessory1": {
+      "rocalc_name": "Ring",
+      "rocalc_idx": 341,
+      "card": "Mantis"
+    },
+    "accessory2": {
+      "rocalc_name": "Bloodied Shackle Ball",
+      "rocalc_idx": 725
+    }
+  }
+}
