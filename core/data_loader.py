@@ -48,6 +48,15 @@ class DataLoader:
             return None
         return data.get("items", {}).get(str(item_id))
 
+    def get_items_by_type(self, item_type: str) -> list:
+        """Return all items of a given type (e.g. 'IT_ARMOR', 'IT_CARD', 'IT_WEAPON').
+        Used by the equipment browser GUI. Returns [] if item_db.json is absent."""
+        try:
+            data = self._load_json("db/item_db.json")
+        except FileNotFoundError:
+            return []
+        return [v for v in data.get("items", {}).values() if v.get("type") == item_type]
+
     # =============================================================
     # Monster database
     # =============================================================

@@ -3,7 +3,16 @@
 tools/import_item_db.py
 
 One-shot scraper: reads Hercules/db/pre-re/item_db.conf and writes
-core/data/pre-re/db/item_db.json (IT_WEAPON entries only).
+core/data/pre-re/db/item_db.json.
+
+Types scraped:
+  IT_WEAPON (708)  — weapons (Subtype W_*); all fields
+  IT_ARMOR  (1431) — armor, shields, headgear, garment, shoes, accessories
+  IT_CARD   (538)  — cards; loc identifies which slot accepts the card
+  IT_AMMO   (83)   — arrows, bolts, bullets, cannon balls (Subtype A_*)
+
+Types skipped (not equippable player gear):
+  IT_CASH, IT_USABLE, IT_HEALING, IT_PETEGG, IT_PETARMOR, IT_DELAYCONSUME
 
 Usage:
     python tools/import_item_db.py           # write to output path
@@ -11,8 +20,18 @@ Usage:
 
 Run from the PS_Calc/ project root. No external dependencies — stdlib only.
 
-Note: IT_AMMO (Subtype A_*) is excluded from this pass. Implement a
-separate scraper pass for ammo when the ammo system is added.
+Schema notes:
+  - All entries include: id, aegis_name, name, type, buy, sell, weight,
+    equip_level, loc (list), upper, job, gender, script.
+  - IT_WEAPON adds: atk, level, weapon_type, element, slots, refineable, range.
+  - IT_ARMOR adds:  def, slots, refineable, view_sprite,
+                    on_equip_script, on_unequip_script.
+  - IT_AMMO adds:   atk, subtype, element.
+  - IT_CARD adds nothing beyond shared fields.
+  - loc is always a list (single string normalized to one-element list).
+  - element derived from 'bonus bAtkEle,Ele_*' in Script (IT_WEAPON, IT_AMMO only).
+  - buy null when absent; sell = explicit Sell or buy//2 or null.
+  - Refine: absent → true (Hercules default).
 """
 import json
 import re
@@ -24,14 +43,23 @@ from pathlib import Path
 # Paths — relative to project root (run from PS_Calc/)
 # ---------------------------------------------------------------------------
 CONF_PATH = Path("Hercules/db/pre-re/item_db.conf")
-OUT_PATH = Path("core/data/pre-re/db/item_db.json")
+OUT_PATH  = Path("core/data/pre-re/db/item_db.json")
 
 # ---------------------------------------------------------------------------
-# Subtype → weapon_type string
-# Must match the strings in size_fix.json and mastery_weapon_map.json.
+# Types to include vs skip
+# ---------------------------------------------------------------------------
+EQUIP_TYPES = {"IT_WEAPON", "IT_ARMOR", "IT_CARD", "IT_AMMO"}
+SKIP_TYPES  = {
+    "IT_CASH", "IT_USABLE", "IT_HEALING",
+    "IT_PETEGG", "IT_PETARMOR", "IT_DELAYCONSUME", "IT_ETC",
+}
+
+# ---------------------------------------------------------------------------
+# Subtype → weapon_type string (W_* → human-readable)
+# Must match strings in size_fix.json and mastery_weapon_map.json.
 # Source: Hercules/src/map/pc.h W_* enum + size_fix.txt column headers.
 # ---------------------------------------------------------------------------
-SUBTYPE_MAP: dict[str, str] = {
+WEAPON_SUBTYPE_MAP: dict[str, str] = {
     "W_1HSWORD": "1HSword",
     "W_2HSWORD": "2HSword",
     "W_1HSPEAR": "1HSpear",
@@ -74,6 +102,10 @@ ELEMENT_MAP: dict[str, int] = {
     "Undead":  9,
 }
 
+
+# ---------------------------------------------------------------------------
+# Entry block extractor
+# ---------------------------------------------------------------------------
 
 def extract_entries(text: str) -> list[str]:
     """
@@ -130,74 +162,33 @@ def extract_entries(text: str) -> list[str]:
     return entries
 
 
-def extract_script_content(entry: str) -> str:
-    """Return the raw text inside Script: <\" ... \"> or empty string if absent."""
-    match = re.search(r'Script:\s*<"\s*(.*?)\s*">', entry, re.DOTALL)
+# ---------------------------------------------------------------------------
+# Field helpers
+# ---------------------------------------------------------------------------
+
+def extract_script_text(entry: str, field_name: str = "Script") -> str:
+    """Return raw text inside <field_name>: <\" ... \"> or empty string."""
+    match = re.search(rf'{field_name}:\s*<"\s*(.*?)\s*">', entry, re.DOTALL)
     return match.group(1) if match else ""
 
 
-def parse_entry(entry: str) -> dict | None:
+def parse_loc(entry: str) -> list[str]:
     """
-    Parse a single entry block. Returns a populated dict for IT_WEAPON entries
-    with a known W_* Subtype. Returns None for all other entry types.
+    Parse Loc field — returns a list always.
+    Handles both string form:  Loc: "EQP_ARMOR"
+    and array form:            Loc: ["EQP_HEAD_LOW", "EQP_HEAD_MID"]
     """
-    # Filter: must be IT_WEAPON
-    if not re.search(r'Type:\s*"IT_WEAPON"', entry):
-        return None
+    array_match = re.search(r'Loc:\s*\[([^\]]+)\]', entry)
+    if array_match:
+        return re.findall(r'"([^"]+)"', array_match.group(1))
+    str_match = re.search(r'Loc:\s*"([^"]+)"', entry)
+    return [str_match.group(1)] if str_match else []
 
-    # Filter: must have a W_* Subtype (guards against IT_WEAPON without Subtype)
-    subtype_match = re.search(r'Subtype:\s*"(W_\w+)"', entry)
-    if not subtype_match:
-        return None
-    raw_subtype = subtype_match.group(1)
-    weapon_type = SUBTYPE_MAP.get(raw_subtype)
-    if weapon_type is None:
-        print(f"WARNING: Unknown Subtype {raw_subtype!r} — entry skipped.", file=sys.stderr)
-        return None
 
-    # Mandatory: Id
-    id_match = re.search(r"\bId:\s*(\d+)", entry)
-    if not id_match:
-        return None
-    item_id = int(id_match.group(1))
-
-    # Mandatory: AegisName and Name
-    aegis_match = re.search(r'AegisName:\s*"([^"]+)"', entry)
-    aegis_name = aegis_match.group(1) if aegis_match else ""
-
-    name_match = re.search(r'\bName:\s*"([^"]+)"', entry)
-    name = name_match.group(1) if name_match else ""
-
-    # Optional numeric fields — Hercules defaults are 0 / 1 where noted
-    atk_match = re.search(r"\bAtk:\s*(\d+)", entry)
-    atk = int(atk_match.group(1)) if atk_match else 0  # default 0
-
-    wlv_match = re.search(r"\bWeaponLv:\s*(\d+)", entry)
-    level = int(wlv_match.group(1)) if wlv_match else 1  # default 1 (Hercules default)
-
-    weight_match = re.search(r"\bWeight:\s*(\d+)", entry)
-    weight = int(weight_match.group(1)) if weight_match else 0
-
-    slots_match = re.search(r"\bSlots:\s*(\d+)", entry)
-    slots = int(slots_match.group(1)) if slots_match else 0
-
-    # Refine — boolean, defaults to true in Hercules; only false is ever written explicitly
-    refine_match = re.search(r"\bRefine:\s*(false|true)\b", entry, re.IGNORECASE)
-    refineable = refine_match.group(1).lower() != "false" if refine_match else True
-
-    # Element — parsed from Script: bonus bAtkEle,Ele_<Name>
-    # Absent bAtkEle = Neutral (0). One bAtkEle per IT_WEAPON entry (verified).
-    script_text = extract_script_content(entry)
-    ele_match = re.search(r"bonus\s+bAtkEle\s*,\s*Ele_(\w+)", script_text)
-    element = ELEMENT_MAP.get(ele_match.group(1), 0) if ele_match else 0
-
-    # --- New fields ---
-
-    # Buy price (null for 47 weapons with no shop price)
+def parse_buy_sell(entry: str) -> tuple[int | None, int | None]:
+    """Returns (buy, sell). sell inferred as buy//2 when absent."""
     buy_match = re.search(r"\bBuy:\s*(\d+)", entry)
     buy = int(buy_match.group(1)) if buy_match else None
-
-    # Sell price: explicit field, or buy//2 if Buy is present, else null
     sell_match = re.search(r"\bSell:\s*(\d+)", entry)
     if sell_match:
         sell = int(sell_match.group(1))
@@ -205,59 +196,194 @@ def parse_entry(entry: str) -> dict | None:
         sell = buy // 2
     else:
         sell = None
+    return buy, sell
 
-    # Attack range in cells (always present in weapon entries; default 0 per schema)
-    range_match = re.search(r"\bRange:\s*(\d+)", entry)
-    range_ = int(range_match.group(1)) if range_match else 0
 
-    # Required equip level (EquipLv [min,max] array form confirmed absent in weapon entries)
+def parse_job_list(entry: str) -> list[str]:
+    """Parse Job: { Name: true ... } block into a list of class names."""
+    block_match = re.search(r'Job:\s*\{([^}]+)\}', entry, re.DOTALL)
+    if not block_match:
+        return []
+    return re.findall(r'(\w+):\s*true', block_match.group(1))
+
+
+def parse_refineable(entry: str) -> bool:
+    """Refine: absent → true (Hercules default). Only false is ever explicit."""
+    refine_match = re.search(r"\bRefine:\s*(false|true)\b", entry, re.IGNORECASE)
+    return refine_match.group(1).lower() != "false" if refine_match else True
+
+
+def parse_atk_element(script_text: str) -> int:
+    """Extract element integer from 'bonus bAtkEle,Ele_<Name>' in script."""
+    ele_match = re.search(r"bonus\s+bAtkEle\s*,\s*Ele_(\w+)", script_text)
+    return ELEMENT_MAP.get(ele_match.group(1), 0) if ele_match else 0
+
+
+def parse_common_fields(entry: str, item_id: int, item_type: str) -> dict:
+    """Fields shared across all equippable types."""
+    aegis_match = re.search(r'AegisName:\s*"([^"]+)"', entry)
+    aegis_name  = aegis_match.group(1) if aegis_match else ""
+
+    name_match = re.search(r'\bName:\s*"([^"]+)"', entry)
+    name       = name_match.group(1) if name_match else ""
+
+    buy, sell = parse_buy_sell(entry)
+
+    weight_match = re.search(r"\bWeight:\s*(\d+)", entry)
+    weight = int(weight_match.group(1)) if weight_match else 0
+
     equiplv_match = re.search(r"\bEquipLv:\s*(\d+)", entry)
     equip_level = int(equiplv_match.group(1)) if equiplv_match else 0
 
-    # Equip location — "EQP_WEAPON" (1H) or "EQP_ARMS" (2H)
-    loc_match = re.search(r'Loc:\s*"([^"]+)"', entry)
-    loc = loc_match.group(1) if loc_match else ""
-
-    # Class tier restriction: null = ITEMUPPER_ALL; "ITEMUPPER_UPPER" = transcendent-only; etc.
     upper_match = re.search(r'Upper:\s*"([^"]+)"', entry)
     upper = upper_match.group(1) if upper_match else None
 
-    # Job class restrictions — dict form only (int mask form confirmed absent in weapon entries)
-    job_block_match = re.search(r'Job:\s*\{([^}]+)\}', entry, re.DOTALL)
-    job: list[str] = []
-    if job_block_match:
-        job = re.findall(r'(\w+):\s*true', job_block_match.group(1))
-
-    # Gender restriction: null = any; "SEX_MALE" / "SEX_FEMALE" if restricted
     gender_match = re.search(r'Gender:\s*"([^"]+)"', entry)
     gender = gender_match.group(1) if gender_match else None
 
-    # Raw Athena script text (delimiters stripped); null if no Script block
-    # element is separately extracted above; script kept for future passive bonus parsing
-    # OnEquipScript/OnUnequipScript confirmed absent from all IT_WEAPON entries — omitted
+    script_text = extract_script_text(entry, "Script")
     script = script_text if script_text else None
 
     return {
         "id":          item_id,
         "aegis_name":  aegis_name,
         "name":        name,
-        "atk":         atk,
-        "level":       level,
-        "weapon_type": weapon_type,
-        "element":     element,
-        "weight":      weight,
-        "slots":       slots,
-        "refineable":  refineable,
+        "type":        item_type,
         "buy":         buy,
         "sell":        sell,
-        "range":       range_,
+        "weight":      weight,
         "equip_level": equip_level,
-        "loc":         loc,
+        "loc":         parse_loc(entry),
         "upper":       upper,
-        "job":         job,
+        "job":         parse_job_list(entry),
         "gender":      gender,
         "script":      script,
     }
+
+
+# ---------------------------------------------------------------------------
+# Per-type parsers
+# ---------------------------------------------------------------------------
+
+def parse_weapon(entry: str, item_id: int) -> dict | None:
+    """IT_WEAPON — requires a known W_* Subtype."""
+    subtype_match = re.search(r'Subtype:\s*"(W_\w+)"', entry)
+    if not subtype_match:
+        return None
+    raw_subtype = subtype_match.group(1)
+    weapon_type = WEAPON_SUBTYPE_MAP.get(raw_subtype)
+    if weapon_type is None:
+        print(f"WARNING: Unknown Subtype {raw_subtype!r} (id={item_id}) — skipped.",
+              file=sys.stderr)
+        return None
+
+    base = parse_common_fields(entry, item_id, "IT_WEAPON")
+
+    atk_match  = re.search(r"\bAtk:\s*(\d+)", entry)
+    wlv_match  = re.search(r"\bWeaponLv:\s*(\d+)", entry)
+    slots_match = re.search(r"\bSlots:\s*(\d+)", entry)
+    range_match = re.search(r"\bRange:\s*(\d+)", entry)
+
+    script_text = extract_script_text(entry, "Script")
+
+    base.update({
+        "atk":         int(atk_match.group(1))  if atk_match  else 0,
+        "level":       int(wlv_match.group(1))  if wlv_match  else 1,
+        "weapon_type": weapon_type,
+        "element":     parse_atk_element(script_text),
+        "slots":       int(slots_match.group(1)) if slots_match else 0,
+        "refineable":  parse_refineable(entry),
+        "range":       int(range_match.group(1)) if range_match else 0,
+    })
+    return base
+
+
+def parse_armor(entry: str, item_id: int) -> dict:
+    """IT_ARMOR — body armor, shields, headgear, garment, shoes, accessories."""
+    base = parse_common_fields(entry, item_id, "IT_ARMOR")
+
+    def_match     = re.search(r"\bDef:\s*(\d+)", entry)
+    slots_match   = re.search(r"\bSlots:\s*(\d+)", entry)
+    sprite_match  = re.search(r"\bViewSprite:\s*(\d+)", entry)
+
+    on_equip_text   = extract_script_text(entry, "OnEquipScript")
+    on_unequip_text = extract_script_text(entry, "OnUnequipScript")
+
+    base.update({
+        "def":               int(def_match.group(1))    if def_match    else 0,
+        "slots":             int(slots_match.group(1))  if slots_match  else 0,
+        "refineable":        parse_refineable(entry),
+        "view_sprite":       int(sprite_match.group(1)) if sprite_match else 0,
+        "on_equip_script":   on_equip_text   if on_equip_text   else None,
+        "on_unequip_script": on_unequip_text if on_unequip_text else None,
+    })
+    return base
+
+
+def parse_card(entry: str, item_id: int) -> dict:
+    """IT_CARD — cards; loc identifies which slot they go in."""
+    return parse_common_fields(entry, item_id, "IT_CARD")
+
+
+def parse_ammo(entry: str, item_id: int) -> dict:
+    """IT_AMMO — arrows, bolts, bullets, cannon balls (Subtype A_*)."""
+    base = parse_common_fields(entry, item_id, "IT_AMMO")
+
+    subtype_match = re.search(r'Subtype:\s*"(A_\w+)"', entry)
+    subtype = subtype_match.group(1) if subtype_match else ""
+
+    atk_match = re.search(r"\bAtk:\s*(\d+)", entry)
+    script_text = extract_script_text(entry, "Script")
+
+    base.update({
+        "atk":     int(atk_match.group(1)) if atk_match else 0,
+        "subtype": subtype,
+        "element": parse_atk_element(script_text),
+    })
+    return base
+
+
+# ---------------------------------------------------------------------------
+# Entry dispatcher
+# ---------------------------------------------------------------------------
+
+def parse_entry(entry: str) -> dict | None:
+    """Dispatch to the correct per-type parser. Returns None for skipped types."""
+    type_match = re.search(r'Type:\s*"(IT_\w+)"', entry)
+    if not type_match:
+        return None
+    item_type = type_match.group(1)
+
+    if item_type in SKIP_TYPES or item_type not in EQUIP_TYPES:
+        return None
+
+    id_match = re.search(r"\bId:\s*(\d+)", entry)
+    if not id_match:
+        return None
+    item_id = int(id_match.group(1))
+
+    if item_type == "IT_WEAPON":
+        return parse_weapon(entry, item_id)
+    if item_type == "IT_ARMOR":
+        return parse_armor(entry, item_id)
+    if item_type == "IT_CARD":
+        return parse_card(entry, item_id)
+    if item_type == "IT_AMMO":
+        return parse_ammo(entry, item_id)
+    return None  # unreachable given EQUIP_TYPES guard
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+# Expected counts from: grep -c '"IT_<TYPE>"' Hercules/db/pre-re/item_db.conf
+EXPECTED_COUNTS = {
+    "IT_WEAPON": 708,
+    "IT_ARMOR":  1431,
+    "IT_CARD":   538,
+    "IT_AMMO":   83,
+}
 
 
 def main(dry_run: bool = False) -> None:
@@ -273,6 +399,7 @@ def main(dry_run: bool = False) -> None:
 
     items: dict[str, dict] = {}
     skipped = 0
+    counts: dict[str, int] = {}
 
     for entry in entries:
         result = parse_entry(entry)
@@ -280,38 +407,46 @@ def main(dry_run: bool = False) -> None:
             skipped += 1
         else:
             items[str(result["id"])] = result
+            t = result["type"]
+            counts[t] = counts.get(t, 0) + 1
 
-    print(f"  IT_WEAPON entries parsed: {len(items)}")
-    print(f"  Non-weapon entries skipped: {skipped}")
+    print(f"  Entries parsed: {len(items)}")
+    for t, n in sorted(counts.items()):
+        expected = EXPECTED_COUNTS.get(t, "?")
+        flag = "" if n == expected else f"  *** EXPECTED {expected} ***"
+        print(f"    {t}: {n}{flag}")
+    print(f"  Entries skipped: {skipped}")
 
-    # Sanity checks
-    expected_weapon_count = 708  # grep -c '"IT_WEAPON"' item_db.conf
-    if len(items) != expected_weapon_count:
-        print(
-            f"WARNING: Expected {expected_weapon_count} weapons, got {len(items)}. "
-            "Check for unmapped subtypes above.",
-            file=sys.stderr,
-        )
+    for t, expected in EXPECTED_COUNTS.items():
+        actual = counts.get(t, 0)
+        if actual != expected:
+            print(
+                f"WARNING: {t} count mismatch — expected {expected}, got {actual}.",
+                file=sys.stderr,
+            )
 
     output = {
-        "_source": "Scraped from Hercules/db/pre-re/item_db.conf",
+        "_source":    "Scraped from Hercules/db/pre-re/item_db.conf",
         "_scraped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "_note": (
-            "IT_WEAPON entries only (Subtype W_*). "
-            "element derived from 'bonus bAtkEle,Ele_*' in Script field; absent bAtkEle = Neutral (0). "
-            "buy null for 47 weapons with no shop price; sell inferred as buy//2 when absent. "
-            "equip_level 0 if absent. upper null = ITEMUPPER_ALL. job [] = all classes. "
-            "gender null = any gender. script is raw Athena text (delimiters stripped) or null. "
-            "OnEquipScript/OnUnequipScript absent from all IT_WEAPON entries — omitted. "
-            "EquipLv [min,max] form and Job int mask absent from all IT_WEAPON entries. "
-            "IT_AMMO (Subtype A_*) excluded — implement separately when ammo system is added."
+            "Types: IT_WEAPON (Subtype W_*), IT_ARMOR, IT_CARD, IT_AMMO (Subtype A_*). "
+            "Skipped: IT_CASH, IT_USABLE, IT_HEALING, IT_PETEGG, IT_PETARMOR, IT_DELAYCONSUME. "
+            "loc is always a list (single-string Loc normalized to one-element list). "
+            "element derived from 'bonus bAtkEle,Ele_*' in Script (IT_WEAPON, IT_AMMO only). "
+            "buy null when absent; sell = explicit Sell field, or buy//2, or null. "
+            "Refine: absent → refineable=true (Hercules default). "
+            "equip_level 0 when absent. upper null = ITEMUPPER_ALL. job [] = all classes. "
+            "gender null = any. on_equip_script/on_unequip_script null when absent (IT_ARMOR). "
+            "IT_WEAPON.range = Range field (0 if absent). "
+            "IT_ARMOR.view_sprite = ViewSprite field (0 if absent). "
+            "IT_AMMO.subtype = raw A_* string from Subtype field."
         ),
         "items": items,
     }
 
     if dry_run:
         print(f"\n[DRY RUN] Would write {len(items)} items to {OUT_PATH}")
-        sample_keys = list(items.keys())[:5]
+        sample_keys = list(items.keys())[:3]
         for k in sample_keys:
             print(f"  {k}: {items[k]}")
         return
