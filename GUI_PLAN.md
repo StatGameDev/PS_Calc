@@ -567,16 +567,80 @@ path for player vs player scenarios.
 
 ---
 
-## Phase 4 — Modals
+## Phase 4 — Modals ✓ DONE
 
-### 4.1 Equipment Browser
+### 4.0 New Build dialog ✓
+Name / job / level form; saves via BuildManager; refreshes build dropdown.
+
+### 4.1 Equipment Browser ✓
 Filterable list from loader.get_items_by_type(). Select → fills equipment slot.
+Edit buttons enabled. Slot-to-EQP mapping filters items by slot.
 
-### 4.2 Skill Browser
+### 4.2 Skill Browser ✓
 Filterable skill list from skills.json. Select → sets active skill in combat_controls.
+"…" Browse button added next to skill combo + level spinner.
 
-### 4.3 Monster Browser
+### 4.3 Monster Browser ✓
 Filterable mob list from mob_db.json. Select → sets target_mob_id.
+"Browse…" button added next to target search. Numeric columns sort as integers.
+
+### 4.x — Phase 4 Enhancements (pending)
+
+**4.4 — Skill list real names + job filter** (GUI_TODO #1)
+- Skill combo currently shows all 1168 skills including internal/NPC skills.
+- Filter skill combo to only show skills available to the current build's job_id.
+- Use skills.json job data if present; otherwise expose a "Show All" toggle.
+
+**4.5 — Equipment Browser job filter** (GUI_TODO #6)
+- Filter items in EquipmentBrowserDialog by build's job_id using item["job"] list.
+- Add "All Jobs" toggle button in the dialog toolbar to disable the filter.
+
+**4.6 — Monster Browser filter dropdowns** (GUI_TODO #12)
+- Add Race / Element / Size QComboBox filter dropdowns above the table.
+- Filters combine with the name search (AND logic).
+
+**4.7 — Filter Passives and Masteries by job** (GUI_TODO #8)
+- Passive section should hide/disable buffs and masteries irrelevant to the loaded job.
+- SC_AURABLADE → Knights/Lord Knights only; SM_SWORD → Swordman classes only, etc.
+- Add "Show All" override toggle in the section header.
+
+---
+
+## Known Bugs (GUI_TODO — from runtime testing)
+
+**B1 — QFont::setPointSize <= 0 error** ✓ FIXED
+Font size constants clamped to `max(1, ...)` in app_config.py.
+
+**B2 — Monster browser numeric sort wrong** ✓ FIXED
+ID/Lv/HP/DEF columns now use `_NumericItem` subclass that sorts by `int(text)`.
+
+**B3 — StepsBar starts in wrong position** (GUI_TODO #3)
+The StepsBar renders at a mid-panel position on startup instead of flush right.
+Investigate: PanelContainer `showEvent` / `set_visible_bar` initial sizing order.
+The inner QSplitter in the combat panel may not have its sizes set before show.
+
+**B4 — Combat panel doesn't expand when Steps expanded** (GUI_TODO #4)
+Clicking the StepsBar to expand it should nudge the outer splitter.
+Investigate: `expand_requested` signal path from StepsBar → Panel → PanelContainer.
+Check that `_on_section_expand_requested` in PanelContainer is actually connected.
+
+**B5 — Target sections not refreshing on selection** (GUI_TODO #5)
+After selecting a new target via inline search or MonsterBrowserDialog, Target Info
+and Incoming Damage sections may not update.
+Investigate: `_run_battle_pipeline` is called via `_on_build_changed` which is
+triggered by `combat_settings_changed`. Confirm that signal fires and that
+`refresh_mob` / `refresh_status` are reached.
+
+**B6 — Basic attack crit eligibility** (GUI_TODO #9)
+`crit_chance.py` already includes skill_id=0 in `CRIT_ELIGIBLE_SKILLS`.
+Needs runtime verification: confirm normal attack (id=0) produces a non-None
+`crit` branch in BattleResult and that Summary shows crit numbers.
+
+**B7 — Overrefine shows as unrefinable** (GUI_TODO #10)
+Data inspection: Flamberge (1129) has `refineable: true`, resolve_weapon passes
+it correctly, `get_overrefine(3, 7) = 16`. Cannot reproduce statically.
+Needs runtime trace: add print in `base_damage.py` at the `weapon.refineable`
+check to confirm what value is received when knight_bash.json is loaded.
 
 ---
 

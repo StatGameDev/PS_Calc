@@ -22,6 +22,16 @@ _ELEMENT_NAMES = [
 ]
 
 _COLUMNS = ["Name", "ID", "Lv", "HP", "DEF", "Element", "Race", "Size", "Boss"]
+_NUMERIC_COLS = {1, 2, 3, 4}  # ID, Lv, HP, DEF — sort as numbers
+
+
+class _NumericItem(QTableWidgetItem):
+    """QTableWidgetItem that sorts numerically when the text is a plain integer."""
+    def __lt__(self, other: QTableWidgetItem) -> bool:
+        try:
+            return int(self.text()) < int(other.text())
+        except ValueError:
+            return super().__lt__(other)
 
 
 class MonsterBrowserDialog(QDialog):
@@ -77,8 +87,8 @@ class MonsterBrowserDialog(QDialog):
 
     # ── Internal helpers ───────────────────────────────────────────────────
 
-    def _make_item(self, text: str) -> QTableWidgetItem:
-        item = QTableWidgetItem(text)
+    def _make_item(self, text: str, numeric: bool = False) -> QTableWidgetItem:
+        item = _NumericItem(text) if numeric else QTableWidgetItem(text)
         item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
         return item
 
@@ -93,10 +103,10 @@ class MonsterBrowserDialog(QDialog):
             name_item = self._make_item(m.get("name", ""))
             name_item.setData(Qt.ItemDataRole.UserRole, m.get("id"))
             self._table.setItem(row, 0, name_item)
-            self._table.setItem(row, 1, self._make_item(str(m.get("id", ""))))
-            self._table.setItem(row, 2, self._make_item(str(m.get("level", ""))))
-            self._table.setItem(row, 3, self._make_item(str(m.get("hp", ""))))
-            self._table.setItem(row, 4, self._make_item(str(m.get("def_", ""))))
+            self._table.setItem(row, 1, self._make_item(str(m.get("id", "")),    numeric=True))
+            self._table.setItem(row, 2, self._make_item(str(m.get("level", "")), numeric=True))
+            self._table.setItem(row, 3, self._make_item(str(m.get("hp", "")),    numeric=True))
+            self._table.setItem(row, 4, self._make_item(str(m.get("def_", "")),  numeric=True))
             self._table.setItem(row, 5, self._make_item(f"{elem_name}/{elem_lv}"))
             self._table.setItem(row, 6, self._make_item(m.get("race", "")))
             self._table.setItem(row, 7, self._make_item(m.get("size", "")))
