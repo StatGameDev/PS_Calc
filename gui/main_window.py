@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._build_combo)
 
         new_btn = QPushButton("New")
-        new_btn.setEnabled(False)  # enabled in Phase 4
+        new_btn.clicked.connect(self._on_new_build)
         layout.addWidget(new_btn)
 
         refresh_btn = QPushButton("Refresh")
@@ -183,14 +183,14 @@ class MainWindow(QMainWindow):
 
     # ── Build list helpers ─────────────────────────────────────────────────
 
-    def _refresh_builds(self) -> None:
+    def _refresh_builds(self, select_name: str | None = None) -> None:
         names = sorted(BuildManager.list_builds(app_config.SAVES_DIR))
-        current = self._build_combo.currentText()
+        want = select_name or self._build_combo.currentText()
         self._build_combo.blockSignals(True)
         self._build_combo.clear()
         self._build_combo.addItems(names)
-        if current in names:
-            self._build_combo.setCurrentText(current)
+        if want in names:
+            self._build_combo.setCurrentText(want)
         elif names:
             self._build_combo.setCurrentIndex(0)
         self._build_combo.blockSignals(False)
@@ -198,6 +198,14 @@ class MainWindow(QMainWindow):
         name = self._build_combo.currentText()
         if name:
             self._on_build_selected(name)
+
+    def _on_new_build(self) -> None:
+        from gui.dialogs.new_build_dialog import NewBuildDialog
+        dlg = NewBuildDialog(app_config.SAVES_DIR, parent=self)
+        if dlg.exec() == NewBuildDialog.DialogCode.Accepted:
+            name = dlg.created_build_name()
+            if name:
+                self._refresh_builds(select_name=name)
 
     def _on_build_selected(self, name: str) -> None:
         if not name:

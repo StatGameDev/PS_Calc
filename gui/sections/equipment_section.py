@@ -5,6 +5,7 @@ from typing import Optional
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -65,6 +66,7 @@ class EquipmentSection(Section):
         self._item_ids:     dict[str, Optional[int]] = {s: None for s, *_ in _SLOTS}
         self._name_labels:  dict[str, QLabel]        = {}
         self._refine_spins: dict[str, QSpinBox]      = {}
+        self._edit_btns:    dict[str, QPushButton]   = {}
 
         # ── Slot grid ──────────────────────────────────────────────────────
         grid_widget = QWidget()
@@ -100,7 +102,10 @@ class EquipmentSection(Section):
             edit_btn = QPushButton("Edit")
             edit_btn.setObjectName("equip_edit_btn")
             edit_btn.setFixedWidth(42)
-            edit_btn.setEnabled(False)  # enabled in Phase 4
+            self._edit_btns[slot_key] = edit_btn
+            edit_btn.clicked.connect(
+                lambda checked=False, k=slot_key: self._open_browser(k)
+            )
             grid.addWidget(edit_btn, row_i, 3)
 
         self.add_content_widget(grid_widget)
@@ -119,6 +124,21 @@ class EquipmentSection(Section):
         elem_layout.addWidget(self._element_combo)
         elem_layout.addStretch()
         self.add_content_widget(elem_row)
+
+    # ── Browser ────────────────────────────────────────────────────────────
+
+    def _open_browser(self, slot_key: str) -> None:
+        from gui.dialogs.equipment_browser import EquipmentBrowserDialog
+        dlg = EquipmentBrowserDialog(slot_key, self._item_ids.get(slot_key), parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            new_id = dlg.selected_item_id()
+            self._item_ids[slot_key] = new_id
+            self._name_labels[slot_key].setText(_resolve_item_name(new_id))
+            if new_id is None and slot_key in self._refine_spins:
+                self._refine_spins[slot_key].setValue(0)
+            if self._compact_widget is not None:
+                self._update_compact_labels()
+            self.equipment_changed.emit()
 
     # ── Compact API ────────────────────────────────────────────────────────
 

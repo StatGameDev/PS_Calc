@@ -5,12 +5,14 @@ from typing import Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QPushButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -58,6 +60,12 @@ class CombatControlsSection(Section):
         self._level_spin.setFixedWidth(60)
         skill_row.addWidget(self._level_spin)
 
+        skill_browse_btn = QPushButton("…")
+        skill_browse_btn.setFixedWidth(28)
+        skill_browse_btn.setToolTip("Browse skills")
+        skill_browse_btn.clicked.connect(self._open_skill_browser)
+        skill_row.addWidget(skill_browse_btn)
+
         skill_widget = QWidget()
         skill_widget.setLayout(skill_row)
         grid.addWidget(skill_widget, 0, 1)
@@ -70,9 +78,15 @@ class CombatControlsSection(Section):
         target_col = QVBoxLayout()
         target_col.setSpacing(4)
 
+        search_row = QHBoxLayout()
+        search_row.setSpacing(4)
         self._search_edit = QLineEdit()
         self._search_edit.setPlaceholderText("Search mob name…")
-        target_col.addWidget(self._search_edit)
+        search_row.addWidget(self._search_edit, stretch=1)
+        target_browse_btn = QPushButton("Browse…")
+        target_browse_btn.clicked.connect(self._open_monster_browser)
+        search_row.addWidget(target_browse_btn)
+        target_col.addLayout(search_row)
 
         self._mob_list = QListWidget()
         self._mob_list.setMaximumHeight(140)
@@ -139,6 +153,35 @@ class CombatControlsSection(Section):
         self._mob_list.setVisible(False)
         self._mob_list.clear()
         self.combat_settings_changed.emit()
+
+    def _open_skill_browser(self) -> None:
+        from gui.dialogs.skill_browser import SkillBrowserDialog
+        current = None
+        idx = self._skill_combo.currentIndex()
+        if idx >= 0:
+            s = self._skill_combo.itemData(idx)
+            current = s["id"] if s else None
+        dlg = SkillBrowserDialog(current, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            sid = dlg.selected_skill_id()
+            for i in range(self._skill_combo.count()):
+                data = self._skill_combo.itemData(i)
+                if data and data.get("id") == sid:
+                    self._skill_combo.setCurrentIndex(i)
+                    break
+
+    def _open_monster_browser(self) -> None:
+        from gui.dialogs.monster_browser import MonsterBrowserDialog
+        dlg = MonsterBrowserDialog(self._selected_mob_id, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            mob_id = dlg.selected_mob_id()
+            self._selected_mob_id = mob_id
+            if mob_id is not None:
+                data = loader.get_monster_data(mob_id)
+                self._mob_selected_lbl.setText(data["name"] if data else f"Mob #{mob_id}")
+            else:
+                self._mob_selected_lbl.setText("None selected")
+            self.combat_settings_changed.emit()
 
     # ── Public API ────────────────────────────────────────────────────────
 
