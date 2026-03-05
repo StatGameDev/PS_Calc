@@ -62,6 +62,18 @@ Race / Element / Size QComboBox above table. AND logic with name search.
 **4.7 — Passives and Masteries job filter**
 Hide/disable entries irrelevant to loaded job. "Show All" override in section header.
 
+**P1 — Persist StepsBar expanded/collapsed state across focus changes** _(Phase 8 prereq)_
+Currently `set_focus_state("combat_focused")` hides the StepsBar entirely, and
+`set_focus_state("builder_focused")` always calls `reset_steps_to_collapsed()` via
+`QTimer.singleShot`. If the user expanded the step list and then toggled to combat focus
+and back, the expanded state is lost.
+Required when user-adjustable widget sizes are introduced (Phase 8):
+- Add `_steps_expanded: bool` to `StepsBar` (already has `self._expanded`; just needs
+  to survive hide/show).
+- `Panel.set_visible_bar(True)` should restore the last expanded state rather than
+  always resetting to collapsed. Call `_on_steps_expand` or `reset_steps_to_collapsed`
+  based on the saved flag.
+
 ---
 
 ## Session 2 — C1 Variance + E1 Hit/Miss

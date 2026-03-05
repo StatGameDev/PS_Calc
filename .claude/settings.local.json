@@ -23,7 +23,11 @@
       "Bash(ls -lh ~/Downloads/*2025*.js)",
       "Read(//c/Users/Felix/**)",
       "Bash(grep -n \"Slotnum\\\\|localStorage\\\\|saveSlot\\\\|loadSlot\\\\|charData\\\\|slotData\" /c/Projects/PS_Calc/rocalc_files/*.js)",
-      "Bash(ls c:/Projects/PS_Calc/*.txt c:/Projects/PS_Calc/*.cfg c:/Projects/PS_Calc/*.toml)"
+      "Bash(ls c:/Projects/PS_Calc/*.txt c:/Projects/PS_Calc/*.cfg c:/Projects/PS_Calc/*.toml)",
+      "Bash(pip install PySide6 pyqtgraph)",
+      "Bash(grep -h \"active_buffs\" -A 20 c:/Projects/PS_Calc/saves/*.json)",
+      "Bash(python tools/import_skill_db.py --dry-run)",
+      "Bash(python tools/import_skill_db.py)"
     ],
     "additionalDirectories": [
       "c:\\Projects\\PS_Calc\\core\\data\\pre-re"
