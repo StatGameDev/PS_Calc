@@ -79,6 +79,7 @@ class BuildManager:
                 "is_riding_peco": build.is_riding_peco,
                 "no_sizefix": build.no_sizefix,
             },
+            "server": build.server,
         }
         out_path = Path(path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -149,6 +150,7 @@ class BuildManager:
             is_ranged_override=flags.get("is_ranged_override", None),
             is_riding_peco=flags.get("is_riding_peco", False),
             no_sizefix=flags.get("no_sizefix", False),
+            server=data.get("server", "standard"),
         )
 
     @staticmethod

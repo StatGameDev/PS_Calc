@@ -1,0 +1,208 @@
+/* ==========================================================================
+   PS Calc — Dark Theme
+   All colors, fonts, and widget rules live here. No inline styles in code.
+   ========================================================================== */
+
+/* ── Global ──────────────────────────────────────────────────────────────── */
+QMainWindow, QDialog {
+    background-color: #1e2025;
+}
+
+QWidget {
+    background-color: #1e2025;
+    color: #dde1e8;
+    font-family: "Segoe UI", "Ubuntu", sans-serif;
+    font-size: 13px;
+}
+
+/* ── Top Bar ─────────────────────────────────────────────────────────────── */
+QFrame#top_bar {
+    background-color: #252830;
+    border-bottom: 1px solid #3a3f50;
+}
+
+QLabel#app_title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #4d8fff;
+}
+
+/* ── Section Header ──────────────────────────────────────────────────────── */
+QFrame#section_header {
+    background-color: #2a2f3d;
+    border-top: 1px solid #3a3f50;
+    border-bottom: 1px solid #3a3f50;
+}
+
+QFrame#section_header:hover {
+    background-color: #323848;
+}
+
+QLabel#section_arrow {
+    color: #6b7480;
+    font-size: 9px;
+}
+
+QLabel#section_title {
+    font-weight: bold;
+    color: #b8bfcc;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+/* ── Section Content ─────────────────────────────────────────────────────── */
+QFrame#section_content {
+    background-color: #1e2025;
+    border-bottom: 1px solid #2a2f3d;
+}
+
+/* ── Panel (QScrollArea) ─────────────────────────────────────────────────── */
+QScrollArea {
+    border: none;
+    background-color: #1e2025;
+}
+
+QScrollArea > QWidget > QWidget {
+    background-color: #1e2025;
+}
+
+QWidget#panel_inner {
+    background-color: #1e2025;
+}
+
+/* ── Splitter ────────────────────────────────────────────────────────────── */
+QSplitter::handle {
+    background-color: #3a3f50;
+    width: 3px;
+    height: 3px;
+}
+
+QSplitter::handle:hover {
+    background-color: #4d8fff;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+QPushButton {
+    background-color: #2a2f3d;
+    border: 1px solid #3a3f50;
+    border-radius: 4px;
+    padding: 4px 12px;
+    color: #dde1e8;
+    min-height: 22px;
+}
+
+QPushButton:hover {
+    background-color: #353a4a;
+    border-color: #505669;
+}
+
+QPushButton:pressed {
+    background-color: #1e2230;
+}
+
+QPushButton:disabled {
+    color: #4a5060;
+    border-color: #252830;
+    background-color: #252830;
+}
+
+QPushButton:checked {
+    background-color: #1a3a5c;
+    border-color: #4d8fff;
+    color: #4d8fff;
+}
+
+QPushButton#focus_btn {
+    min-width: 88px;
+    font-weight: bold;
+}
+
+QPushButton#focus_btn:hover {
+    background-color: #1a3a5c;
+    border-color: #4d8fff;
+    color: #4d8fff;
+}
+
+/* ── ComboBox ────────────────────────────────────────────────────────────── */
+QComboBox {
+    background-color: #2a2f3d;
+    border: 1px solid #3a3f50;
+    border-radius: 4px;
+    padding: 3px 8px 3px 8px;
+    color: #dde1e8;
+    min-height: 22px;
+    min-width: 180px;
+}
+
+QComboBox:hover {
+    border-color: #505669;
+}
+
+QComboBox:focus {
+    border-color: #4d8fff;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #3a3f50;
+    border-radius: 0 4px 4px 0;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #2a2f3d;
+    border: 1px solid #3a3f50;
+    outline: none;
+    selection-background-color: #1a3a5c;
+    selection-color: #dde1e8;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+QScrollBar:vertical {
+    background: #1e2025;
+    width: 8px;
+    margin: 0;
+    border: none;
+}
+
+QScrollBar::handle:vertical {
+    background: #3a3f50;
+    border-radius: 4px;
+    min-height: 24px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #505669;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+    background: none;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+QScrollBar:horizontal {
+    height: 0;
+}
+
+/* ── Labels (generic) ────────────────────────────────────────────────────── */
+QLabel {
+    background-color: transparent;
+}
+
+QLabel[muted="true"] {
+    color: #8892a2;
+}
+
+/* ── Placeholder content label (stubs) ──────────────────────────────────── */
+QLabel#stub_label {
+    color: #4a5060;
+    font-style: italic;
+    padding: 12px 0;
+}

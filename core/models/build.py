@@ -52,6 +52,8 @@ class PlayerBuild:
     # Key = mastery skill name (e.g. "SM_SWORD", "KN_SPEARMASTERY")
     # Value = skill level
 
+    server: str = "standard"    # "standard" or "payon_stories"
+
     # Save/load identity and equipment slots
     name: str = ""
     equipped: Dict[str, Optional[int]] = field(default_factory=dict)

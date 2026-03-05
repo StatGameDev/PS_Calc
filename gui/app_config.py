@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from PySide6.QtWidgets import QApplication
 
-@dataclass
-class AppConfig:
-    """Global UI/app settings only.
-    Never mixed with battle mechanics.
-    Will be saved to settings.json in Phase 4 (separate from build saves)."""
-    appearance_mode: str = "dark"      # "dark" / "light" / "system"
-    color_theme: str = "dark-blue"     # any valid customtkinter theme
+# Must be imported AFTER QApplication(sys.argv) is constructed in main.py.
+UI_SCALE: float = QApplication.primaryScreen().logicalDotsPerInch() / 96.0
+THEME_PATH: str = "gui/themes/dark.qss"
+SAVES_DIR: str = "saves"
+
+FONT_SIZE_NORMAL: int = int(13 * UI_SCALE)
+FONT_SIZE_SMALL: int = int(11 * UI_SCALE)
+FONT_SIZE_LARGE: int = int(16 * UI_SCALE)
