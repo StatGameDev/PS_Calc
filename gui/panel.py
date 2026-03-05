@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QScrollArea,
     QSizePolicy,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -16,17 +17,21 @@ from PySide6.QtWidgets import (
 from core.models.damage import BattleResult
 from gui.section import Section
 
+# Width of the narrow collapsed bar (px)
+_BAR_W = 22
+# Width of the expanded step list including the bar (px)
+_EXPANDED_W = 220
+
 
 class _VerticalBarLabel(QWidget):
-    """Narrow 22px strip that draws rotated 'Steps ▶/◀' text via QPainter."""
+    """Narrow 22px strip with rotated 'Steps ▶/◀' label drawn via QPainter."""
 
     clicked = Signal()
-    _WIDTH = 22
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._expanded = False
-        self.setFixedWidth(self._WIDTH)
+        self.setFixedWidth(_BAR_W)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(40)
@@ -46,7 +51,7 @@ class _VerticalBarLabel(QWidget):
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         p.fillRect(self.rect(), QColor("#252830"))
         p.save()
-        p.translate(self._WIDTH // 2, self.height() // 2)
+        p.translate(_BAR_W // 2, self.height() // 2)
         p.rotate(-90)
         font = QFont()
         font.setPointSize(9)
@@ -62,25 +67,32 @@ class _VerticalBarLabel(QWidget):
 
 class StepsBar(QWidget):
     """
-    Vertical sidebar attached to the right edge of the combat panel.
-    Hidden when combat is focused; shown (narrow) when builder is focused.
-    Clicking the bar expands the step list horizontally.
+    Vertical sidebar for the compact combat panel.
+    Layout: [bar (left, always visible)] [step list scroll (right, toggle)].
+
+    The bar acts as a visual divider between the sections QScrollArea and the
+    step list. Expanding/collapsing is delegated to Panel via signals so that
+    the Panel's inner QSplitter can handle the resize reliably.
     """
 
-    _NARROW = 22
-    _WIDE = 220
+    expand_requested = Signal()
+    collapse_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._expanded = False
-        self.setFixedWidth(self._NARROW)
         self.setVisible(False)
 
         h = QHBoxLayout(self)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(0)
 
-        # Step list (hidden until bar is clicked)
+        # Bar on LEFT — acts as divider between sections and step list
+        self._bar = _VerticalBarLabel()
+        self._bar.clicked.connect(self._on_bar_clicked)
+        h.addWidget(self._bar)
+
+        # Step list on RIGHT — hidden until expanded
         self._rows_inner = QWidget()
         self._rows_inner.setObjectName("panel_inner")
         self._rows_layout = QVBoxLayout(self._rows_inner)
@@ -93,41 +105,34 @@ class StepsBar(QWidget):
         self._scroll.setWidget(self._rows_inner)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setVisible(False)
-        h.addWidget(self._scroll)
-
-        # Vertical bar (always visible while StepsBar is shown)
-        self._bar = _VerticalBarLabel()
-        self._bar.clicked.connect(self._on_bar_clicked)
-        h.addWidget(self._bar)
+        h.addWidget(self._scroll, stretch=1)
 
     # ── Toggle ─────────────────────────────────────────────────────────────
 
     def _on_bar_clicked(self) -> None:
         if self._expanded:
+            self._expanded = False
             self._scroll.setVisible(False)
             self._bar.set_expanded(False)
-            self.setFixedWidth(self._NARROW)
-            self._expanded = False
+            self.collapse_requested.emit()
         else:
+            self._expanded = True
             self._scroll.setVisible(True)
             self._bar.set_expanded(True)
-            self.setFixedWidth(self._WIDE)
-            self._expanded = True
+            self.expand_requested.emit()
 
     # ── Public API ─────────────────────────────────────────────────────────
 
     def set_visible_bar(self, visible: bool) -> None:
         """Called by PanelContainer on focus state changes."""
         if not visible and self._expanded:
+            self._expanded = False
             self._scroll.setVisible(False)
             self._bar.set_expanded(False)
-            self.setFixedWidth(self._NARROW)
-            self._expanded = False
         self.setVisible(visible)
 
     def refresh(self, result: Optional[BattleResult]) -> None:
-        """Rebuild step rows from BattleResult (connected to result_updated)."""
-        # Clear rows, keep trailing stretch
+        """Rebuild step rows from BattleResult (wired to result_updated)."""
         while self._rows_layout.count() > 1:
             item = self._rows_layout.takeAt(0)
             if item.widget():
@@ -154,8 +159,10 @@ class StepsBar(QWidget):
 class Panel(QWidget):
     """
     Container for an ordered list of Section widgets.
-    The combat panel adds a StepsBar on its right edge (hidden when
-    combat is focused, shown when builder is focused).
+
+    The combat panel adds a StepsBar via an inner QSplitter so that expanding
+    the steps list reliably pushes the sections QScrollArea to the left.
+    The builder panel uses a plain QScrollArea with no splitter overhead.
     """
 
     def __init__(self, name: str, parent: QWidget | None = None) -> None:
@@ -163,11 +170,14 @@ class Panel(QWidget):
         self._name = name
         self.setObjectName(f"panel_{name}")
 
-        h = QHBoxLayout(self)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.setSpacing(0)
+        self._steps_bar: Optional[StepsBar] = None
+        self._inner_splitter: Optional[QSplitter] = None
 
-        # Scrollable sections area
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # ── Scrollable sections area ──────────────────────────────────────
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -184,17 +194,44 @@ class Panel(QWidget):
         self._layout.addStretch()
 
         self._scroll.setWidget(self._inner)
-        h.addWidget(self._scroll, stretch=1)
 
-        # Steps bar — combat panel only
-        self._steps_bar: Optional[StepsBar] = None
         if name == "combat":
+            # Inner QSplitter handles sections ↔ steps resize reliably
+            self._inner_splitter = QSplitter(Qt.Orientation.Horizontal)
+            self._inner_splitter.setHandleWidth(1)
+            self._inner_splitter.setChildrenCollapsible(False)
+            self._inner_splitter.addWidget(self._scroll)
+
             self._steps_bar = StepsBar()
-            h.addWidget(self._steps_bar)
+            self._steps_bar.expand_requested.connect(self._on_steps_expand)
+            self._steps_bar.collapse_requested.connect(self._on_steps_collapse)
+            self._inner_splitter.addWidget(self._steps_bar)
+
+            outer.addWidget(self._inner_splitter)
+        else:
+            outer.addWidget(self._scroll)
+
+    # ── Steps expand/collapse (combat panel only) ─────────────────────────
+
+    def _on_steps_expand(self) -> None:
+        if self._inner_splitter is None:
+            return
+        total = sum(self._inner_splitter.sizes())
+        self._inner_splitter.setSizes([max(0, total - _EXPANDED_W), _EXPANDED_W])
+
+    def _on_steps_collapse(self) -> None:
+        if self._inner_splitter is None:
+            return
+        total = sum(self._inner_splitter.sizes())
+        self._inner_splitter.setSizes([total - _BAR_W, _BAR_W])
+
+    # ── Properties ────────────────────────────────────────────────────────
 
     @property
     def steps_bar(self) -> Optional[StepsBar]:
         return self._steps_bar
+
+    # ── Section management ────────────────────────────────────────────────
 
     def add_section(self, section: Section) -> None:
         """Insert section before the trailing QSpacerItem."""
