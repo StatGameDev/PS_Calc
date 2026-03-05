@@ -33,8 +33,10 @@ from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
 from gui.sections.passive_section import PassiveSection
 from gui.sections.stats_section import StatsSection
+from gui.sections.incoming_damage import IncomingDamageSection
 from gui.sections.step_breakdown import StepBreakdownSection
 from gui.sections.summary_section import SummarySection
+from gui.sections.target_section import TargetSection
 
 
 class MainWindow(QMainWindow):
@@ -82,9 +84,11 @@ class MainWindow(QMainWindow):
         self._passive_section: PassiveSection     = self._panel_container.get_section("passive_section")   # type: ignore[assignment]
 
         # ── Typed section references — combat ─────────────────────────────
-        self._combat_controls: CombatControlsSection = self._panel_container.get_section("combat_controls")  # type: ignore[assignment]
-        self._summary_section: SummarySection        = self._panel_container.get_section("summary_section")  # type: ignore[assignment]
-        self._step_breakdown:  StepBreakdownSection  = self._panel_container.get_section("step_breakdown")   # type: ignore[assignment]
+        self._combat_controls:  CombatControlsSection  = self._panel_container.get_section("combat_controls")   # type: ignore[assignment]
+        self._summary_section:  SummarySection         = self._panel_container.get_section("summary_section")   # type: ignore[assignment]
+        self._step_breakdown:   StepBreakdownSection   = self._panel_container.get_section("step_breakdown")    # type: ignore[assignment]
+        self._target_section:   TargetSection          = self._panel_container.get_section("target_section")    # type: ignore[assignment]
+        self._incoming_damage:  IncomingDamageSection  = self._panel_container.get_section("incoming_damage")   # type: ignore[assignment]
 
         self._connect_builder_signals()
         self._connect_combat_signals()
@@ -278,11 +282,19 @@ class MainWindow(QMainWindow):
         skill = self._combat_controls.get_skill_instance()
         mob_id = self._combat_controls.get_target_mob_id() or build.target_mob_id
         target = loader.get_monster(mob_id) if mob_id is not None else Target()
+
+        self._target_section.refresh_mob(mob_id)
+        self._incoming_damage.refresh_mob(mob_id)
+        self._incoming_damage.refresh_status(status)
+
         try:
             result = self._pipeline.calculate(status, weapon, skill, target, build)
             self.result_updated.emit(result)
         except Exception as exc:
             print(f"WARNING: BattlePipeline error: {exc}")
+            self._target_section.refresh_mob(None)
+            self._incoming_damage.refresh_mob(None)
+            self._incoming_damage.refresh_status(None)
             self.result_updated.emit(None)
 
     # ── Server toggle ──────────────────────────────────────────────────────

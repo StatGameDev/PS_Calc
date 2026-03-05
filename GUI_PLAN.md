@@ -504,23 +504,23 @@ Signal flow wired in main_window.py:
 
 ---
 
-## Phase 2 — Combat Analysis: Output
+## Phase 2 — Combat Analysis: Output ✓ DONE
 
 Prerequisite: Phase 1 sections wired to BattlePipeline via signals.
 Recalculation: any build change emits `build_changed` → MainWindow runs pipeline →
 pushes BattleResult to combat sections via `result_updated(BattleResult)` signal.
 
-### 2.1 Combat Controls (`combat_controls.py`)
+### 2.1 Combat Controls (`combat_controls.py`) ✓
 Skill dropdown (populated from skills.json, filters by job_id).
 Target dropdown (search QLineEdit → filtered mob list → select → sets target_mob_id).
 Environment radio buttons (reserved for future map-level config).
 compact_mode = "none" → always accessible.
 
-### 2.2 Summary Card (`summary_section.py`)
+### 2.2 Summary Card (`summary_section.py`) ✓
 Normal range (min–max), avg. Crit range + avg, crit%. Hit% (placeholder 100% until E1).
 compact_mode = "none" → always visible.
 
-### 2.3 Step Breakdown (`step_breakdown.py`)
+### 2.3 Step Breakdown (`step_breakdown.py`) ✓
 Full view: two-column table (Normal | Crit), one row per DamageStep.
 Columns: name, min/avg/max value. Hover tooltip: note + formula.
 "Show Source" toggle reveals hercules_ref column.
@@ -530,18 +530,30 @@ rows stacked vertically, alternating row backgrounds. No formula/note/ref in com
 
 ---
 
-## Phase 3 — Combat Analysis: Target & Incoming
+## Phase 3 — Combat Analysis: Target & Incoming ✓ DONE
 
-### 3.1 Target Info (`target_section.py`)
-Full view: mob name, ID, level, HP, DEF, VIT, element, size, race, is_boss.
-compact_view: single summary line. Format decided during implementation (Phase 3.1).
+### 3.1 Target Info (`target_section.py`) ✓
+Full view: mob name, ID, level, HP, DEF, MDEF, element (Name/Level), size, race,
+is_boss flag, then a "Base Stats" sub-header with STR/AGI/VIT/INT/DEX/LUK.
+Data source: `loader.get_monster_data(mob_id)` called from `_run_battle_pipeline()`.
+compact_view: single summary line — `"MobName  DEF:X  VIT:X  Element/Lv  Size"`,
+with `"Boss"` appended when is_boss.
 
-### 3.2 Incoming Damage (`incoming_damage.py`)
-Incoming damage calc (player as defender). default_collapsed=true, compact_mode="hidden".
-Full design TBD.
+Future (after magic damage implemented): conditionally swap DEF→MDEF and add INT
+for magic skills; display all fields for mixed damage. Compact view adjusts to match.
+
+### 3.2 Incoming Damage (`incoming_damage.py`) ✓
+Phase 3: display-only. Two rows: `Mob ATK: min–max` and `Player DEF: hard / soft`.
+`refresh_mob(mob_id)` and `refresh_status(status)` called from `_run_battle_pipeline()`.
+compact_mode="hidden" — section is hidden when combat panel is compact; no compact_view
+override needed. Left hidden in compact mode for now.
+
+Future: when fully implemented, section remains hidden in compact view; the summary
+card (summary_section) gains a compact variant of target info instead.
 
 ### 3.3 Custom Target dialog + Load-from-Build path
-Modal for custom target entry. "Load from Build" path for player vs player scenarios.
+Deferred to Phase 4 (modal work). Modal for custom target entry; "Load from Build"
+path for player vs player scenarios.
 
 ---
 
