@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -11,14 +12,21 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
 from core.build_manager import BuildManager
+from core.calculators.status_calculator import StatusCalculator
+from core.config import BattleConfig
+from core.models.build import PlayerBuild
 from gui import app_config
 from gui.panel_container import PanelContainer
+from gui.sections.build_header import BuildHeaderSection
+from gui.sections.derived_section import DerivedSection
+from gui.sections.equipment_section import EquipmentSection
+from gui.sections.passive_section import PassiveSection
+from gui.sections.stats_section import StatsSection
 
 
 class MainWindow(QMainWindow):
@@ -35,8 +43,9 @@ class MainWindow(QMainWindow):
         self.resize(1400, 900)
         self.setMinimumSize(1280, 720)
 
-        self._current_build = None
+        self._current_build: PlayerBuild | None = None
         self._current_build_name: str = ""
+        self._config = BattleConfig()
 
         # Load layout config (file I/O outside widget constructors)
         with open("gui/layout_config.json", "r", encoding="utf-8") as f:
@@ -50,13 +59,19 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # PanelContainer created first so focus buttons can reference it
-        # via method indirection (the methods are called post-init only).
         self._panel_container = PanelContainer(layout_config=layout_config)
 
         root.addWidget(self._build_top_bar())
         root.addWidget(self._panel_container, stretch=1)
 
+        # ── Typed section references ──────────────────────────────────────
+        self._build_header:    BuildHeaderSection = self._panel_container.get_section("build_header")      # type: ignore[assignment]
+        self._stats_section:   StatsSection       = self._panel_container.get_section("stats_section")    # type: ignore[assignment]
+        self._derived_section: DerivedSection     = self._panel_container.get_section("derived_section")  # type: ignore[assignment]
+        self._equip_section:   EquipmentSection   = self._panel_container.get_section("equipment_section")# type: ignore[assignment]
+        self._passive_section: PassiveSection     = self._panel_container.get_section("passive_section")  # type: ignore[assignment]
+
+        self._connect_builder_signals()
         self._refresh_builds()
 
     # ── Top bar construction ───────────────────────────────────────────────
@@ -70,13 +85,11 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(12, 0, 12, 0)
         layout.setSpacing(8)
 
-        # App title
         title = QLabel("PS Calc")
         title.setObjectName("app_title")
         layout.addWidget(title)
         layout.addSpacing(8)
 
-        # Build selector
         layout.addWidget(QLabel("Build:"))
         self._build_combo = QComboBox()
         self._build_combo.setMinimumWidth(200)
@@ -115,7 +128,6 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()
 
-        # Focus buttons
         builder_btn = QPushButton("◧ Builder")
         builder_btn.setObjectName("focus_btn")
         builder_btn.clicked.connect(self._focus_builder)
@@ -127,6 +139,17 @@ class MainWindow(QMainWindow):
         layout.addWidget(combat_btn)
 
         return bar
+
+    # ── Signal wiring ──────────────────────────────────────────────────────
+
+    def _connect_builder_signals(self) -> None:
+        """Wire all builder section change signals to _on_build_changed."""
+        self._build_header.build_name_changed.connect(self._on_build_changed)
+        self._build_header.job_changed.connect(self._on_build_changed)
+        self._build_header.level_changed.connect(self._on_build_changed)
+        self._stats_section.stats_changed.connect(self._on_build_changed)
+        self._equip_section.equipment_changed.connect(self._on_build_changed)
+        self._passive_section.passives_changed.connect(self._on_build_changed)
 
     # ── Build list helpers ─────────────────────────────────────────────────
 
@@ -141,10 +164,76 @@ class MainWindow(QMainWindow):
         elif names:
             self._build_combo.setCurrentIndex(0)
         self._build_combo.blockSignals(False)
+        # Load the currently visible build
+        name = self._build_combo.currentText()
+        if name:
+            self._on_build_selected(name)
 
     def _on_build_selected(self, name: str) -> None:
+        if not name:
+            return
         self._current_build_name = name
-        # Phase 1: load build and propagate to all sections.
+        path = os.path.join(app_config.SAVES_DIR, f"{name}.json")
+        try:
+            build = BuildManager.load_build(path)
+        except Exception as exc:
+            print(f"WARNING: Failed to load build '{name}': {exc}")
+            return
+
+        self._current_build = build
+        self._load_build_into_sections(build)
+
+        # Sync server toggle to the loaded build's server field
+        self._server_group.blockSignals(True)
+        is_payon = (build.server == "payon_stories")
+        btn = self._server_group.button(1 if is_payon else 0)
+        if btn:
+            btn.setChecked(True)
+        self._server_group.blockSignals(False)
+
+        base_title = "PS Calc — Pre-Renewal Damage Calculator"
+        self.setWindowTitle(base_title + (" — Payon Stories" if is_payon else ""))
+
+        self._run_status_calc()
+
+    def _load_build_into_sections(self, build: PlayerBuild) -> None:
+        """Push build data to all builder sections (no change signals fired)."""
+        self._build_header.load_build(build)
+        self._stats_section.load_build(build)
+        self._equip_section.load_build(build)
+        self._passive_section.load_build(build)
+
+    # ── Build-change pipeline ─────────────────────────────────────────────
+
+    def _on_build_changed(self, *_args) -> None:
+        """Called when any builder section changes. Collects build and recalculates."""
+        if self._current_build is None:
+            return
+        self._collect_build()
+        self._run_status_calc()
+
+    def _collect_build(self) -> None:
+        """Update self._current_build from all builder sections in-place."""
+        build = self._current_build
+        if build is None:
+            return
+        self._build_header.collect_into(build)
+        self._stats_section.collect_into(build)
+        self._equip_section.collect_into(build)
+        self._passive_section.collect_into(build)
+
+    def _run_status_calc(self) -> None:
+        """Run StatusCalculator and push results to DerivedSection."""
+        build = self._current_build
+        if build is None:
+            return
+        weapon = BuildManager.resolve_weapon(
+            build.equipped.get("right_hand"),
+            build.refine_levels.get("right_hand", 0),
+            build.weapon_element,
+        )
+        status = StatusCalculator(self._config).calculate(build, weapon)
+        self._derived_section.refresh(status)
 
     # ── Server toggle ──────────────────────────────────────────────────────
 

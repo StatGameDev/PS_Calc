@@ -1,12 +1,218 @@
-from PySide6.QtWidgets import QLabel
+from __future__ import annotations
+
+from typing import Optional
+
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
+    QComboBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QWidget,
+)
+
+from core.data_loader import loader
+from core.models.build import PlayerBuild
 from gui.section import Section
+
+# (slot_key, display_label, has_refine)
+_SLOTS: list[tuple[str, str, bool]] = [
+    ("right_hand", "R. Hand",  True),
+    ("left_hand",  "L. Hand",  True),
+    ("ammo",       "Ammo",     False),
+    ("armor",      "Armor",    True),
+    ("garment",    "Garment",  True),
+    ("footwear",   "Footwear", True),
+    ("acc_l",      "Acc. L",   False),
+    ("acc_r",      "Acc. R",   False),
+    ("head_top",   "Head Top", True),
+    ("head_mid",   "Head Mid", True),
+    ("head_low",   "Head Low", True),
+]
+
+# Element names indexed by ID 0-9 (Hercules order)
+_ELEMENT_NAMES = [
+    "Neutral", "Water", "Earth", "Fire", "Wind",
+    "Poison", "Holy", "Dark", "Ghost", "Undead",
+]
+
+
+def _resolve_item_name(item_id: Optional[int]) -> str:
+    """Return display name for a slot item ID. Falls back gracefully."""
+    if item_id is None:
+        return "— Empty —"
+    item = loader.get_item(item_id)
+    if item is None:
+        return f"Unknown (ID {item_id})"
+    return item.get("name", item.get("aegis_name", f"ID {item_id}"))
 
 
 class EquipmentSection(Section):
-    """Phase 1.4 — Equipment slots with refine spinners and item browser."""
+    """Phase 1.4 — Equipment slots with item name, refine spinners, Edit button."""
+
+    equipment_changed = Signal()
 
     def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_mode, parent)
-        lbl = QLabel("Coming in Phase 1.4 — Equipment")
-        lbl.setObjectName("stub_label")
-        self.add_content_widget(lbl)
+
+        self._compact_widget: QWidget | None = None
+        self._compact_weapon_lbl: QLabel | None = None
+        self._compact_summary_lbl: QLabel | None = None
+
+        # Per-slot widget storage (keyed by slot_key)
+        self._item_ids:     dict[str, Optional[int]] = {s: None for s, *_ in _SLOTS}
+        self._name_labels:  dict[str, QLabel]        = {}
+        self._refine_spins: dict[str, QSpinBox]      = {}
+
+        # ── Slot grid ──────────────────────────────────────────────────────
+        grid_widget = QWidget()
+        grid = QGridLayout(grid_widget)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(6)
+        grid.setVerticalSpacing(3)
+
+        for row_i, (slot_key, slot_label, has_refine) in enumerate(_SLOTS):
+            slot_lbl = QLabel(slot_label)
+            slot_lbl.setObjectName("equip_slot_label")
+            slot_lbl.setFixedWidth(68)
+            grid.addWidget(slot_lbl, row_i, 0)
+
+            name_lbl = QLabel("— Empty —")
+            name_lbl.setObjectName("equip_item_label")
+            self._name_labels[slot_key] = name_lbl
+            grid.addWidget(name_lbl, row_i, 1)
+
+            if has_refine:
+                refine_spin = QSpinBox()
+                refine_spin.setRange(0, 20)
+                refine_spin.setValue(0)
+                refine_spin.setFixedWidth(50)
+                refine_spin.setPrefix("+")
+                refine_spin.valueChanged.connect(self.equipment_changed)
+                self._refine_spins[slot_key] = refine_spin
+                grid.addWidget(refine_spin, row_i, 2)
+            else:
+                placeholder = QLabel("")
+                grid.addWidget(placeholder, row_i, 2)
+
+            edit_btn = QPushButton("Edit")
+            edit_btn.setObjectName("equip_edit_btn")
+            edit_btn.setFixedWidth(42)
+            edit_btn.setEnabled(False)  # enabled in Phase 4
+            grid.addWidget(edit_btn, row_i, 3)
+
+        self.add_content_widget(grid_widget)
+
+        # ── Weapon element override ────────────────────────────────────────
+        elem_row = QWidget()
+        elem_layout = QHBoxLayout(elem_row)
+        elem_layout.setContentsMargins(0, 4, 0, 0)
+        elem_layout.setSpacing(6)
+        elem_layout.addWidget(QLabel("Weapon Element:"))
+        self._element_combo = QComboBox()
+        self._element_combo.addItem("From Item", None)
+        for idx, name in enumerate(_ELEMENT_NAMES):
+            self._element_combo.addItem(name, idx)
+        self._element_combo.currentIndexChanged.connect(self.equipment_changed)
+        elem_layout.addWidget(self._element_combo)
+        elem_layout.addStretch()
+        self.add_content_widget(elem_row)
+
+    # ── Compact API ────────────────────────────────────────────────────────
+
+    def _build_compact_widget(self) -> None:
+        w = QWidget()
+        inner = QGridLayout(w)
+        inner.setContentsMargins(4, 4, 4, 4)
+        inner.setSpacing(3)
+
+        self._compact_weapon_lbl = QLabel("— Empty —")
+        self._compact_weapon_lbl.setObjectName("compact_equip_weapon")
+        inner.addWidget(self._compact_weapon_lbl, 0, 0)
+
+        self._compact_summary_lbl = QLabel("0/11 slots filled")
+        self._compact_summary_lbl.setObjectName("compact_equip_summary")
+        inner.addWidget(self._compact_summary_lbl, 1, 0)
+
+        w.setVisible(False)
+        self._compact_widget = w
+        self.layout().addWidget(w)
+
+    def _update_compact_labels(self) -> None:
+        if self._compact_weapon_lbl is None:
+            return
+        rh_id = self._item_ids.get("right_hand")
+        rh_name = _resolve_item_name(rh_id)
+        rh_refine_spin = self._refine_spins.get("right_hand")
+        if rh_refine_spin and rh_refine_spin.value() > 0:
+            weapon_text = f"{rh_name} +{rh_refine_spin.value()}"
+        else:
+            weapon_text = rh_name
+        self._compact_weapon_lbl.setText(weapon_text)
+
+        filled = sum(1 for v in self._item_ids.values() if v is not None)
+        self._compact_summary_lbl.setText(f"{filled}/{len(_SLOTS)} slots filled")  # type: ignore[union-attr]
+
+    def _enter_compact_view(self) -> None:
+        self._pre_compact_collapsed = self._is_collapsed
+        if self._compact_widget is None:
+            self._build_compact_widget()
+        self._update_compact_labels()
+        self._content_frame.setVisible(False)
+        self._compact_widget.setVisible(True)
+        self._is_collapsed = False
+        self._arrow.setText("▼")
+
+    def _exit_compact_view(self) -> None:
+        if self._compact_widget is not None:
+            self._compact_widget.setVisible(False)
+        restored = self._pre_compact_collapsed if self._pre_compact_collapsed is not None else False
+        self._pre_compact_collapsed = None
+        self._is_collapsed = restored
+        self._content_frame.setVisible(not restored)
+        self._arrow.setText("▶" if restored else "▼")
+
+    # ── Public API ────────────────────────────────────────────────────────
+
+    def load_build(self, build: PlayerBuild) -> None:
+        """Populate all equipment widgets from build without emitting change signals."""
+        for spin in self._refine_spins.values():
+            spin.blockSignals(True)
+        self._element_combo.blockSignals(True)
+
+        for slot_key, _, has_refine in _SLOTS:
+            item_id = build.equipped.get(slot_key)
+            self._item_ids[slot_key] = item_id
+            self._name_labels[slot_key].setText(_resolve_item_name(item_id))
+
+            if has_refine and slot_key in self._refine_spins:
+                self._refine_spins[slot_key].setValue(
+                    build.refine_levels.get(slot_key, 0)
+                )
+
+        # Weapon element combo: None → "From Item" (index 0), else match by data
+        we = build.weapon_element
+        if we is None:
+            self._element_combo.setCurrentIndex(0)
+        else:
+            idx = self._element_combo.findData(we)
+            self._element_combo.setCurrentIndex(idx if idx >= 0 else 0)
+
+        for spin in self._refine_spins.values():
+            spin.blockSignals(False)
+        self._element_combo.blockSignals(False)
+
+        if self._compact_widget is not None:
+            self._update_compact_labels()
+
+    def collect_into(self, build: PlayerBuild) -> None:
+        """Write section state into an existing PlayerBuild in-place."""
+        build.equipped = {slot_key: self._item_ids[slot_key] for slot_key, *_ in _SLOTS}
+        build.refine_levels = {
+            slot_key: self._refine_spins[slot_key].value()
+            for slot_key, _, has_refine in _SLOTS
+            if has_refine and slot_key in self._refine_spins
+        }
+        build.weapon_element = self._element_combo.currentData()  # None or int 0-9

@@ -173,3 +173,9 @@ class PanelContainer(QSplitter):
             self.setSizes(self._pre_nudge_sizes)
             self.blockSignals(False)
             self._pre_nudge_sizes = None
+
+    # ── Public accessor ────────────────────────────────────────────────────
+
+    def get_section(self, key: str) -> Section:
+        """Return the Section instance for the given layout_config key."""
+        return self._sections[key]

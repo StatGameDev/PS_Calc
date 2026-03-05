@@ -162,10 +162,10 @@ Split fractions are working defaults and will be adjusted during implementation.
 - `combat_controls` (`none`): skill and target selection always accessible.
 - `summary_section` (`none`): damage numbers always visible; primary output.
 - `step_breakdown` (`compact_view`): collapses to a narrow vertical strip docked to the
-  right edge of the content area. The strip shows step names only.
+  right edge of the content area. The strip shows section name with arrows pointing left only.
   - Clicking the strip expands it: `step_breakdown` emits `expand_requested()`.
   - `PanelContainer` receives the signal and nudges the combat panel wider (~5% of
-    total width). This nudge does NOT change the current focus state or trigger snap.
+    total width), arrows point right now. This nudge does NOT change the current focus state or trigger snap.
   - Expanded compact view: step name + avg value rows, stacked vertically,
     alternating row backgrounds from dark.qss. No formula, note, or hercules_ref.
   - Collapsing the strip emits a matching signal; PanelContainer restores the
@@ -464,38 +464,43 @@ No multi-monitor re-scaling on window move (not planned beyond Phase 8).
 
 ---
 
-## Phase 1 — Character Builder Panel
+## Phase 1 — Character Builder Panel ✓ DONE
 
 Prerequisite: Phase 0 complete and app launches with stubbed sections visible.
 
-### 1.1 Build Header Section (`build_header.py`)
-Content: build name (editable QLineEdit), job display (QLabel), base level + job level
-spinboxes. Emits `build_name_changed`, `job_changed`, `level_changed` signals.
+### 1.1 Build Header Section (`build_header.py`) ✓
+Content: build name (editable QLineEdit), job QComboBox (all pre-re jobs), base level +
+job level spinboxes. Emits `build_name_changed`, `job_changed`, `level_changed`.
 compact_mode = "none" → no compact widget needed.
 
-### 1.2 Base Stats Section (`stats_section.py`)
+### 1.2 Base Stats Section (`stats_section.py`) ✓
 Content: six QSpinBox rows (STR/AGI/VIT/INT/DEX/LUK), each with base + bonus + total
-display. Stat point counter above the grid.
-compact_view: read-only 3-column QLabel grid — `STAT: Base+Bonus` format. No spinners.
+display. Base stat total counter above the grid. Additional "Flat Bonuses" sub-group
+(BATK+, HIT+, FLEE+, CRI+, Hard DEF, Soft DEF+, ASPD%) for manually entered gear bonuses.
+compact_view: read-only 3-column QLabel grid — `STAT: Base+Bonus` format.
 
-### 1.3 Derived Stats Section (`derived_section.py`)
-Content: read-only grid driven by StatusCalculator. Fields: BATK, DEF (hard/soft), FLEE,
-HIT, CRI, ASPD (placeholder), HP/SP (placeholder).
-compact_view: single-column compact block mirroring RO stat window:
-`ATK: value`, `DEF: Hard+Soft`, `FLEE: Flee+PFlg`, `HIT: value`, `CRI: value%`.
-stats_section and derived_section compact views stack together in the narrow builder panel.
+### 1.3 Derived Stats Section (`derived_section.py`) ✓
+Content: read-only grid driven by StatusCalculator.refresh(status). Fields: BATK,
+DEF (hard+soft), FLEE (+perfect_dodge), HIT, CRI%, ASPD (placeholder), HP/SP (placeholder).
+compact_view: compact block showing BATK, DEF, FLEE, HIT, CRI.
+main_window._run_status_calc() calls StatusCalculator and pushes StatusData here.
 
-### 1.4 Equipment Section (`equipment_section.py`)
-Content: one row per slot (right_hand, left_hand, ammo, armor, garment, footwear,
-acc_l, acc_r, head_top, head_mid, head_low). Each row: slot label, item name/ID,
-refine spinner, Edit button (opens Equipment Browser modal — Phase 4.1).
-compact_view: weapon name + refine on line 1, slot-count summary on line 2
-(e.g., "Flamberge +7  ·  5/10 slots filled").
+### 1.4 Equipment Section (`equipment_section.py`) ✓
+Content: 11-slot grid (right_hand…head_low). Each row: slot label, item name (resolved
+via loader.get_item), refine spinner (0–20, refineable slots only), Edit button (disabled
+— Phase 4). Weapon Element combo below grid (From Item / Neutral / Water … Undead).
+compact_view: weapon name + refine on line 1, slot-count summary on line 2.
 
-### 1.5 Passive Section (`passive_section.py`)
-Sub-groups: Self Buffs (SC_* checkboxes/spinboxes), Party Buffs, Masteries (skill level
-spinboxes), Flags (is_riding_peco, no_sizefix, is_ranged_override radio).
-compact_view: single summary line — e.g. "SC_OVERTHRUST 5  ·  SM_SWORD 10  ·  2 flags".
+### 1.5 Passive Section (`passive_section.py`) ✓
+Sub-groups: Self Buffs (SC_AURABLADE/MAXIMIZEPOWER/OVERTHRUST/OVERTHRUSTMAX),
+Party Buffs placeholder, Masteries (12 skills, 0–10 spinboxes), Flags
+(is_riding_peco checkbox, no_sizefix checkbox, is_ranged_override radio: Auto/Melee/Ranged).
+compact_view: single summary line of active buffs · masteries · flags.
+
+Signal flow wired in main_window.py:
+- `_on_build_selected` → load file → push to all sections → `_run_status_calc()`
+- any section change signal → `_on_build_changed` → collect into build → `_run_status_calc()`
+- `get_section(key)` added to PanelContainer for typed section access.
 
 ---
 
