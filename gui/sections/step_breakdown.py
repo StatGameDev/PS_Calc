@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -34,19 +35,73 @@ def _fmt_step(step: Optional[DamageStep]) -> str:
     return f"{step.min_value}–{step.value}–{step.max_value}"
 
 
+class _VerticalBar(QWidget):
+    """
+    Narrow clickable vertical strip shown on the right edge of the compact
+    widget. Draws rotated 'Steps ▶/◀' text. Emits clicked() on left press.
+    """
+
+    clicked = Signal()
+    _WIDTH = 22
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._expanded = False
+        self.setFixedWidth(self._WIDTH)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setMinimumHeight(40)
+        self.setToolTip("Toggle step list")
+
+    def set_expanded(self, expanded: bool) -> None:
+        self._expanded = expanded
+        self.update()
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+    def paintEvent(self, event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        p.fillRect(self.rect(), QColor("#252830"))
+
+        p.save()
+        p.translate(self._WIDTH // 2, self.height() // 2)
+        p.rotate(-90)
+
+        font = QFont()
+        font.setPointSize(9)
+        p.setFont(font)
+        p.setPen(QColor("#6a7383"))
+
+        arrow = "◀" if self._expanded else "▶"
+        text = f"Steps  {arrow}"
+        fm = p.fontMetrics()
+        br = fm.boundingRect(text)
+        p.drawText(-br.width() // 2, br.height() // 3, text)
+        p.restore()
+
+
 class StepBreakdownSection(Section):
-    """Phase 2.3 — Step-by-step pipeline table with formula/source toggles."""
+    """Phase 2.3 — Step-by-step pipeline table with formula/source toggles.
+
+    Full view (combat focused): Normal/Crit table with Show Source toggle.
+    Compact view (builder focused): vertical bar on right edge. Clicking the
+    bar expands a scrollable step+value list; clicking again collapses it.
+    Only one of {full table, compact bar} is ever visible at a time.
+    """
 
     def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_mode, parent)
 
         self._result: Optional[BattleResult] = None
         self._compact_widget: Optional[QWidget] = None
-        self._compact_expand_btn: Optional[QPushButton] = None
-        self._compact_rows_widget: Optional[QWidget] = None
+        self._compact_bar: Optional[_VerticalBar] = None
+        self._compact_rows_widget: Optional[QScrollArea] = None
         self._compact_rows_layout: Optional[QVBoxLayout] = None
         self._compact_rows_inner: Optional[QWidget] = None
-        self._compact_collapse_btn: Optional[QPushButton] = None
 
         # ── Controls row ──────────────────────────────────────────────────
         ctrl_row = QHBoxLayout()
@@ -79,7 +134,6 @@ class StepBreakdownSection(Section):
         self._table.setMinimumHeight(120)
         self.add_content_widget(self._table)
 
-        # Placeholder row
         self._set_placeholder()
 
     # ── Source toggle ──────────────────────────────────────────────────────
@@ -93,13 +147,12 @@ class StepBreakdownSection(Section):
     def _set_placeholder(self) -> None:
         self._table.setRowCount(1)
         item = QTableWidgetItem("No data yet")
-        item.setForeground(__import__("PySide6.QtGui", fromlist=["QColor"]).QColor("#4a5060"))
+        item.setForeground(QColor("#4a5060"))
         self._table.setItem(0, _COL_NAME, item)
         for col in (_COL_NORMAL, _COL_CRIT, _COL_SOURCE):
             self._table.setItem(0, col, QTableWidgetItem(""))
 
     def _populate_table(self, result: BattleResult) -> None:
-        from PySide6.QtGui import QColor
         normal_steps = result.normal.steps
         crit_by_name: dict[str, DamageStep] = {}
         crit_only_steps: list[DamageStep] = []
@@ -151,7 +204,6 @@ class StepBreakdownSection(Section):
     def _rebuild_compact_rows(self, result: Optional[BattleResult]) -> None:
         if self._compact_rows_layout is None:
             return
-        # Clear existing rows
         while self._compact_rows_layout.count():
             item = self._compact_rows_layout.takeAt(0)
             if item.widget():
@@ -174,60 +226,55 @@ class StepBreakdownSection(Section):
             row_layout.addWidget(val_lbl)
             self._compact_rows_layout.addWidget(row_w)
 
-    # ── Compact view (compact_mode = "compact_view") ──────────────────────
+    # ── Compact view ──────────────────────────────────────────────────────
 
     def _build_compact_widget(self) -> None:
         w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        h_layout = QHBoxLayout(w)
+        h_layout.setContentsMargins(0, 0, 0, 0)
+        h_layout.setSpacing(0)
 
-        expand_btn = QPushButton("▶  Steps")
-        expand_btn.clicked.connect(self._on_compact_expand)
-        layout.addWidget(expand_btn)
-
-        rows_w = QWidget()
-        rows_layout = QVBoxLayout(rows_w)
+        # Scrollable step list — hidden until bar is clicked
+        rows_inner = QWidget()
+        rows_layout = QVBoxLayout(rows_inner)
         rows_layout.setContentsMargins(0, 0, 0, 0)
         rows_layout.setSpacing(0)
-        rows_w.setVisible(False)
 
-        # Scrollable wrapper for the compact rows
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setWidget(rows_w)
+        scroll.setWidget(rows_inner)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setMaximumHeight(300)
         scroll.setVisible(False)
 
-        collapse_btn = QPushButton("◀  Collapse")
-        collapse_btn.clicked.connect(self._on_compact_collapse)
-        collapse_btn.setVisible(False)
-        layout.addWidget(collapse_btn)
-        layout.addWidget(scroll)
+        h_layout.addWidget(scroll)
 
-        self._compact_expand_btn = expand_btn
-        self._compact_rows_widget = scroll
-        self._compact_rows_inner = rows_w
+        # Vertical bar — always visible while compact mode is active
+        bar = _VerticalBar()
+        bar.clicked.connect(self._on_bar_clicked)
+        h_layout.addWidget(bar)
+
+        self._compact_rows_inner = rows_inner
         self._compact_rows_layout = rows_layout
-        self._compact_collapse_btn = collapse_btn
+        self._compact_rows_widget = scroll
+        self._compact_bar = bar
 
+        w.setVisible(False)  # must be hidden before adding; shown by _enter_compact_view
         self.layout().addWidget(w)
         self._compact_widget = w
 
-        # Populate if we already have data
         self._rebuild_compact_rows(self._result)
 
-    def _on_compact_expand(self) -> None:
-        self._compact_expand_btn.setVisible(False)
-        self._compact_rows_widget.setVisible(True)
-        self._compact_collapse_btn.setVisible(True)
-        self.expand_requested.emit()
-
-    def _on_compact_collapse(self) -> None:
-        self._compact_rows_widget.setVisible(False)
-        self._compact_collapse_btn.setVisible(False)
-        self._compact_expand_btn.setVisible(True)
-        self.collapse_requested.emit()
+    def _on_bar_clicked(self) -> None:
+        """Toggle the step list open/closed and notify PanelContainer."""
+        if self._compact_rows_widget.isVisible():
+            self._compact_rows_widget.setVisible(False)
+            self._compact_bar.set_expanded(False)
+            self.collapse_requested.emit()
+        else:
+            self._compact_rows_widget.setVisible(True)
+            self._compact_bar.set_expanded(True)
+            self.expand_requested.emit()
 
     def _enter_compact_view(self) -> None:
         if self._compact_widget is None:
@@ -240,14 +287,12 @@ class StepBreakdownSection(Section):
 
     def _exit_compact_view(self) -> None:
         if self._compact_widget is not None:
-            self._compact_widget.setVisible(False)
-            # Reset expand/collapse state for next compact entry
-            if self._compact_expand_btn:
-                self._compact_expand_btn.setVisible(True)
-            if self._compact_rows_widget:
+            # Collapse bar to its default state before hiding
+            if self._compact_rows_widget is not None:
                 self._compact_rows_widget.setVisible(False)
-            if self._compact_collapse_btn:
-                self._compact_collapse_btn.setVisible(False)
+            if self._compact_bar is not None:
+                self._compact_bar.set_expanded(False)
+            self._compact_widget.setVisible(False)
         if self._pre_compact_collapsed is not None:
             self._is_collapsed = self._pre_compact_collapsed
             self._pre_compact_collapsed = None

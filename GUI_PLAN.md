@@ -521,12 +521,20 @@ Normal range (min–max), avg. Crit range + avg, crit%. Hit% (placeholder 100% u
 compact_mode = "none" → always visible.
 
 ### 2.3 Step Breakdown (`step_breakdown.py`) ✓
-Full view: two-column table (Normal | Crit), one row per DamageStep.
+Full view (combat focused): two-column table (Normal | Crit), one row per DamageStep.
 Columns: name, min/avg/max value. Hover tooltip: note + formula.
 "Show Source" toggle reveals hercules_ref column.
-compact_view: vertical strip (step names only when collapsed). On expand_requested:
-PanelContainer nudges combat panel wider; expanded view shows step name + avg value
-rows stacked vertically, alternating row backgrounds. No formula/note/ref in compact.
+
+compact_view (builder focused): `_VerticalBar` strip docked to the right edge of the
+section. Bar draws rotated "Steps ▶/◀" label via QPainter; fixed 22px width.
+Full table is hidden when compact strip is active; compact strip is hidden when full
+table is active — never both visible simultaneously.
+- Clicking bar → shows scrollable step+avg list to its left; bar shows ◀; emits
+  `expand_requested` → PanelContainer nudges combat panel wider (~5%).
+- Clicking bar again → hides list; bar shows ▶; emits `collapse_requested` →
+  PanelContainer restores pre-nudge ratio.
+- `_exit_compact_view` always resets bar to collapsed state before hiding it.
+- No formula, note, or hercules_ref in compact list.
 
 ---
 
@@ -595,6 +603,16 @@ Full step breakdown always-visible. pyqtgraph TTK distribution histogram
 - Resolution scaling verification (1280×720 through 1920×1080).
 - Manual UI scale override: `ui_scale_override` in settings JSON; checked at startup.
 - Payon Stories BattleConfig fully wired.
+
+---
+
+## Future: Horizontal Layout Pass
+
+Sections currently stack vertically in each panel. PySide6 supports placing sections
+side by side using horizontal QHBoxLayouts and nested QSplitters with minimal effort,
+but no specific arrangements have been planned yet. Revisit after Phase 3 is stable
+and content widths are well understood. Candidates: Summary + Target side by side;
+Combat Controls + Incoming Damage row.
 
 ---
 
