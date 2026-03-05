@@ -60,7 +60,7 @@
       "panel": "combat",
       "display_name": "Step Breakdown",
       "default_collapsed": false,
-      "compact_mode": "compact_view"
+      "compact_mode": "hidden"
     },
     {
       "key": "target_section",

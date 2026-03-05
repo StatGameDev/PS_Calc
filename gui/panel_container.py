@@ -124,6 +124,10 @@ class PanelContainer(QSplitter):
         for key, sec in self._sections.items():
             sec.set_compact_mode(self._section_panel[key] != focused_panel)
 
+        # Show/hide the combat panel's steps sidebar
+        if self._combat_panel.steps_bar is not None:
+            self._combat_panel.steps_bar.set_visible_bar(focused_panel == "builder")
+
         self.focus_state_changed.emit(state)
 
     def focus_builder(self) -> None:
@@ -179,3 +183,8 @@ class PanelContainer(QSplitter):
     def get_section(self, key: str) -> Section:
         """Return the Section instance for the given layout_config key."""
         return self._sections[key]
+
+    @property
+    def steps_bar(self):
+        """The combat panel's StepsBar (shown when builder is focused)."""
+        return self._combat_panel.steps_bar

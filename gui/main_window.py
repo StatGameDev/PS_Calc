@@ -96,6 +96,7 @@ class MainWindow(QMainWindow):
         # Wire result_updated to combat sections
         self.result_updated.connect(self._summary_section.refresh)
         self.result_updated.connect(self._step_breakdown.refresh)
+        self.result_updated.connect(self._panel_container.steps_bar.refresh)
 
         self._refresh_builds()
 

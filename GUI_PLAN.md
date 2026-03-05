@@ -525,15 +525,17 @@ Full view (combat focused): two-column table (Normal | Crit), one row per Damage
 Columns: name, min/avg/max value. Hover tooltip: note + formula.
 "Show Source" toggle reveals hercules_ref column.
 
-compact_view (builder focused): `_VerticalBar` strip docked to the right edge of the
-section. Bar draws rotated "Steps ▶/◀" label via QPainter; fixed 22px width.
-Full table is hidden when compact strip is active; compact strip is hidden when full
-table is active — never both visible simultaneously.
-- Clicking bar → shows scrollable step+avg list to its left; bar shows ◀; emits
-  `expand_requested` → PanelContainer nudges combat panel wider (~5%).
-- Clicking bar again → hides list; bar shows ▶; emits `collapse_requested` →
-  PanelContainer restores pre-nudge ratio.
-- `_exit_compact_view` always resets bar to collapsed state before hiding it.
+compact_mode="hidden": StepBreakdownSection is completely invisible when builder
+is focused. Step data in compact state is handled by StepsBar in Panel instead.
+
+StepsBar (gui/panel.py, combat panel only): panel-level QWidget on the right edge
+of the combat panel's QHBoxLayout. Controlled by PanelContainer.set_focus_state —
+shown when builder_focused, hidden when combat_focused. Internal toggle:
+- Default (collapsed): 22px wide, `_VerticalBarLabel` draws rotated "Steps ▶" text.
+- Clicking bar: expands to 220px, shows scrollable step+avg list; arrow → ◀.
+- Clicking again: collapses back to 22px; list hidden; arrow → ▶.
+- `set_visible_bar(False)` always resets to collapsed before hiding.
+- `refresh(result)` connected to MainWindow.result_updated alongside step_breakdown.
 - No formula, note, or hercules_ref in compact list.
 
 ---
