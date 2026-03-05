@@ -76,7 +76,8 @@ class DefenseFix:
             variance_max = def2 * (def2 - 15) // 150
             vd_min = def2 // 2
             vd_max = def2 // 2 + (variance_max - 1 if variance_max > 0 else 0)
-            vd_avg = def2 // 2 + ((variance_max - 1) // 2 if variance_max > 0 else 0)
+            # avg of rnd()%n is (n-1)/2; n//2 rounds half-up (C1a fix)
+            vd_avg = def2 // 2 + (variance_max // 2 if variance_max > 0 else 0)
             note_type = "PC"
         else:
             # battle.c: vit_def = (def2/20)*(def2/20);
@@ -85,7 +86,8 @@ class DefenseFix:
             variance_max = (def2 // 20) * (def2 // 20)
             vd_min = def2
             vd_max = def2 + (variance_max - 1 if variance_max > 0 else 0)
-            vd_avg = def2 + ((variance_max - 1) // 2 if variance_max > 0 else 0)
+            # avg of rnd()%n is (n-1)/2; n//2 rounds half-up (C1a fix)
+            vd_avg = def2 + (variance_max // 2 if variance_max > 0 else 0)
             note_type = "monster"
 
         # DamageRange.subtract() applies the crossing:

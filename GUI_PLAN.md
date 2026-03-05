@@ -8,8 +8,8 @@ _Load at the start of any GUI session. PHASES_DONE.md contains full Phase 0–4 
 | Session | Focus | Exit Criteria |
 |---|---|---|
 | **1** | Bugs B3+B4+B5 (splitter/target), verify B6+B7 | Layout stable, target refresh working, crit/overrefine verified |
-| **2** | C1 Variance + E1 Hit/Miss | Summary card shows min/avg/max and hit chance |
-| **3** | C3 ASPD + HP + SP | Derived stats correct for naked builds |
+| **2** | C1 Variance + E1 Hit/Miss | ⚠️ Partial — C1a avg fix done; E1 deferred; C1 distribution needs planning session |
+| **3** | E1 Hit/Miss + C3 ASPD + HP + SP | Hit chance in summary card; derived stats correct for naked builds |
 | **4** | D5/D4 Script parsing + gear/card effects + tooltips | Gear/card bonuses live; tooltip descriptions for common bonus types |
 | **5** | Enhancements 4.4–4.7 (filter UIs) | All four filter UIs complete |
 | **6** | E3 Bane skills + E4 Katar second hit + polish | Correct output for Hunter and Katar Sin builds |
@@ -76,27 +76,58 @@ Required when user-adjustable widget sizes are introduced (Phase 8):
 
 ---
 
-## Session 2 — C1 Variance + E1 Hit/Miss
+## Session 2 — C1 Variance + E1 Hit/Miss _(partial)_
 
-### C1 Variance (pipeline change)
-Three sources expressed as `(min, max, scale)` tuples — keep strictly separated
-from deterministic multipliers (Phase 7 histogram depends on this):
-- Weapon ATK range: crit forces atkmax.
-- Overrefine: rnd(1, max) — NOT clamped on crit.
-- VIT DEF: rnd(0, max-1) — bypassed on crit; fix avg-off-by-0.5.
+### Done
+- **C1a** — VIT DEF avg off-by-0.5 fixed in `defense_fix.py`: `variance_max//2`.
+- **B7 debug** — runtime print added to `base_damage.py`; run app to see actual
+  weapon.level/refine values and confirm root cause before removing.
 
-GUI: `summary_section` switches from single avg to `min / avg / max` for normal
-and crit columns.
+### C1 Variance — Handover (needs web-Claude planning session)
 
-### E1 Hit/Miss (pipeline + summary card)
-- Hit chance: `80 + HIT − FLEE`. Verify clamp bounds from source.
-- Perfect Dodge: `1 + ⌊LUK/10⌋ + bonus`.
-- Surface hit_chance on summary card below damage rows.
+`DamageRange(min, max, avg)` is insufficient for Phase 7 histogram.
+The final damage distribution is a **convolution of three independent uniform
+random variables** (weapon ATK range, overrefine roll, VIT DEF roll), each
+subtracted or added at different pipeline stages. The min and max are propagated
+correctly, but `avg` is an approximation only. To support a damage histogram:
+
+- **Option A — Exact convolution**: keep variance sources as `(lo, hi, step)` tuples;
+  convolve at each stage. O(n²) in the range size, feasible for small overrefine but
+  not for high-ATK weapons.
+- **Option B — Irwin-Hall approximation**: sum of n uniform → approximately normal
+  for large n. Fast, but loses tail accuracy.
+- **Option C — Monte Carlo**: simulate k=10k rolls. Simple, correct, fast enough.
+- **Architectural constraint**: deterministic multipliers (SkillRatio, AttrFix, etc.)
+  must be applied to the *entire distribution*, not just avg. They scale the range.
+
+Defer to web-Claude planning session. Do NOT change `DamageRange` until design is
+settled — the tuple structure is the right starting point.
+
+### E1 Hit/Miss — Deferred to Session 3
+
+Verified Hercules formulas:
+- `hitrate = 80 + player_HIT − mob_FLEE`, clamped to `[min_hitrate, max_hitrate]`
+  (defaults 5/100). `#ifndef RENEWAL`, battle.c:4469/5024.
+- `mob_FLEE = mob.level + mob.agi` (standard status formula).
+- `perfect_dodge_chance = (target.luk + 10) / 10 %` — `rnd()%1000 < flee2`
+  where `flee2 = luk + 10`, battle.c:4799.
+- hitrate has further modifiers not modelled: skill per-level bonuses, SC_FOGWALL
+  (−50 for ranged normal), arrow_hit, agi_penalty_type. Add TODO when implementing.
+
+Required changes for E1:
+1. `core/models/target.py` — add `agi: int = 0`
+2. `core/data_loader.py` — `get_monster()` populate `agi` from `stats.agi`
+3. `core/config.py` — add `min_hitrate: int = 5`, `max_hitrate: int = 100`
+4. `core/models/damage.py` — add `perfect_dodge: float = 0.0` to `BattleResult`
+5. `core/calculators/modifiers/hit_chance.py` — new: `calculate_hit_chance(status, target, config)`
+6. `core/calculators/battle_pipeline.py` — call calculate_hit_chance, set result fields
+7. `gui/sections/summary_section.py` — show hit% + perfect dodge% in Hit row
 
 ---
 
-## Session 3 — C3 Derived Stats
+## Session 3 — E1 Hit/Miss + C3 Derived Stats
 
+E1 first (see Session 2 handover above), then ASPD, HP, SP together.
 ASPD, HP, SP implemented together (same pattern: table lookup + formula + bonus stub).
 1. Base table lookup by job_id + base_level (pc.c / status.c).
 2. Stat formula applied.

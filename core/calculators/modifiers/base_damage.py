@@ -123,6 +123,15 @@ class BaseDamage:
         # Suppressed when weapon.refineable is False (item_db: Refine: false).
         if weapon.refineable:
             overrefine = loader.get_overrefine(weapon.level, weapon.refine)
+            # B7 DEBUG — remove once root cause is confirmed
+            if overrefine == 0 and weapon.refine > 0:
+                import sys
+                print(
+                    f"B7 DEBUG: overrefine=0 but refine={weapon.refine} > 0. "
+                    f"weapon='{weapon.aegis_name}' level={weapon.level!r} "
+                    f"refine={weapon.refine!r} refineable={weapon.refineable!r}",
+                    file=sys.stderr,
+                )
             if overrefine > 0:
                 or_avg = (overrefine + 1) // 2
                 dmg = dmg.add_range(1, overrefine, or_avg)

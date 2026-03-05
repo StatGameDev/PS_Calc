@@ -53,6 +53,69 @@ Always grep first. Never load entire files.
 
 ---
 
+## Project File Structure
+
+### Core calculator files (`core/calculators/`)
+
+    core/calculators/battle_pipeline.py        — BattlePipeline orchestrator
+    core/calculators/status_calculator.py      — StatusCalculator (HIT, FLEE, BATK, CRI, DEF)
+    core/calculators/modifiers/
+        base_damage.py       — weapon ATK range, SizeFix, overrefine (battle_calc_base_damage2)
+        skill_ratio.py       — SkillRatio (battle_calc_skillratio)
+        defense_fix.py       — DefenseFix: hard DEF % + VIT DEF rnd range
+        crit_atk_rate.py     — CritAtkRate (pre-defense crit bonus)
+        active_status_bonus.py — SC_AURABLADE etc. (post-defense)
+        refine_fix.py        — RefineFix: deterministic atk2 (post-defense)
+        mastery_fix.py       — MasteryFix (battle_calc_masteryfix, #ifndef RENEWAL)
+        attr_fix.py          — AttrFix: elemental multiplier table
+        final_rate_bonus.py  — FinalRateBonus: short/long damage rates
+        crit_chance.py       — calculate_crit_chance, CRIT_ELIGIBLE_SKILLS
+        hit_chance.py        — calculate_hit_chance (E1, Session 2/3)
+
+### Core models (`core/models/`)
+
+    build.py    — PlayerBuild dataclass
+    weapon.py   — Weapon dataclass, RANGED_WEAPON_TYPES
+    target.py   — Target dataclass (mirror of tstatus for damage calc)
+    status.py   — StatusData dataclass (output of StatusCalculator)
+    damage.py   — DamageRange, DamageStep, DamageResult, BattleResult
+    skill.py    — SkillInstance
+
+### Data files (`core/data/pre-re/`)
+
+    db/item_db.json    — 2760 items (IT_WEAPON, IT_ARMOR, IT_CARD, IT_AMMO)
+    db/mob_db.json     — 1007 mobs
+    db/skills.json     — 1168 skills
+    tables/            — size_fix, attr_fix, refine_weapon, mastery_fix, active_status_bonus
+
+### GUI (`gui/`)
+
+    main_window.py          — QMainWindow, signal routing, pipeline triggers
+    panel_container.py      — PanelContainer(QSplitter), focus states, snap
+    panel.py                — Panel(QWidget), StepsBar
+    section.py              — Section base class, compact_mode protocol
+    sections/               — one file per section key (see layout_config.json)
+    dialogs/                — EquipmentBrowserDialog, SkillBrowserDialog, etc.
+    themes/dark.qss         — all styling (no inline styles anywhere)
+    layout_config.json      — section registry: key, panel, compact_mode
+
+---
+
+## Bug Investigation Protocol
+
+When a runtime bug cannot be found through static analysis (e.g. a value
+shows as 0 in the GUI despite code tracing showing it should be non-zero):
+
+1. Add a targeted `print(..., file=sys.stderr)` at the suspect site.
+2. **Ask the user to run the app and reproduce the issue**, then report
+   the printed output back verbatim.
+3. Only hypothesise fixes after seeing actual runtime values.
+
+Do not spend more than one read-through attempting to find a pure
+static-analysis explanation. Ask the user for runtime cooperation.
+
+---
+
 ## Coding Conventions
 
 - Modifiers: `@staticmethod def calculate(...)` — no instantiation.
@@ -97,11 +160,13 @@ Phases 0–4 complete. See GUI_PLAN.md for full session specs and bug details.
 
 ### C — Pipeline Gaps
 
-C1. Damage Variance — **Session 2**
-Three sources as `(min, max, scale)` tuples: weapon ATK range (crit→atkmax),
-overrefine rnd(1,max) (NOT clamped on crit), VIT DEF rnd(0,max-1) (bypassed on crit;
-avg currently off by 0.5). Variance and deterministic multipliers must stay strictly
-separated. Foundation for Phase 7 histogram.
+C1. Damage Variance — **Needs planning session (web Claude)**
+`DamageRange(min, max, avg)` is insufficient for histogram computation.
+Multiple independent random variables (weapon ATK, overrefine, VIT DEF) are
+convolved through the pipeline — the full distribution is NOT recoverable from
+min/max/avg alone. Needs proper design: exact convolution, Irwin-Hall
+approximation, or Monte Carlo. Plan in web Claude before implementing.
+C1a (VIT DEF avg off-by-0.5): DONE — `variance_max//2` in defense_fix.py.
 
 C2. FinalRateBonus — short/long_damage_rate are map-level in Hercules, not global
 BattleConfig. Verify before fixing.
@@ -120,7 +185,9 @@ before starting to decide manual-vs-generated split.
 
 ### E — Additional Pipeline Mechanics
 
-E1. Hit/Miss — **Session 2** — 80 + HIT − FLEE; Perfect Dodge 1+⌊LUK/10⌋+bonus.
+E1. Hit/Miss — **Session 3** — 80 + HIT − FLEE; Perfect Dodge 1+⌊LUK/10⌋+bonus.
+    hitrate has further modifiers not yet modelled (skill bonuses, SC_FOGWALL,
+    arrow_hit, agi_penalty_type). Implement basic formula first; add TODO for rest.
 E2. Damage Bonus/Reduction — size/race/element multipliers, blocked on D5.
 E3. Bane skills — **Session 6** — Beast/Demon Bane, Dragonology. After VIT DEF, before RefineFix.
 E4. Katar second hit — **Session 6** — verify fraction from source.

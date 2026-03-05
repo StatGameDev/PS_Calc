@@ -315,7 +315,31 @@ Normal Attack. Without it, crit branch was unreachable for the most common use c
 Fix: Synthetic `"Normal Attack  (id=0)"` prepended as the first item in the
 `CombatControlsSection` skill combo, with `userData={"id": 0, "name": "Normal Attack"}`.
 
-**B7 — Overrefine (verified, no change)**
-Static verification: Flamberge (1129) `refineable: true` in item_db.json.
-`resolve_weapon` reads it with default `True`. `get_overrefine(3, 7) = 16`.
-Code path correct — no fix needed.
+**B7 — Overrefine (still open, debug print added)**
+Session 1 static verification concluded code was correct, but GUI still shows 0
+for all weapons. Cannot reproduce via static analysis — root cause unknown.
+Fix: Added debug `print` to `base_damage.py` that fires when `overrefine==0` but
+`weapon.refine > 0`. Run the app with a +7 weapon loaded and check stderr output.
+The print shows `weapon.aegis_name, level, refine, refineable` to identify which
+value is wrong at runtime. Remove the print once root cause is confirmed and fixed.
+
+---
+
+## GUI — Session 2 (Partial)
+
+**C1a — VIT DEF avg off-by-0.5**
+Fixed in `defense_fix.py`. Both PC and monster branches changed:
+`(variance_max - 1) // 2` → `variance_max // 2`.
+Rationale: avg of `rnd()%n` is `(n-1)/2`; floor gave 0.5 below exact for even n;
+`variance_max//2` rounds half-up, correctly representing the expected value.
+
+**C1 (full variance distribution) — deferred, needs design**
+`DamageRange(min, max, avg)` cannot reconstruct the full probability distribution
+needed for Phase 7 histogram. Three independent uniform RVs (weapon ATK, overrefine,
+VIT DEF) must be convolved. Requires a planning session in web Claude to choose
+between exact convolution, Irwin-Hall approximation, or Monte Carlo before
+any code changes. See GUI_PLAN.md Session 2 handover for full spec.
+
+**E1 Hit/Miss — deferred to Session 3**
+Hercules formulas verified (see GUI_PLAN.md Session 2 handover for complete spec
+including required file changes). Not implemented this session due to context limit.
