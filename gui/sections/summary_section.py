@@ -68,7 +68,12 @@ class SummarySection(Section):
 
         self._hit_pct = QLabel(_DASH)
         self._hit_pct.setObjectName("summary_hit_pct")
-        grid.addWidget(self._hit_pct, 3, 1, 1, 3)
+        grid.addWidget(self._hit_pct, 3, 1, 1, 2)
+
+        self._pdodge_pct = QLabel(_DASH)
+        self._pdodge_pct.setObjectName("summary_hit_pct")
+        self._pdodge_pct.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        grid.addWidget(self._pdodge_pct, 3, 3, 1, 2)
 
         grid.setColumnStretch(5, 1)
 
@@ -95,6 +100,7 @@ class SummarySection(Section):
             self._c_max.setText(_DASH)
             self._crit_pct.setText(_DASH)
             self._hit_pct.setText(_DASH)
+            self._pdodge_pct.setText(_DASH)
             return
 
         n = result.normal
@@ -115,3 +121,4 @@ class SummarySection(Section):
             self._crit_pct.setText("—")
 
         self._hit_pct.setText(f"{result.hit_chance:.1f}%")
+        self._pdodge_pct.setText(f"pdodge {result.perfect_dodge:.1f}%")

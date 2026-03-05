@@ -85,6 +85,7 @@ class DataLoader:
             def_=entry["def_"],
             vit=stats.get("vit", entry.get("vit", 0)),
             luk=stats.get("luk", 0),
+            agi=stats.get("agi", 0),
             size=entry["size"],
             race=entry["race"],
             element=entry["element"],
@@ -92,6 +93,45 @@ class DataLoader:
             is_boss=entry["is_boss"],
             level=entry["level"],
         )
+
+    # =============================================================
+    # Job database (ASPD base, HP table, SP table per job_id)
+    # =============================================================
+    def get_job_entry(self, job_id: int) -> Optional[Dict]:
+        """Return the job_db.json entry for job_id, or None if not found."""
+        try:
+            data = self._load_json("tables/job_db.json")
+        except FileNotFoundError:
+            return None
+        return data.get("jobs", {}).get(str(job_id))
+
+    def get_aspd_base(self, job_id: int, weapon_type: str) -> int:
+        """Return BaseASPD amotion for (job_id, weapon_type); 2000 if not found.
+        Source: job_db.conf BaseASPD, status.c status_base_amotion_pc (#ifndef RENEWAL_ASPD)"""
+        entry = self.get_job_entry(job_id)
+        if entry is None:
+            return 2000  # slowest possible — safe fallback
+        return entry.get("aspd_base", {}).get(weapon_type, 2000)
+
+    def get_hp_at_level(self, job_id: int, level: int) -> int:
+        """Return base HP for (job_id, level); 40 if not found.
+        level is 1-indexed. Source: job_db.conf HPTable."""
+        entry = self.get_job_entry(job_id)
+        if entry is None:
+            return 40
+        table = entry.get("hp_table", [])
+        idx = max(0, min(level - 1, len(table) - 1))
+        return table[idx] if table else 40
+
+    def get_sp_at_level(self, job_id: int, level: int) -> int:
+        """Return base SP for (job_id, level); 11 if not found.
+        level is 1-indexed. Source: job_db.conf SPTable."""
+        entry = self.get_job_entry(job_id)
+        if entry is None:
+            return 11
+        table = entry.get("sp_table", [])
+        idx = max(0, min(level - 1, len(table) - 1))
+        return table[idx] if table else 11
 
     # =============================================================
     # Skills (metadata from db/skills.json; damage ratios are in skill_ratio.py)

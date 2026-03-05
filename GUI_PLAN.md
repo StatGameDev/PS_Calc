@@ -125,17 +125,19 @@ Required changes for E1:
 
 ---
 
-## Session 3 — E1 Hit/Miss + C3 Derived Stats
+## Session 3 — E1 Hit/Miss + C3 Derived Stats ✅ DONE
 
-E1 first (see Session 2 handover above), then ASPD, HP, SP together.
-ASPD, HP, SP implemented together (same pattern: table lookup + formula + bonus stub).
-1. Base table lookup by job_id + base_level (pc.c / status.c).
-2. Stat formula applied.
-3. Bonus stubs: `bonus_aspd`, `bonus_maxhp`, `bonus_maxsp` — interface defined here,
-   populated in Session 4.
+**E1** — implemented. See COMPLETED_WORK.md Session 3 for full detail.
+Unmodelled hitrate modifiers (documented in hit_chance.py TODO):
+- Skill per-level HIT bonuses
+- SC_FOGWALL: −50 hitrate for ranged normal attacks
+- arrow_hit: ammo HIT bonus
+- agi_penalty_type: AoE hit penalty
+These require script parsing (Session 4) or separate modifier handling.
 
-GUI: `derived_section` removes placeholders; shows real ASPD, HP, SP.
-Compact view: add HP/SP if space allows; otherwise full view only.
+**C3** — implemented. Real ASPD/HP/SP in StatusCalculator.
+Bonus stubs defined (`bonus_aspd_add`, `bonus_maxhp`, `bonus_maxsp`) — populated Session 4.
+`derived_section` still shows placeholder ASPD/HP/SP labels — update needed (Session 4 or 5).
 
 ---
 

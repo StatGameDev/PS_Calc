@@ -27,7 +27,8 @@
       "Bash(pip install PySide6 pyqtgraph)",
       "Bash(grep -h \"active_buffs\" -A 20 c:/Projects/PS_Calc/saves/*.json)",
       "Bash(python tools/import_skill_db.py --dry-run)",
-      "Bash(python tools/import_skill_db.py)"
+      "Bash(python tools/import_skill_db.py)",
+      "Bash(python tools/import_job_db.py)"
     ],
     "additionalDirectories": [
       "c:\\Projects\\PS_Calc\\core\\data\\pre-re"

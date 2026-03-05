@@ -32,6 +32,9 @@ class PlayerBuild:
     bonus_hit: int = 0
     bonus_flee: int = 0
     bonus_aspd_percent: int = 0
+    bonus_aspd_add: int = 0      # flat amotion reduction from bAspd (Session 4 stub)
+    bonus_maxhp: int = 0         # flat MaxHP addend from items/cards (Session 4 stub)
+    bonus_maxsp: int = 0         # flat MaxSP addend from items/cards (Session 4 stub)
 
     # None = derive from equipped weapon's weapon_type at calc time.
     # Set True/False explicitly to override (e.g. musical instrument played melee).

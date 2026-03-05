@@ -12,5 +12,6 @@ class Target:
     is_boss: bool = False
     level: int = 1
     luk: int = 0              # tstatus->luk — used in crit roll: cri -= luk*2 (battle.c:4957)
+    agi: int = 0              # tstatus->agi — used in FLEE calc: flee = level + agi (status.c)
     is_pc: bool = False
     targeted_count: int = 1   # unit_counttargeted(bl) value for VIT penalty (pre-renewal exact)

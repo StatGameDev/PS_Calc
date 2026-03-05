@@ -12,6 +12,10 @@ class BattleConfig:
     max_aspd: int = 190
     enable_perfect_flee: bool = True
 
+    # Hit/miss rate clamps (battle.c:4469/5024, #ifndef RENEWAL)
+    min_hitrate: int = 5     # minimum_hit_rate (default 5%)
+    max_hitrate: int = 100   # maximum_hit_rate (default 100%)
+
     # Full VIT penalty support (pure mechanics, no legacy fields)
     vit_penalty_target: int = 0      # bitmask: 1=PC, 2=MOB, 4=BOSS, etc.
     vit_penalty_count: int = 3       # hits before penalty starts

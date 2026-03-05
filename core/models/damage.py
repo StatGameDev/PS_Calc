@@ -114,4 +114,5 @@ class BattleResult:
     normal: "DamageResult" = field(default_factory=lambda: DamageResult())
     crit: Optional["DamageResult"] = None
     crit_chance: float = 0.0
-    hit_chance: float = 100.0
+    hit_chance: float = 100.0      # basic hit% (80 + HIT - FLEE, clamped to [min, max])
+    perfect_dodge: float = 0.0    # target's perfect dodge chance (luk+10)/10 %

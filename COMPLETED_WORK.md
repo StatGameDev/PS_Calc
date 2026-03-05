@@ -315,13 +315,11 @@ Normal Attack. Without it, crit branch was unreachable for the most common use c
 Fix: Synthetic `"Normal Attack  (id=0)"` prepended as the first item in the
 `CombatControlsSection` skill combo, with `userData={"id": 0, "name": "Normal Attack"}`.
 
-**B7 — Overrefine (still open, debug print added)**
-Session 1 static verification concluded code was correct, but GUI still shows 0
-for all weapons. Cannot reproduce via static analysis — root cause unknown.
-Fix: Added debug `print` to `base_damage.py` that fires when `overrefine==0` but
-`weapon.refine > 0`. Run the app with a +7 weapon loaded and check stderr output.
-The print shows `weapon.aegis_name, level, refine, refineable` to identify which
-value is wrong at runtime. Remove the print once root cause is confirmed and fixed.
+**B7 — Overrefine showing 0 — RESOLVED (not a bug)**
+Session 3 investigation: all tested weapons were event/costume variants (_C suffix)
+with `refineable: false` in item_db.json. The code correctly suppresses overrefine
+for non-refineable weapons. The test builds (agi_bs.json) used wrong item IDs.
+Debug print removed. No code change needed.
 
 ---
 
@@ -343,3 +341,48 @@ any code changes. See GUI_PLAN.md Session 2 handover for full spec.
 **E1 Hit/Miss — deferred to Session 3**
 Hercules formulas verified (see GUI_PLAN.md Session 2 handover for complete spec
 including required file changes). Not implemented this session due to context limit.
+
+---
+
+## Session 3 — E1 Hit/Miss + C3 ASPD/HP/SP
+
+**B7 resolution** — see B7 entry in Session 1 section above.
+
+**E1 — Hit/Miss**
+`core/models/target.py` — added `agi: int = 0` for mob_FLEE calculation.
+`core/data_loader.py` — `get_monster()` now populates `target.agi` from `stats.agi`.
+`core/config.py` — added `min_hitrate: int = 5`, `max_hitrate: int = 100`.
+`core/models/damage.py` — added `perfect_dodge: float = 0.0` to `BattleResult`.
+`core/calculators/modifiers/hit_chance.py` — new file:
+  `calculate_hit_chance(status, target, config) -> tuple[float, float]`
+  Returns (hit_chance_pct, perfect_dodge_pct).
+  `mob_FLEE = mob.level + mob.agi` (status.c mob flee formula)
+  `hitrate = clamp(80 + player_HIT - mob_FLEE, min_hitrate, max_hitrate)`
+  `perfect_dodge_pct = (target.luk + 10) / 10.0` (flee2/10 as %)
+  Source: battle.c:4469/5024/4799 (#ifndef RENEWAL)
+  TODO: unmodelled modifiers noted in the function docstring (skill per-level HIT
+  bonuses, SC_FOGWALL, arrow_hit, agi_penalty_type).
+`core/calculators/battle_pipeline.py` — calls `calculate_hit_chance`, replaces
+  `hit_chance=100.0` placeholder in `BattleResult`.
+`gui/sections/summary_section.py` — Hit row now shows hit% and perfect_dodge%.
+
+**C3 — ASPD / HP / SP**
+`tools/import_job_db.py` — new scraper for `Hercules/db/pre-re/job_db.conf`.
+  Extracts BaseASPD (per weapon_type), HPTable, SPTable for 33 pre-renewal jobs.
+  Resolves Inherit / InheritHP / InheritSP chains.
+  Maps job_db.conf weapon keys → item_db weapon_type strings.
+  Output: `core/data/pre-re/tables/job_db.json` (33 jobs, 150-level tables).
+`core/data_loader.py` — added `get_job_entry(job_id)`, `get_aspd_base(job_id, weapon_type)`,
+  `get_hp_at_level(job_id, level)`, `get_sp_at_level(job_id, level)`.
+`core/models/build.py` — added 3 Session 4 stubs:
+  `bonus_aspd_add: int = 0` — flat amotion reduction from bAspd items
+  `bonus_maxhp: int = 0` — flat MaxHP addend from items/cards
+  `bonus_maxsp: int = 0` — flat MaxSP addend from items/cards
+`core/calculators/status_calculator.py` — real ASPD/HP/SP formulas (replaces placeholders):
+  ASPD: `amotion = aspd_base - aspd_base*(4*agi+dex)//1000 + bonus_aspd_add`
+        peco penalty: `amotion += 500 - 100*KN_CAVALIERMASTERY_lv`
+        aspd_percent modifier: `amotion *= (1000 - pct*10) // 1000`
+        clamped to [2000 - max_aspd*10, 2000]; displayed = (2000-amotion)//10
+  MaxHP: `HPTable[job_id][level-1] * (100 + vit) // 100 + bonus_maxhp`
+  MaxSP: `SPTable[job_id][level-1] * (100 + int_) // 100 + bonus_maxsp`
+  Source: status.c status_base_amotion_pc + status_calc_pc_ (#ifndef RENEWAL_ASPD)

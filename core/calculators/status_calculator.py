@@ -1,5 +1,6 @@
 from core.build_manager import effective_is_ranged
 from core.config import BattleConfig
+from core.data_loader import loader
 from core.models.build import PlayerBuild
 from core.models.status import StatusData
 from core.models.weapon import Weapon
@@ -49,9 +50,42 @@ class StatusCalculator:
         status.flee = build.base_level + status.agi + build.bonus_flee
         status.flee2 = status.luk + 10 if self.config.enable_perfect_flee else 0
 
-        # Placeholders (full job tables + ASPD in Phase 3)
-        status.aspd = 2000 - (build.bonus_aspd_percent * 10)
-        status.max_hp = 3000 + status.vit * 30
-        status.max_sp = 300 + status.int_ * 5
+        # === ASPD ===
+        # Pre-renewal formula (status.c status_base_amotion_pc, #ifndef RENEWAL_ASPD):
+        #   amotion = aspd_base[job][weapon_type]
+        #   amotion -= amotion * (4*agi + dex) / 1000
+        #   amotion += bonus.aspd_add  (flat from bAspd)
+        #   amotion += 500-100*KN_CAVALIERMASTERY if riding peco (#ifndef RENEWAL_ASPD)
+        #   clamped to [pc_max_aspd, 2000] = [2000 - max_aspd*10, 2000]
+        # Displayed ASPD = (2000 - amotion) / 10  (client conversion)
+        base_amotion = loader.get_aspd_base(build.job_id, weapon.weapon_type)
+        amotion = base_amotion - base_amotion * (4 * status.agi + status.dex) // 1000
+        amotion += build.bonus_aspd_add  # stub: flat amotion reduction from bAspd (Session 4)
+        # bonus_aspd_percent: percentage aspd_rate bonus (e.g. 10 = 10% faster)
+        # Implemented as aspd_rate modifier: amotion *= (1000 - pct*10) / 1000
+        # (bAspd_rate from items/skills — Session 4 populates via script parsing)
+        if build.bonus_aspd_percent:
+            amotion = amotion * (1000 - build.bonus_aspd_percent * 10) // 1000
+        if build.is_riding_peco:
+            cav_lv = build.mastery_levels.get("KN_CAVALIERMASTERY", 0)
+            amotion += 500 - 100 * cav_lv  # status.c #ifndef RENEWAL_ASPD
+        min_amotion = 2000 - self.config.max_aspd * 10
+        amotion = max(min_amotion, min(2000, amotion))
+        status.aspd = (2000 - amotion) // 10  # player-facing 0–max_aspd display value
+
+        # === MAX HP ===
+        # status_calc_pc_ MaxHP (pre-renewal):
+        #   hp_base = HPTable[job_id][base_level - 1]
+        #   max_hp  = hp_base * (100 + vit) // 100
+        #   + bonus_maxhp stub (Session 4)
+        hp_base = loader.get_hp_at_level(build.job_id, build.base_level)
+        status.max_hp = hp_base * (100 + status.vit) // 100
+        status.max_hp += build.bonus_maxhp
+
+        # === MAX SP ===
+        # Same pattern: SPTable[job_id][base_level - 1] * (100 + int_) // 100
+        sp_base = loader.get_sp_at_level(build.job_id, build.base_level)
+        status.max_sp = sp_base * (100 + status.int_) // 100
+        status.max_sp += build.bonus_maxsp
 
         return status

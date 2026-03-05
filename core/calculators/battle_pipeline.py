@@ -18,6 +18,7 @@ from core.calculators.modifiers.refine_fix import RefineFix
 from core.calculators.modifiers.final_rate_bonus import FinalRateBonus
 from core.calculators.modifiers.crit_chance import calculate_crit_chance, CRIT_ELIGIBLE_SKILLS
 from core.calculators.modifiers.crit_atk_rate import CritAtkRate
+from core.calculators.modifiers.hit_chance import calculate_hit_chance
 
 
 class BattlePipeline:
@@ -53,6 +54,8 @@ class BattlePipeline:
         # Crit eligibility and chance
         is_eligible, crit_chance = calculate_crit_chance(status, weapon, skill, target, self.config)
 
+        hit_chance, perfect_dodge = calculate_hit_chance(status, target, self.config)
+
         normal = self._run_branch(status, weapon, skill, target, build, is_crit=False)
         crit = (self._run_branch(status, weapon, skill, target, build, is_crit=True)
                 if is_eligible else None)
@@ -61,7 +64,8 @@ class BattlePipeline:
             normal=normal,
             crit=crit,
             crit_chance=crit_chance,
-            hit_chance=100.0,  # E1 placeholder
+            hit_chance=hit_chance,
+            perfect_dodge=perfect_dodge,
         )
 
     def _run_branch(self,
