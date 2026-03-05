@@ -1,5 +1,10 @@
+docs/
 Hercules/
 rocalc_files/
 __pycache__/
 *.pyc
 *.pyo
+
+# IDE local state
+.vs/
+.vscode/
