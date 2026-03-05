@@ -67,6 +67,7 @@ WEAPON_SUBTYPE_MAP: dict[str, str] = {
     "W_1HAXE":   "1HAxe",
     "W_2HAXE":   "2HAxe",
     "W_MACE":    "Mace",
+    "W_2HMACE":  "2HMace",
     "W_STAFF":   "Staff",
     "W_2HSTAFF": "2HStaff",
     "W_BOW":     "Bow",

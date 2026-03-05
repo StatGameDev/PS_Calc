@@ -94,14 +94,14 @@ class DataLoader:
         )
 
     # =============================================================
-    # Skills (used by skill_ratio.py, NK flags, hit_count – exact from skills.json)
+    # Skills (metadata from db/skills.json; damage ratios are in skill_ratio.py)
     # =============================================================
     def get_skill(self, skill_id: int) -> Optional[Dict]:
-        data = self._load_json("skills.json")
-        for s in data.get("skills", []):
-            if s["id"] == skill_id:
-                return s
-        return None
+        try:
+            data = self._load_json("db/skills.json")
+        except FileNotFoundError:
+            return None
+        return data.get("skills", {}).get(str(skill_id))
 
     # =============================================================
     # Tables – only size_fix for now (exact from repo)
@@ -200,9 +200,12 @@ class DataLoader:
     # =============================================================
 
     def get_all_skills(self) -> list:
-        """All skill entries from skills.json. Used by CombatControlsSection."""
-        data = self._load_json("skills.json")
-        return data.get("skills", [])
+        """All skill entries from db/skills.json. Used by CombatControlsSection."""
+        try:
+            data = self._load_json("db/skills.json")
+        except FileNotFoundError:
+            return []
+        return list(data.get("skills", {}).values())
 
     def get_all_monsters(self) -> list:
         """All mob entries from mob_db.json for search. Returns [] on missing file."""
