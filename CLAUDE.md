@@ -6,6 +6,26 @@ If a task requires locating files, external data, or unfamiliar formats — ask 
 user first. One targeted grep or read is fine. Exploratory multi-file searches are
 not. Stop and ask after one failed attempt.
 
+## Cost Controls — Hard Limits
+
+These caps are non-negotiable. Exceeding them wastes context with no benefit.
+
+**Static bug investigation: 3-file cap.**
+If the root cause of a bug is not found after reading 3 files, STOP.
+Add a debug print at the most likely site and ask the user to run the app and
+report the output. Do not read more files trying to reason it out.
+
+**Repeating the same trace: immediate stop.**
+If you catch yourself re-reading a file you already read, or re-checking logic
+you already verified, stop immediately. You are in a loop. Add the debug print
+and ask for runtime cooperation.
+
+**Unexpected task scope: declare and ask.**
+If a task turns out to require more than ~5 file reads or edits beyond what was
+agreed in the session plan, stop and say "this is larger than expected — here
+is what I've found so far, do you want me to continue or adjust scope?"
+Never silently expand the work.
+
 ---
 
 ## Project Overview
