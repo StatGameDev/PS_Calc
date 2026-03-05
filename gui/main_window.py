@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Optional
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
@@ -17,16 +18,23 @@ from PySide6.QtWidgets import (
 )
 
 from core.build_manager import BuildManager
+from core.calculators.battle_pipeline import BattlePipeline
 from core.calculators.status_calculator import StatusCalculator
 from core.config import BattleConfig
+from core.data_loader import loader
 from core.models.build import PlayerBuild
+from core.models.damage import BattleResult
+from core.models.target import Target
 from gui import app_config
 from gui.panel_container import PanelContainer
 from gui.sections.build_header import BuildHeaderSection
+from gui.sections.combat_controls import CombatControlsSection
 from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
 from gui.sections.passive_section import PassiveSection
 from gui.sections.stats_section import StatsSection
+from gui.sections.step_breakdown import StepBreakdownSection
+from gui.sections.summary_section import SummarySection
 
 
 class MainWindow(QMainWindow):
@@ -36,6 +44,7 @@ class MainWindow(QMainWindow):
     """
 
     server_changed = Signal(str)
+    result_updated = Signal(object)  # Optional[BattleResult]; object allows None
 
     def __init__(self) -> None:
         super().__init__()
@@ -46,6 +55,7 @@ class MainWindow(QMainWindow):
         self._current_build: PlayerBuild | None = None
         self._current_build_name: str = ""
         self._config = BattleConfig()
+        self._pipeline = BattlePipeline(self._config)
 
         # Load layout config (file I/O outside widget constructors)
         with open("gui/layout_config.json", "r", encoding="utf-8") as f:
@@ -64,14 +74,25 @@ class MainWindow(QMainWindow):
         root.addWidget(self._build_top_bar())
         root.addWidget(self._panel_container, stretch=1)
 
-        # ── Typed section references ──────────────────────────────────────
-        self._build_header:    BuildHeaderSection = self._panel_container.get_section("build_header")      # type: ignore[assignment]
-        self._stats_section:   StatsSection       = self._panel_container.get_section("stats_section")    # type: ignore[assignment]
-        self._derived_section: DerivedSection     = self._panel_container.get_section("derived_section")  # type: ignore[assignment]
-        self._equip_section:   EquipmentSection   = self._panel_container.get_section("equipment_section")# type: ignore[assignment]
-        self._passive_section: PassiveSection     = self._panel_container.get_section("passive_section")  # type: ignore[assignment]
+        # ── Typed section references — builder ────────────────────────────
+        self._build_header:    BuildHeaderSection = self._panel_container.get_section("build_header")       # type: ignore[assignment]
+        self._stats_section:   StatsSection       = self._panel_container.get_section("stats_section")     # type: ignore[assignment]
+        self._derived_section: DerivedSection     = self._panel_container.get_section("derived_section")   # type: ignore[assignment]
+        self._equip_section:   EquipmentSection   = self._panel_container.get_section("equipment_section") # type: ignore[assignment]
+        self._passive_section: PassiveSection     = self._panel_container.get_section("passive_section")   # type: ignore[assignment]
+
+        # ── Typed section references — combat ─────────────────────────────
+        self._combat_controls: CombatControlsSection = self._panel_container.get_section("combat_controls")  # type: ignore[assignment]
+        self._summary_section: SummarySection        = self._panel_container.get_section("summary_section")  # type: ignore[assignment]
+        self._step_breakdown:  StepBreakdownSection  = self._panel_container.get_section("step_breakdown")   # type: ignore[assignment]
 
         self._connect_builder_signals()
+        self._connect_combat_signals()
+
+        # Wire result_updated to combat sections
+        self.result_updated.connect(self._summary_section.refresh)
+        self.result_updated.connect(self._step_breakdown.refresh)
+
         self._refresh_builds()
 
     # ── Top bar construction ───────────────────────────────────────────────
@@ -151,6 +172,10 @@ class MainWindow(QMainWindow):
         self._equip_section.equipment_changed.connect(self._on_build_changed)
         self._passive_section.passives_changed.connect(self._on_build_changed)
 
+    def _connect_combat_signals(self) -> None:
+        """Wire combat section change signals to _on_build_changed."""
+        self._combat_controls.combat_settings_changed.connect(self._on_build_changed)
+
     # ── Build list helpers ─────────────────────────────────────────────────
 
     def _refresh_builds(self) -> None:
@@ -195,25 +220,28 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(base_title + (" — Payon Stories" if is_payon else ""))
 
         self._run_status_calc()
+        self._run_battle_pipeline()
 
     def _load_build_into_sections(self, build: PlayerBuild) -> None:
-        """Push build data to all builder sections (no change signals fired)."""
+        """Push build data to all sections (no change signals fired)."""
         self._build_header.load_build(build)
         self._stats_section.load_build(build)
         self._equip_section.load_build(build)
         self._passive_section.load_build(build)
+        self._combat_controls.load_build(build)
 
     # ── Build-change pipeline ─────────────────────────────────────────────
 
     def _on_build_changed(self, *_args) -> None:
-        """Called when any builder section changes. Collects build and recalculates."""
+        """Called when any section changes. Collects build and recalculates."""
         if self._current_build is None:
             return
         self._collect_build()
         self._run_status_calc()
+        self._run_battle_pipeline()
 
     def _collect_build(self) -> None:
-        """Update self._current_build from all builder sections in-place."""
+        """Update self._current_build from all sections in-place."""
         build = self._current_build
         if build is None:
             return
@@ -221,6 +249,7 @@ class MainWindow(QMainWindow):
         self._stats_section.collect_into(build)
         self._equip_section.collect_into(build)
         self._passive_section.collect_into(build)
+        self._combat_controls.collect_into(build)
 
     def _run_status_calc(self) -> None:
         """Run StatusCalculator and push results to DerivedSection."""
@@ -234,6 +263,27 @@ class MainWindow(QMainWindow):
         )
         status = StatusCalculator(self._config).calculate(build, weapon)
         self._derived_section.refresh(status)
+
+    def _run_battle_pipeline(self) -> None:
+        """Run BattlePipeline and push BattleResult to combat sections."""
+        build = self._current_build
+        if build is None:
+            return
+        weapon = BuildManager.resolve_weapon(
+            build.equipped.get("right_hand"),
+            build.refine_levels.get("right_hand", 0),
+            build.weapon_element,
+        )
+        status = StatusCalculator(self._config).calculate(build, weapon)
+        skill = self._combat_controls.get_skill_instance()
+        mob_id = self._combat_controls.get_target_mob_id() or build.target_mob_id
+        target = loader.get_monster(mob_id) if mob_id is not None else Target()
+        try:
+            result = self._pipeline.calculate(status, weapon, skill, target, build)
+            self.result_updated.emit(result)
+        except Exception as exc:
+            print(f"WARNING: BattlePipeline error: {exc}")
+            self.result_updated.emit(None)
 
     # ── Server toggle ──────────────────────────────────────────────────────
 

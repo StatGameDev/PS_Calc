@@ -7,11 +7,11 @@
   "job_level": 50,
   "base_stats": {
     "str": 1,
-    "agi": 77,
-    "vit": 4,
-    "int": 6,
-    "dex": 56,
-    "luk": 10
+    "agi": 99,
+    "vit": 1,
+    "int": 4,
+    "dex": 77,
+    "luk": 56
   },
   "bonus_stats": {
     "str": 0,

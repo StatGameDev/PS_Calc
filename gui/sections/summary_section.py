@@ -1,5 +1,18 @@
-from PySide6.QtWidgets import QLabel
+from __future__ import annotations
+
+from typing import Optional
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QGridLayout,
+    QLabel,
+    QWidget,
+)
+
+from core.models.damage import BattleResult
 from gui.section import Section
+
+_DASH = "—"
 
 
 class SummarySection(Section):
@@ -7,6 +20,98 @@ class SummarySection(Section):
 
     def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_mode, parent)
-        lbl = QLabel("Coming in Phase 2.2 — Summary")
-        lbl.setObjectName("stub_label")
-        self.add_content_widget(lbl)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(5)
+
+        # Column headers
+        for col, text in enumerate(("", "Min", "Avg", "Max"), start=0):
+            hdr = QLabel(text)
+            hdr.setObjectName("summary_col_header")
+            hdr.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            grid.addWidget(hdr, 0, col)
+
+        # Normal row
+        normal_lbl = QLabel("Normal")
+        normal_lbl.setObjectName("summary_label")
+        grid.addWidget(normal_lbl, 1, 0)
+
+        self._n_min = self._make_val()
+        self._n_avg = self._make_val()
+        self._n_max = self._make_val()
+        grid.addWidget(self._n_min, 1, 1)
+        grid.addWidget(self._n_avg, 1, 2)
+        grid.addWidget(self._n_max, 1, 3)
+
+        # Crit row
+        crit_lbl = QLabel("Crit")
+        crit_lbl.setObjectName("summary_label")
+        grid.addWidget(crit_lbl, 2, 0)
+
+        self._c_min = self._make_val()
+        self._c_avg = self._make_val()
+        self._c_max = self._make_val()
+        grid.addWidget(self._c_min, 2, 1)
+        grid.addWidget(self._c_avg, 2, 2)
+        grid.addWidget(self._c_max, 2, 3)
+
+        self._crit_pct = QLabel(_DASH)
+        self._crit_pct.setObjectName("summary_crit_pct")
+        self._crit_pct.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        grid.addWidget(self._crit_pct, 2, 4)
+
+        # Hit row
+        hit_lbl = QLabel("Hit")
+        hit_lbl.setObjectName("summary_label")
+        grid.addWidget(hit_lbl, 3, 0)
+
+        self._hit_pct = QLabel(_DASH)
+        self._hit_pct.setObjectName("summary_hit_pct")
+        grid.addWidget(self._hit_pct, 3, 1, 1, 3)
+
+        grid.setColumnStretch(5, 1)
+
+        container = QWidget()
+        container.setLayout(grid)
+        self.add_content_widget(container)
+
+    @staticmethod
+    def _make_val() -> QLabel:
+        lbl = QLabel(_DASH)
+        lbl.setObjectName("summary_value")
+        lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        return lbl
+
+    # ── Public API ────────────────────────────────────────────────────────
+
+    def refresh(self, result: Optional[BattleResult]) -> None:
+        if result is None:
+            self._n_min.setText(_DASH)
+            self._n_avg.setText(_DASH)
+            self._n_max.setText(_DASH)
+            self._c_min.setText(_DASH)
+            self._c_avg.setText(_DASH)
+            self._c_max.setText(_DASH)
+            self._crit_pct.setText(_DASH)
+            self._hit_pct.setText(_DASH)
+            return
+
+        n = result.normal
+        self._n_min.setText(str(n.min_damage))
+        self._n_avg.setText(str(n.avg_damage))
+        self._n_max.setText(str(n.max_damage))
+
+        if result.crit is not None:
+            c = result.crit
+            self._c_min.setText(str(c.min_damage))
+            self._c_avg.setText(str(c.avg_damage))
+            self._c_max.setText(str(c.max_damage))
+            self._crit_pct.setText(f"{result.crit_chance:.1f}% crit")
+        else:
+            self._c_min.setText(_DASH)
+            self._c_avg.setText(_DASH)
+            self._c_max.setText(_DASH)
+            self._crit_pct.setText("—")
+
+        self._hit_pct.setText(f"{result.hit_chance:.1f}%")

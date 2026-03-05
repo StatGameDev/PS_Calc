@@ -199,6 +199,19 @@ class DataLoader:
     # Active status bonuses
     # =============================================================
 
+    def get_all_skills(self) -> list:
+        """All skill entries from skills.json. Used by CombatControlsSection."""
+        data = self._load_json("skills.json")
+        return data.get("skills", [])
+
+    def get_all_monsters(self) -> list:
+        """All mob entries from mob_db.json for search. Returns [] on missing file."""
+        try:
+            data = self._load_json("db/mob_db.json")
+        except FileNotFoundError:
+            return []
+        return list(data.get("mobs", {}).values())
+
     def get_active_status_config(self, status_key: str) -> dict:
         """Returns the complete config dict for a given SC_* key from active_status_bonus.json.
         Full mechanic support (all SCs from the investigation) – used by ActiveStatusBonus class.
