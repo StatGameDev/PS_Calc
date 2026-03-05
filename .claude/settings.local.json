@@ -8,7 +8,22 @@
       "Bash(python tools/import_item_db.py)",
       "Bash(python3 -c \"import json; d=json.load\\(open\\(''c:/Projects/PS_Calc/core/data/pre-re/tables/size_fix.json''\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
       "Bash(python -c \"import json; d=json.load\\(open\\(''c:/Projects/PS_Calc/core/data/pre-re/tables/size_fix.json''\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
-      "Bash(python -c \"import json; d=json.load\\(open\\(''c:/Projects/PS_Calc/core/data/pre-re/tables/size_fix.json''\\)\\); print\\(d[''weapon_types'']\\)\")"
+      "Bash(python -c \"import json; d=json.load\\(open\\(''c:/Projects/PS_Calc/core/data/pre-re/tables/size_fix.json''\\)\\); print\\(d[''weapon_types'']\\)\")",
+      "Bash(python tools/import_mob_db.py --dry-run)",
+      "Bash(python tools/import_mob_db.py)",
+      "Bash(sort -t: -k3)",
+      "Bash(grep -v \"^//\")",
+      "Bash(grep -v \"^\\\\s*//\")",
+      "Read(//c/Projects/PS_Calc/**)",
+      "Bash(sed 's/.*Loc:\\\\s*//')",
+      "Bash(grep -v \"//\")",
+      "Bash(grep -v \"//.*upgrade\\\\|//.*refine\")",
+      "Bash(python tools/import_rocalc_saves.py)",
+      "Read(//c/Users/Felix/Downloads/**)",
+      "Bash(ls -lh ~/Downloads/*2025*.js)",
+      "Read(//c/Users/Felix/**)",
+      "Bash(grep -n \"Slotnum\\\\|localStorage\\\\|saveSlot\\\\|loadSlot\\\\|charData\\\\|slotData\" /c/Projects/PS_Calc/rocalc_files/*.js)",
+      "Bash(ls c:/Projects/PS_Calc/*.txt c:/Projects/PS_Calc/*.cfg c:/Projects/PS_Calc/*.toml)"
     ],
     "additionalDirectories": [
       "c:\\Projects\\PS_Calc\\core\\data\\pre-re"
