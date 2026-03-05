@@ -99,6 +99,11 @@ class PanelContainer(QSplitter):
             section.expand_requested.connect(self._on_section_expand_requested)
             section.collapse_requested.connect(self._on_section_collapse_requested)
 
+        # ── Wire combat panel's step-bar forwarding signals (B4) ─────────
+        # These propagate StepsBar expand/collapse to the outer-splitter nudge.
+        self._combat_panel.steps_expand_requested.connect(self._on_section_expand_requested)
+        self._combat_panel.steps_collapse_requested.connect(self._on_section_collapse_requested)
+
         # ── Drag-to-snap debounce timer ───────────────────────────────────
         self._snap_timer = QTimer(self)
         self._snap_timer.setSingleShot(True)
@@ -126,7 +131,11 @@ class PanelContainer(QSplitter):
 
         # Show/hide the combat panel's steps sidebar
         if self._combat_panel.steps_bar is not None:
-            self._combat_panel.steps_bar.set_visible_bar(focused_panel == "builder")
+            show_bar = focused_panel == "builder"
+            self._combat_panel.steps_bar.set_visible_bar(show_bar)
+            if show_bar:
+                # Defer inner-splitter sizing until after layout is computed (B3).
+                QTimer.singleShot(0, self._combat_panel.reset_steps_to_collapsed)
 
         self.focus_state_changed.emit(state)
 

@@ -292,19 +292,17 @@ class MainWindow(QMainWindow):
         mob_id = self._combat_controls.get_target_mob_id() or build.target_mob_id
         target = loader.get_monster(mob_id) if mob_id is not None else Target()
 
+        # Always refresh target/incoming — independent of pipeline success (B5).
         self._target_section.refresh_mob(mob_id)
         self._incoming_damage.refresh_mob(mob_id)
         self._incoming_damage.refresh_status(status)
 
         try:
             result = self._pipeline.calculate(status, weapon, skill, target, build)
-            self.result_updated.emit(result)
         except Exception as exc:
             print(f"WARNING: BattlePipeline error: {exc}")
-            self._target_section.refresh_mob(None)
-            self._incoming_damage.refresh_mob(None)
-            self._incoming_damage.refresh_status(None)
-            self.result_updated.emit(None)
+            result = None
+        self.result_updated.emit(result)
 
     # ── Server toggle ──────────────────────────────────────────────────────
 

@@ -50,6 +50,9 @@ class CombatControlsSection(Section):
 
         self._skill_combo = QComboBox()
         self._skill_combo.setMinimumWidth(160)
+        # Normal Attack is not in skills.json (id=0 is implicit in Hercules).
+        # Prepend it as the first entry so basic-attack crit is verifiable (B6).
+        self._skill_combo.addItem("Normal Attack  (id=0)", userData={"id": 0, "name": "Normal Attack"})
         for s in loader.get_all_skills():
             self._skill_combo.addItem(f"{s['name']}  (id={s['id']})", userData=s)
         skill_row.addWidget(self._skill_combo, stretch=1)

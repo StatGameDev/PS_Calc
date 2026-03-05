@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -165,6 +165,10 @@ class Panel(QWidget):
     The builder panel uses a plain QScrollArea with no splitter overhead.
     """
 
+    # Forwarded from StepsBar so PanelContainer can nudge the outer splitter (B4).
+    steps_expand_requested = Signal()
+    steps_collapse_requested = Signal()
+
     def __init__(self, name: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._name = name
@@ -204,7 +208,9 @@ class Panel(QWidget):
 
             self._steps_bar = StepsBar()
             self._steps_bar.expand_requested.connect(self._on_steps_expand)
+            self._steps_bar.expand_requested.connect(self.steps_expand_requested)
             self._steps_bar.collapse_requested.connect(self._on_steps_collapse)
+            self._steps_bar.collapse_requested.connect(self.steps_collapse_requested)
             self._inner_splitter.addWidget(self._steps_bar)
 
             outer.addWidget(self._inner_splitter)
@@ -224,6 +230,15 @@ class Panel(QWidget):
             return
         total = sum(self._inner_splitter.sizes())
         self._inner_splitter.setSizes([total - _BAR_W, _BAR_W])
+
+    def reset_steps_to_collapsed(self) -> None:
+        """Set inner splitter to collapsed state (bar only, no step list).
+        Called via QTimer.singleShot from PanelContainer after first show (B3)."""
+        if self._inner_splitter is None:
+            return
+        total = sum(self._inner_splitter.sizes())
+        if total > 0:
+            self._inner_splitter.setSizes([total - _BAR_W, _BAR_W])
 
     # ── Properties ────────────────────────────────────────────────────────
 
