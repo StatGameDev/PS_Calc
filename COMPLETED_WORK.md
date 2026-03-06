@@ -386,3 +386,51 @@ including required file changes). Not implemented this session due to context li
   MaxHP: `HPTable[job_id][level-1] * (100 + vit) // 100 + bonus_maxhp`
   MaxSP: `SPTable[job_id][level-1] * (100 + int_) // 100 + bonus_maxsp`
   Source: status.c status_base_amotion_pc + status_calc_pc_ (#ifndef RENEWAL_ASPD)
+
+---
+
+## Session 4 — B8 Save button + D5/D4 Script parsing + Gear bonuses
+
+**B8 — Save button**
+`gui/main_window.py` — added `_save_btn` QPushButton in `_build_top_bar()`.
+  Enabled when a named build is loaded; disabled otherwise.
+  `_on_save_build()`: calls `_collect_build()` then `BuildManager.save_build(build, path)`.
+  Overwrites existing file without confirmation.
+
+**Pre-Session 4 gate — bonus distribution (2144 items with scripts)**
+- bonus (arity 1): 73 unique types. Top damage-relevant: bStr/Agi/Vit/Int/Dex/Luk,
+  bAllStats, bBaseAtk(94), bHit(60), bFlee(79), bCritical(82), bMaxHP(85), bMaxSP(82),
+  bDef(72), bAspdRate(86), bCritAtkRate(16), bLongAtkRate(8), bAspd.
+- bonus2 (arity 2): 38 unique types. Top: bAddRace(205), bSubEle(200), bSubRace(142),
+  bSkillAtk(96), bIgnoreDefRate(65), bAddSize(37) — E2 stubs (race/size/element mults).
+- bonus3 (arity 3): 9 unique types. bAutoSpell(142) — procs, not damage calc.
+- Decision: ~15 bonus types routed to existing PlayerBuild fields.
+  bonus2/bonus3 race/size/element multipliers stored in GearBonuses for E2.
+  Description templates cover top ~25 types.
+
+**D5 — Item Script Parser**
+`core/models/item_effect.py` — new `ItemEffect` dataclass:
+  `bonus_type: str, arity: int, params: list, description: str`
+`core/item_script_parser.py` — new `parse_script(script: str) -> list[ItemEffect]`
+  Regex-based parser for bonus/bonus2/bonus3 calls in Hercules script strings.
+  Description template table: ~35 bonus1, ~25 bonus2, 9 bonus3 types.
+  Verified test cases:
+  - Alice Card: `bonus2 bSubRace,RC_Boss,40` → "Reduces damage from Boss monsters by 40%."
+  - Picky Card: `bonus bStr,1; bonus bBaseAtk,10` → str_=1, batk=10
+  - bAllStats,2 → all 6 stats += 2
+
+**D4 — Gear Bonus Aggregator**
+`core/models/gear_bonuses.py` — new `GearBonuses` dataclass.
+  Flat stat fields: str_, agi, vit, int_, dex, luk, batk, hit, flee, flee2, cri,
+  crit_atk_rate, long_atk_rate, def_, maxhp, maxsp, aspd_percent, aspd_add.
+  E2 stub dicts: add_race, sub_ele, sub_race, add_size, add_ele, ignore_def_rate, skill_atk.
+  all_effects: List[ItemEffect] for tooltip use.
+`core/gear_bonus_aggregator.py` — new `GearBonusAggregator.compute(equipped) -> GearBonuses`.
+  Iterates all equipped slots, parses scripts, routes effects via _BONUS1_ROUTES dict.
+
+**Wiring (main_window.py)**
+`gui/main_window.py` — `_apply_gear_bonuses(build) -> PlayerBuild`:
+  Calls `GearBonusAggregator.compute(build.equipped)`, returns `dataclasses.replace(build, ...)`
+  with all bonus_* fields augmented by gear bonuses.
+  Original build unchanged → save_build always writes clean manual values.
+  Called in `_run_status_calc()` and `_run_battle_pipeline()` before StatusCalculator.

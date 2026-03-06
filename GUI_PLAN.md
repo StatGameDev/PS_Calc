@@ -10,7 +10,7 @@ _Load at the start of any GUI session. PHASES_DONE.md contains full Phase 0–4 
 | **1** | Bugs B3+B4+B5 (splitter/target), verify B6+B7 | Layout stable, target refresh working, crit/overrefine verified |
 | **2** | C1 Variance + E1 Hit/Miss | ⚠️ Partial — C1a avg fix done; E1 deferred; C1 distribution needs planning session |
 | **3** | E1 Hit/Miss + C3 ASPD + HP + SP | Hit chance in summary card; derived stats correct for naked builds |
-| **4** | D5/D4 Script parsing + gear/card effects + tooltips | Gear/card bonuses live; tooltip descriptions for common bonus types |
+| **4** | D5/D4 Script parsing + gear/card effects + tooltips | ✅ Done — gear/card bonuses live; tooltip descriptions generated |
 | **5** | Enhancements 4.4–4.7 (filter UIs) | All four filter UIs complete |
 | **6** | E3 Bane skills + E4 Katar second hit + polish | Correct output for Hunter and Katar Sin builds |
 
@@ -45,6 +45,11 @@ Runtime: load knight_bash.json, select Normal Attack, verify crit branch in Summ
 **B7 — Overrefine shows as unrefinable** ✅ _Verified Session 1 (no code change)_
 Static: Flamberge (1129) refineable=true in item_db.json. resolve_weapon reads it correctly.
 get_overrefine(3, 7) = 16. Code path correct — no fix needed.
+
+**B8 — No Save button in GUI** ✅ _Fixed Session 4_
+"Save" QPushButton added to top bar. Disabled when no build loaded or build name is empty.
+`_on_save_build()`: collects build from sections, then `BuildManager.save_build(build, path)`.
+Overwrites without confirmation. No "Save As" (Phase 8 polish).
 
 ---
 
@@ -141,32 +146,25 @@ Bonus stubs defined (`bonus_aspd_add`, `bonus_maxhp`, `bonus_maxsp`) — populat
 
 ---
 
-## Session 4 — D5/D4 Script Parsing + Gear/Card Effects
+## Session 4 — D5/D4 Script Parsing + Gear/Card Effects ✅ DONE
 
-### Parser output per item
-```python
-@dataclass
-class ItemEffect:
-    bonus_type: str      # e.g. "bStr", "bSubClass"
-    params: list         # e.g. [40] or ["Class_Boss", 40]
-    description: str     # human-readable, generated or manual override
-```
+**Implemented:**
+- `core/models/item_effect.py` — `ItemEffect(bonus_type, arity, params, description)`
+- `core/item_script_parser.py` — `parse_script(script) -> list[ItemEffect]`
+  - Regex parser for bonus/bonus2/bonus3. Template table: ~35/25/9 types.
+- `core/models/gear_bonuses.py` — `GearBonuses` dataclass (flat fields + E2 stub dicts)
+- `core/gear_bonus_aggregator.py` — `GearBonusAggregator.compute(equipped) -> GearBonuses`
+- `gui/main_window.py` — `_apply_gear_bonuses()` applies parsed bonuses as a clean overlay;
+  save_build always writes manual-only values.
 
-### Description generation
-Template table: bonus_type → description pattern with param slots.
-~20 common types cover the majority of item_db.
-Manual override dict keyed by item_id for exceptions.
-Alice Card test case: `bonus2 bSubClass,Class_Boss,40` →
-"Receive 40% less damage from Boss monsters."
+**Verified:** Alice Card `bSubRace,RC_Boss,40` → "Reduces damage from Boss monsters by 40%."
+Picky Card `bStr,1 + bBaseAtk,10` → str_=1, batk=10 correctly routed.
 
-### Bonus routing
-- Numeric bonuses populate Session 3 stubs (bonus_aspd, bonus_maxhp, etc.).
-- Flat ATK/HIT/FLEE/CRI bonuses → existing `bonus_*` fields in StatusData.
-- Pipeline-level multipliers (size/race/element) → E2 stubs (not fully implemented).
-
-### GUI
-Equipment browser and equipment section item names gain tooltip showing generated
-description per card slot and gear piece.
+**Not implemented (future sessions):**
+- Tooltips in Equipment Browser / Equip Section UI (Session 5)
+- bonus2/bonus3 E2 routing (race/size/element mults → pipeline) — blocked on E2 design
+- bSkillAtk, bIgnoreDefRate pipeline routing (Session 6)
+- Manual override dict for exceptional items
 
 ---
 

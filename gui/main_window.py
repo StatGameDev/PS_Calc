@@ -17,13 +17,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import dataclasses
+
 from core.build_manager import BuildManager
 from core.calculators.battle_pipeline import BattlePipeline
 from core.calculators.status_calculator import StatusCalculator
 from core.config import BattleConfig
 from core.data_loader import loader
+from core.gear_bonus_aggregator import GearBonusAggregator
 from core.models.build import PlayerBuild
 from core.models.damage import BattleResult
+from core.models.gear_bonuses import GearBonuses
 from core.models.target import Target
 from gui import app_config
 from gui.panel_container import PanelContainer
@@ -126,6 +130,11 @@ class MainWindow(QMainWindow):
         new_btn.clicked.connect(self._on_new_build)
         layout.addWidget(new_btn)
 
+        self._save_btn = QPushButton("Save")
+        self._save_btn.clicked.connect(self._on_save_build)
+        self._save_btn.setEnabled(False)
+        layout.addWidget(self._save_btn)
+
         refresh_btn = QPushButton("Refresh")
         refresh_btn.clicked.connect(self._refresh_builds)
         layout.addWidget(refresh_btn)
@@ -207,6 +216,18 @@ class MainWindow(QMainWindow):
             if name:
                 self._refresh_builds(select_name=name)
 
+    def _on_save_build(self) -> None:
+        """Save the current build to saves/{name}.json (overwrite without prompt)."""
+        build = self._current_build
+        if build is None or not build.name:
+            return
+        self._collect_build()
+        path = os.path.join(app_config.SAVES_DIR, f"{build.name}.json")
+        try:
+            BuildManager.save_build(build, path)
+        except Exception as exc:
+            print(f"WARNING: Failed to save build '{build.name}': {exc}")
+
     def _on_build_selected(self, name: str) -> None:
         if not name:
             return
@@ -219,6 +240,7 @@ class MainWindow(QMainWindow):
             return
 
         self._current_build = build
+        self._save_btn.setEnabled(bool(build.name))
         self._load_build_into_sections(build)
 
         # Sync server toggle to the loaded build's server field
@@ -264,17 +286,43 @@ class MainWindow(QMainWindow):
         self._passive_section.collect_into(build)
         self._combat_controls.collect_into(build)
 
+    def _apply_gear_bonuses(self, build: PlayerBuild) -> PlayerBuild:
+        """Return a new PlayerBuild with gear bonuses added on top of manual bonuses.
+
+        The original build is unchanged so save_build always writes clean values.
+        """
+        gb = GearBonusAggregator.compute(build.equipped)
+        return dataclasses.replace(
+            build,
+            bonus_str=build.bonus_str + gb.str_,
+            bonus_agi=build.bonus_agi + gb.agi,
+            bonus_vit=build.bonus_vit + gb.vit,
+            bonus_int=build.bonus_int + gb.int_,
+            bonus_dex=build.bonus_dex + gb.dex,
+            bonus_luk=build.bonus_luk + gb.luk,
+            bonus_batk=build.bonus_batk + gb.batk,
+            bonus_hit=build.bonus_hit + gb.hit,
+            bonus_flee=build.bonus_flee + gb.flee,
+            bonus_cri=build.bonus_cri + gb.cri,
+            equip_def=build.equip_def + gb.def_,
+            bonus_maxhp=build.bonus_maxhp + gb.maxhp,
+            bonus_maxsp=build.bonus_maxsp + gb.maxsp,
+            bonus_aspd_percent=build.bonus_aspd_percent + gb.aspd_percent,
+            bonus_aspd_add=build.bonus_aspd_add + gb.aspd_add,
+        )
+
     def _run_status_calc(self) -> None:
         """Run StatusCalculator and push results to DerivedSection."""
         build = self._current_build
         if build is None:
             return
+        eff_build = self._apply_gear_bonuses(build)
         weapon = BuildManager.resolve_weapon(
-            build.equipped.get("right_hand"),
-            build.refine_levels.get("right_hand", 0),
-            build.weapon_element,
+            eff_build.equipped.get("right_hand"),
+            eff_build.refine_levels.get("right_hand", 0),
+            eff_build.weapon_element,
         )
-        status = StatusCalculator(self._config).calculate(build, weapon)
+        status = StatusCalculator(self._config).calculate(eff_build, weapon)
         self._derived_section.refresh(status)
 
     def _run_battle_pipeline(self) -> None:
@@ -282,14 +330,15 @@ class MainWindow(QMainWindow):
         build = self._current_build
         if build is None:
             return
+        eff_build = self._apply_gear_bonuses(build)
         weapon = BuildManager.resolve_weapon(
-            build.equipped.get("right_hand"),
-            build.refine_levels.get("right_hand", 0),
-            build.weapon_element,
+            eff_build.equipped.get("right_hand"),
+            eff_build.refine_levels.get("right_hand", 0),
+            eff_build.weapon_element,
         )
-        status = StatusCalculator(self._config).calculate(build, weapon)
+        status = StatusCalculator(self._config).calculate(eff_build, weapon)
         skill = self._combat_controls.get_skill_instance()
-        mob_id = self._combat_controls.get_target_mob_id() or build.target_mob_id
+        mob_id = self._combat_controls.get_target_mob_id() or eff_build.target_mob_id
         target = loader.get_monster(mob_id) if mob_id is not None else Target()
 
         # Always refresh target/incoming — independent of pipeline success (B5).
@@ -298,7 +347,7 @@ class MainWindow(QMainWindow):
         self._incoming_damage.refresh_status(status)
 
         try:
-            result = self._pipeline.calculate(status, weapon, skill, target, build)
+            result = self._pipeline.calculate(status, weapon, skill, target, eff_build)
         except Exception as exc:
             print(f"WARNING: BattlePipeline error: {exc}")
             result = None
