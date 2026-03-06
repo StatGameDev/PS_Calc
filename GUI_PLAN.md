@@ -51,10 +51,12 @@ get_overrefine(3, 7) = 16. Code path correct — no fix needed.
 `_on_save_build()`: collects build from sections, then `BuildManager.save_build(build, path)`.
 Overwrites without confirmation. No "Save As" (Phase 8 polish).
 
-**B9 — Save writes wrong filename when display name ≠ file stem** ✅ _Fixed Session 4 (same commit)_
-Root cause: `_on_save_build` used `build.name` ("Agi BS") for the path instead of
-`self._current_build_name` ("agi_bs"), creating a new file instead of overwriting.
-Fix: use `self._current_build_name` for the path and the enabled guard.
+**B9 — Save had stale build.name before _collect_build()** ✅ _Fixed Session 4_
+Root cause: `_on_save_build` referenced `build` (undefined local) and checked `build.name`
+before `_collect_build()` was called, so the Name field value was not yet reflected.
+Fix: call `_collect_build()` first, then use `build.name` (Name field) as the filename.
+If the name changed (e.g. "agi_bs" → "Agi BS"), `_current_build_name` and the combo are
+refreshed after save so they stay consistent.
 
 ---
 
