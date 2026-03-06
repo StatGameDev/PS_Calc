@@ -89,6 +89,44 @@ Notes: Split across two conversation segments (planning context + implementation
 
 ---
 
+## Session A (doc cleanup)  2026-03-06  claude-sonnet-4-6
+ctx_used: 56% (post-compaction continuation; compaction occurred mid-session when previous
+conversation hit context limit during data_models.md editing — the Target section had been
+updated but GearBonuses/mob_db/PlayerBuild sections were still at their old state at handoff)
+
+Work items completed:
+- completed_work.md: fix stale pipeline order in header; append Session 5 and Session A sections
+- data_models.md: GearBonuses [NEW]→[EXISTS] for 4 Session A fields; mob_db table updated with Status column; PlayerBuild MODELS.md ref removed
+- gui_plan.md: F6 job IDs corrected (10/22 → 12/24); phases_done ref updated
+- CLAUDE.md: handoff protocol clarified (current_state.md is cross-instance only; context_log made optional/user-triggered with post-push reminder; data_models.md item 4 made more specific)
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/completed_work.md | 437 | ~3,059 |
+| docs/current_state.md | 52 | ~364 |
+| docs/session_roadmap.md | 265 | ~1,855 |
+| docs/gui_plan.md (partial) | 50 | ~350 |
+| CLAUDE.md (partial) | 35 | ~245 |
+| **subtotal reads** | **839** | **~5,873** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| docs/completed_work.md | +80 | ~560 |
+| docs/data_models.md | +15 net | ~105 |
+| docs/gui_plan.md | +2 | ~14 |
+| CLAUDE.md | +20 net | ~140 |
+
+Files created: none
+
+Total est_tokens: ~5,873 reads + ~819 edits + ~6,000 fixed + ~8,000 conv ≈ 21,000 (~11% of 200k)
+Notes: Pure doc cleanup session. No code changes. data_models.md was pre-loaded via system-reminder
+(not counted as a read). All deferred Session A doc items resolved and committed in two commits
+(c540e8d + 9b0d08f).
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
