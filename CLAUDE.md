@@ -108,6 +108,18 @@ Always grep first. Never load entire files.
     db/skills.json     — 1168 skills
     tables/            — size_fix, attr_fix, refine_weapon, mastery_fix, active_status_bonus
 
+### Planning docs (`docs/`)
+
+    gaps.md            — all open gaps: ID, status, Hercules ref, one-line description
+    session_roadmap.md — Session A–F scope, work items in order, test cases
+    pipeline_specs.md  — full pipeline step specs for BF_WEAPON, BF_MAGIC, incoming
+    data_models.md     — Target/StatusData/GearBonuses/PlayerBuild field specs (current vs needed)
+    context_log.md     — historical context % used per session; used to calibrate future scope
+
+    Load these on demand — do NOT load all at session start.
+    Always load gaps.md + session_roadmap.md when planning or scoping a session.
+    Load context_log.md when estimating whether a planned session fits in one context window.
+
 ### GUI (`gui/`)
 
     main_window.py          — QMainWindow, signal routing, pipeline triggers
@@ -146,7 +158,7 @@ static-analysis explanation. Ask the user for runtime cooperation.
 - No business logic in widget classes — widgets emit signals, core handles
   calculation, results pushed back via signals.
 
-> See MODELS.md for data model reference (PlayerBuild, BattleResult, Target, etc.)
+> See `docs/data_models.md` for data model field specs (PlayerBuild, BattleResult, Target, etc.)
 
 ---
 
@@ -157,61 +169,39 @@ static-analysis explanation. Ask the user for runtime cooperation.
 
 ---
 
-## Session Plan
+## Session Planning
 
-Phases 0–4 complete. See GUI_PLAN.md for full session specs and bug details.
+> Current gaps, session scope, and work items are tracked in `docs/`.
+> Do not maintain a separate open-items list here — it will go stale.
 
-> Reference files: MODELS.md (data models, DataLoader, project structure) —
-> PHASES_DONE.md (completed phase specs, archive only) —
-> COMPLETED_WORK.md (work log, codebase map)
+- Open gaps by ID: `docs/gaps.md`
+- Session scope and work items in order: `docs/session_roadmap.md`
+- Context budget history for scope calibration: `docs/context_log.md`
 
-| Session | Focus | Key constraint |
-|---|---|---|
-| 1 | GUI stabilization: fix B3+B4+B5, verify B6+B7 | No new features until layout is stable |
-| 2 | C1 Variance (tuple threading) + E1 Hit/Miss | Variance sources and deterministic multipliers strictly separated |
-| 3 | C3 ASPD + HP + SP together | Leave bonus stubs for Session 4 |
-| 4 | D5/D4 Script parsing + gear/card effects + tooltips | Grep bonus-type distribution before starting; decide manual-vs-generated split first |
-| 5 | GUI enhancements: 4.4–4.7 (filters) | No pipeline deps |
-| 6 | E3 Bane skills + E4 Katar second hit + polish | — |
+One permanent constraint: **C1 full variance distribution** (histogram computation)
+requires a web-Claude design session before any implementation. Do not touch
+`DamageRange` structure until that design is done.
 
 ---
 
-## Open Items
+## Instance Handoff Protocol
 
-### C — Pipeline Gaps
+Multiple Claude instances (Claude Code, web Claude) may work on this project.
+`docs/current_state.md` is the shared handoff surface — it lives in the repo
+so any instance can read it.
 
-C1. Damage Variance — **Needs planning session (web Claude)**
-`DamageRange(min, max, avg)` is insufficient for histogram computation.
-Multiple independent random variables (weapon ATK, overrefine, VIT DEF) are
-convolved through the pipeline — the full distribution is NOT recoverable from
-min/max/avg alone. Needs proper design: exact convolution, Irwin-Hall
-approximation, or Monte Carlo. Plan in web Claude before implementing.
-C1a (VIT DEF avg off-by-0.5): DONE — `variance_max//2` in defense_fix.py.
+**Starting a session (any instance):**
+- Claude Code: read `docs/current_state.md` before starting work
+- Web Claude: user pastes contents of `docs/current_state.md` + the relevant
+  sections of this file (rules, file structure, pipeline order)
 
-C2. FinalRateBonus — short/long_damage_rate are map-level in Hercules, not global
-BattleConfig. Verify before fixing.
+**Ending a session / before switching instances:**
+- User says `handoff` → Claude updates `docs/current_state.md` with:
+  - What was completed this session
+  - Next session work items (copied from session_roadmap.md, trimmed to essentials)
+  - Any in-progress or interrupted work
+  - Active known bugs not yet fixed
+  - Any discoveries not yet written to permanent docs
 
-C3. StatusCalculator — **Session 3** — ASPD, HP, SP placeholders.
-All three share the same pattern; implement together. Bonus stubs defined here,
-populated in Session 4.
-
-### D — Data Infrastructure
-
-D4. Card effects — **Session 4**, depends on D5.
-D5. Script parsing — **Session 4**. Parse bonus/bonus2/bonus3 → structured effect
-lists → numeric bonuses into stat/pipeline layers → human-readable tooltips.
-Quality bar: ratemyserver.com descriptions. Grep item_db bonus-type distribution
-before starting to decide manual-vs-generated split.
-
-### E — Additional Pipeline Mechanics
-
-E1. Hit/Miss — **Session 3** — 80 + HIT − FLEE; Perfect Dodge 1+⌊LUK/10⌋+bonus.
-    hitrate has further modifiers not yet modelled (skill bonuses, SC_FOGWALL,
-    arrow_hit, agi_penalty_type). Implement basic formula first; add TODO for rest.
-E2. Damage Bonus/Reduction — size/race/element multipliers, blocked on D5.
-E3. Bane skills — **Session 6** — Beast/Demon Bane, Dragonology. After VIT DEF, before RefineFix.
-E4. Katar second hit — **Session 6** — verify fraction from source.
-E5. SC_IMPOSITIO in BATK — likely feeds bonus_batk. Verify against source.
-E6. Forged weapon Verys — flat +5/Very after elemental modifier.
-E7. Cart Revolution double elemental fix.
-E8. GS_GROUNDDRIFT — separate 50*lv neutral component with own elemental fix.
+`docs/current_state.md` is the only file that should be updated at handoff.
+Do not duplicate its contents into MEMORY.md or gaps.md.

@@ -36,7 +36,7 @@ Notes: retroactive entry, no size data recorded. Use Session A onward for calibr
 ---
 
 ## Session A  2026-03-06  claude-sonnet-4-6
-ctx_used: ___%   (fill in after session)
+ctx_used: 93% Session 1 (planning), 63% Session 2 (implementation)
 
 Work items completed:
 - W1: Extend Target model — 9 new fields (sub_race/ele/size, near/long/magic_def_rate, mdef_, int_, armor_element, flee)
