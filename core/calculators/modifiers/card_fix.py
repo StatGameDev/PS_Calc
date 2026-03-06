@@ -72,7 +72,6 @@ class CardFix:
             + add_ele.get("Ele_All", 0)
             + add_size.get(size_key, 0)
             + add_size.get("Size_All", 0)
-            + gear_bonuses.atk_rate                        # bAtkRate flat %
             + (gear_bonuses.long_atk_rate if is_ranged else 0)  # G11
         )
 
@@ -102,7 +101,6 @@ class CardFix:
                   f"  {'Boss' if target.is_boss else 'NonBoss'}+{add_race.get(boss_rc,0)}%"
                   f"  Ele+{add_ele.get(ele_key,0)}%"
                   f"  Size+{add_size.get(size_key,0)}%"
-                  f"  AtkRate+{gear_bonuses.atk_rate}%"
                   + (f"  LongAtk+{gear_bonuses.long_atk_rate}%" if is_ranged else "")
                   + (f"  TargetDef-{def_pct}%" if def_pct else "")),
             formula=f"dmg * (100 + {atk_bonus} - {def_pct}) // 100 = dmg * {net} // 100",

@@ -130,6 +130,21 @@ class BattlePipeline:
         dmg: DamageRange = BaseDamage.calculate(status, weapon, build, target, skill, result,
                                                  is_crit=is_crit)
 
+        # === bAtkRate — #ifndef RENEWAL, battle.c:5330 (pre-skill-ratio) ===
+        # ATK_ADDRATE(sd->bonus.atk_rate) applied before SkillRatio in the default case.
+        if gear_bonuses.atk_rate:
+            dmg = dmg.scale(100 + gear_bonuses.atk_rate, 100)
+            result.add_step(
+                "bAtkRate",
+                value=dmg.avg,
+                min_value=dmg.min,
+                max_value=dmg.max,
+                multiplier=(100 + gear_bonuses.atk_rate) / 100,
+                note=f"bAtkRate +{gear_bonuses.atk_rate}% (from gear — applied before Skill Ratio)",
+                formula=f"dmg * (100 + {gear_bonuses.atk_rate}) // 100",
+                hercules_ref="battle.c:5330 #ifndef RENEWAL: ATK_ADDRATE(sd->bonus.atk_rate)",
+            )
+
         # === SKILL RATIO ===
         dmg = SkillRatio.calculate(skill, dmg, build, result)
 

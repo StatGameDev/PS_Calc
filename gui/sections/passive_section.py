@@ -20,10 +20,17 @@ from gui.section import Section
 # ── Self buffs that feed active_status_levels ─────────────────────────────────
 # (sc_key, display_name, has_level, min_lv, max_lv)
 _SELF_BUFFS: list[tuple[str, str, bool, int, int]] = [
-    ("SC_AURABLADE",    "Aura Blade",      True,  1, 5),
-    ("SC_MAXIMIZEPOWER","Maximize Power",  False, 1, 1),
-    ("SC_OVERTHRUST",   "Overthrust",      True,  1, 10),
-    ("SC_OVERTHRUSTMAX","Max. Overthrust", True,  1, 5),
+    ("SC_AURABLADE",       "Aura Blade",       True,  1, 5),
+    ("SC_MAXIMIZEPOWER",   "Maximize Power",   False, 1, 1),
+    ("SC_OVERTHRUST",      "Overthrust",        True,  1, 10),
+    ("SC_OVERTHRUSTMAX",   "Max. Overthrust",   True,  1, 5),
+    # ASPD buffs (G9) — source: status.c status_calc_aspd_rate (1000=100% scale)
+    # Quicken/Adrenaline: aspd_rate -= max(active). Only highest applies.
+    ("SC_TWOHANDQUICKEN",  "Two-Hand Quicken", False, 1,  1),   # val2=300 (fixed)
+    ("SC_SPEARQUICKEN",    "Spear Quicken",    True,  1, 10),   # val2=200+10*lv (level matters)
+    ("SC_ONEHANDQUICKEN",  "One-Hand Quicken", False, 1,  1),   # val2=300 (fixed)
+    ("SC_ADRENALINE",      "Adrenaline Rush",  False, 1,  1),   # val3=300 self / 200 party; no lv effect
+    ("SC_ASSNCROS",        "Assassin Cross",   False, 1,  1),   # val2=f(bard_agi) — placeholder
 ]
 
 # ── Masteries that feed mastery_levels ────────────────────────────────────────
@@ -39,9 +46,15 @@ _MASTERIES: list[tuple[str, str]] = [
     ("DC_DANCINGLESSON", "Dancing Lesson"),
     ("SA_ADVANCEDBOOK",  "Advanced Book"),
     ("AS_KATAR",         "Katar"),
+    ("ASC_KATAR",        "Adv. Katar"),
     ("AL_DEMONBANE",     "Demon Bane"),
     ("HT_BEASTBANE",     "Beast Bane"),
 ]
+
+# Masteries restricted to specific job IDs. Keys not present here are always visible.
+_MASTERY_JOB_FILTER: dict[str, set[int]] = {
+    "ASC_KATAR": {24},   # Assassin Cross only
+}
 
 
 def _make_sub_header(text: str) -> QLabel:
@@ -64,7 +77,8 @@ class PassiveSection(Section):
         # Storage
         self._sc_checks:  dict[str, QCheckBox] = {}
         self._sc_spins:   dict[str, QSpinBox]  = {}
-        self._mastery_spins: dict[str, QSpinBox] = {}
+        self._mastery_spins:  dict[str, QSpinBox] = {}
+        self._mastery_labels: dict[str, QLabel]   = {}
 
         # ── Self Buffs ────────────────────────────────────────────────────
         self.add_content_widget(_make_sub_header("Self Buffs"))
@@ -120,6 +134,7 @@ class PassiveSection(Section):
 
             lbl = QLabel(m_display)
             lbl.setObjectName("passive_mastery_label")
+            self._mastery_labels[m_key] = lbl
             mastery_grid.addWidget(lbl, row, col_base)
 
             spin = QSpinBox()
@@ -176,6 +191,23 @@ class PassiveSection(Section):
         flags_layout.addWidget(ranged_row, 1, 1, 1, 2)
 
         self.add_content_widget(flags_widget)
+
+    # ── Public API (job visibility) ────────────────────────────────────────
+
+    def update_job(self, job_id: int) -> None:
+        """Show/hide job-restricted mastery rows based on current job_id."""
+        for m_key, _ in _MASTERIES:
+            restriction = _MASTERY_JOB_FILTER.get(m_key)
+            if restriction is None:
+                continue
+            visible = job_id in restriction
+            if m_key in self._mastery_labels:
+                self._mastery_labels[m_key].setVisible(visible)
+            if m_key in self._mastery_spins:
+                spin = self._mastery_spins[m_key]
+                spin.setVisible(visible)
+                if not visible:
+                    spin.setValue(0)
 
     # ── Internal ──────────────────────────────────────────────────────────
 
@@ -301,6 +333,8 @@ class PassiveSection(Section):
             rb.blockSignals(False)
         self._riding_peco_chk.blockSignals(False)
         self._no_sizefix_chk.blockSignals(False)
+
+        self.update_job(build.job_id)
 
         if self._compact_summary_lbl is not None:
             self._compact_summary_lbl.setText(self._build_summary())

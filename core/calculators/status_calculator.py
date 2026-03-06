@@ -61,6 +61,35 @@ class StatusCalculator:
         base_amotion = loader.get_aspd_base(build.job_id, weapon.weapon_type)
         amotion = base_amotion - base_amotion * (4 * status.agi + status.dex) // 1000
         amotion += build.bonus_aspd_add  # stub: flat amotion reduction from bAspd (Session 4)
+
+        # SC ASPD buffs — source: status.c:5587-5652 status_calc_aspd_rate
+        # Comment in source: "Note that the scale of aspd_rate is 1000 = 100%."
+        # Formula: aspd_rate -= max(all active SC reductions); amotion = amotion * aspd_rate // 1000
+        # Only the highest single reduction applies — no stacking between quicken-type SCs.
+        active_sc = build.active_status_levels
+        sc_aspd_reduction = 0   # in 1000-scale units (300 = 30% reduction)
+
+        # Fixed-value SCs (val2 constant regardless of level)
+        for sc_key in ("SC_TWOHANDQUICKEN", "SC_ONEHANDQUICKEN"):
+            if sc_key in active_sc:
+                sc_aspd_reduction = max(sc_aspd_reduction, 300)  # val2 = 300
+
+        # SC_ADRENALINE: val3 = 300 (self/Blacksmith) or 200 (party); using 300 (self assumed)
+        # Weapon restriction (axe/mace only) not enforced here — user's responsibility.
+        if "SC_ADRENALINE" in active_sc:
+            sc_aspd_reduction = max(sc_aspd_reduction, 300)
+
+        # SC_SPEARQUICKEN: val2 = 200 + 10*val1 (status.c:7822 #ifndef RENEWAL_ASPD)
+        if "SC_SPEARQUICKEN" in active_sc:
+            spear_lv = active_sc["SC_SPEARQUICKEN"]
+            sc_aspd_reduction = max(sc_aspd_reduction, 200 + 10 * spear_lv)
+
+        # SC_ASSNCROS (Assassin's Cross song): val2 = f(bard_agi) — not yet implemented.
+        # Needs a Bard AGI input field; deferred until party buff system is added.
+
+        if sc_aspd_reduction:
+            amotion = amotion * (1000 - sc_aspd_reduction) // 1000
+
         # bonus_aspd_percent: percentage aspd_rate bonus (e.g. 10 = 10% faster)
         # Implemented as aspd_rate modifier: amotion *= (1000 - pct*10) / 1000
         # (bAspd_rate from items/skills — Session 4 populates via script parsing)

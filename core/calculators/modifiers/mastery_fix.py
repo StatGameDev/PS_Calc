@@ -47,4 +47,24 @@ class MasteryFix:
             formula=formula,
             hercules_ref="battle.c: damage = battle->add_mastery(sd, target, damage, left_hand);"
         )
+
+        # ASC_KATAR: Advanced Katar Mastery — percentage bonus on top of flat AS_KATAR.
+        # Source: battle.c:927-929 #else (pre-renewal):
+        #   if (weapontype == W_KATAR && skill_id != ASC_BREAKER && weapon)
+        #       damage += damage * (10 + 2 * skill2_lv) / 100;
+        asc_katar_lv = build.mastery_levels.get("ASC_KATAR", 0)
+        if weapon.weapon_type == "Katar" and asc_katar_lv > 0:
+            ratio = 100 + 10 + 2 * asc_katar_lv   # e.g. lv5 → 120, lv10 → 130
+            dmg = dmg.scale(ratio, 100)
+            result.add_step(
+                name="Adv. Katar Mastery",
+                value=dmg.avg,
+                min_value=dmg.min,
+                max_value=dmg.max,
+                multiplier=ratio / 100,
+                note=f"ASC_KATAR Lv {asc_katar_lv}: ×{ratio / 100:.2f}",
+                formula=f"dmg * (100 + 10 + 2 × {asc_katar_lv}) / 100",
+                hercules_ref="battle.c:927-929 #else: damage += damage * (10 + 2 * skill2_lv) / 100"
+            )
+
         return dmg

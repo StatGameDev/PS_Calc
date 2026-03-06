@@ -562,3 +562,34 @@ Skill element from skills.json `element` field ("Ele_Fire" → strip prefix → 
 `BattleResult.magic: Optional[DamageResult]` added to damage.py; mirrored to `.normal` for GUI.
 `battle_pipeline.py`: routes `attack_type == "Magic"` skills to MagicPipeline.
 Note: matk_percent and skillatk_bonus are stubs (no GearBonuses fields yet).
+
+---
+
+## Session C
+
+**C1 — ASC_KATAR percentage mastery (G4)**
+`core/calculators/modifiers/mastery_fix.py`: ASC_KATAR block added after the flat mastery step.
+Formula from battle.c:927-929 `#else` (pre-renewal): `damage += damage * (10 + 2*skill_lv) / 100`.
+Implemented as `dmg.scale(100 + 10 + 2*lv, 100)` — e.g. lv5 → ×1.20, lv10 → ×1.30.
+Only fires when `weapon.weapon_type == "Katar"` and `asc_katar_lv > 0`.
+`gui/sections/passive_section.py`: ASC_KATAR row added to `_MASTERIES`; `_MASTERY_JOB_FILTER`
+dict added to restrict row visibility to job_id=24 (Assassin Cross); `update_job(job_id)` method
+hides row and resets spin to 0 for other jobs; wired from `load_build` and `job_changed` signal.
+
+**C2 — ASPD skill buffs (G9, partial)**
+`core/calculators/status_calculator.py`: SC ASPD reduction block added after flat `bonus_aspd_add`.
+Uses `status_calc_aspd_rate` 1000-scale approach (source confirmed by user testing — 30% reduction
+for SC_TWOHANDQUICKEN matches val2=300, not the flag&1 branch `bonus=7` which yields ~7%).
+Only the highest single SC reduction applies (no SC-to-SC stacking): `max()` across all active SCs.
+Values: SC_TWOHANDQUICKEN/SC_ONEHANDQUICKEN = 300; SC_ADRENALINE = 300 (self assumed);
+SC_SPEARQUICKEN = 200+10×level. Gear bonuses (`bonus_aspd_add`, `bonus_aspd_percent`) apply in
+subsequent steps and DO stack with SC bonuses.
+SC_ASSNCROS deferred: val2 = f(Bard's AGI) — needs party buff input system. Currently does nothing.
+`gui/sections/passive_section.py`: 5 ASPD SC checkboxes added to `_SELF_BUFFS` (SC_SPEARQUICKEN
+uses `has_level=True` because val2 is level-dependent). See docs/aspd.md for full investigation.
+
+**C3 — bAtkRate pipeline position fix (G10)**
+`core/calculators/battle_pipeline.py`: `bAtkRate` step added between BaseDamage and SkillRatio.
+Source: battle.c:5330 `#ifndef RENEWAL`: `ATK_ADDRATE(sd->bonus.atk_rate)`.
+`core/calculators/modifiers/card_fix.py`: `atk_rate` removed from the CardFix attacker-side
+`atk_bonus` sum where it was incorrectly placed (post-defense, post-AttrFix).
