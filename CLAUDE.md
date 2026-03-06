@@ -192,29 +192,27 @@ requires a web-Claude design session before any implementation. Do not touch
 
 ## Instance Handoff Protocol
 
-Multiple Claude instances (Claude Code, web Claude) may work on this project.
-`docs/current_state.md` is the shared handoff surface — it lives in the repo
-so any instance can read it.
+`docs/current_state.md` is the handoff surface for switching between Claude instances
+(different accounts or handing to another developer). Only needed when actually switching.
 
-**Starting a session (any instance):**
-- Claude Code: read `docs/current_state.md` before starting work
-- Web Claude: user pastes contents of `docs/current_state.md` + the relevant
-  sections of this file (rules, file structure, pipeline order)
+**On user says `handoff`:** Update `docs/current_state.md` with:
+- What was completed this session
+- Next session work items (copied from session_roadmap.md, trimmed to essentials)
+- Any in-progress or interrupted work
+- Active known bugs not yet fixed
+- Any discoveries not yet written to permanent docs
 
-**Ending a session / before switching instances:**
-- User says `handoff` → Claude updates `docs/current_state.md` with:
-  - What was completed this session
-  - Next session work items (copied from session_roadmap.md, trimmed to essentials)
-  - Any in-progress or interrupted work
-  - Active known bugs not yet fixed
-  - Any discoveries not yet written to permanent docs
+For web Claude receiving a handoff: user pastes `docs/current_state.md` + the relevant
+sections of this file (rules, file structure, pipeline order).
 
-`docs/current_state.md` is the only file that should be updated at handoff.
-Do not duplicate its contents into MEMORY.md or gaps.md.
+`docs/current_state.md` is the only file updated at handoff. Do not duplicate into MEMORY.md or gaps.md.
 
 **End-of-session docs maintenance (before commit):**
 - `docs/gaps.md` — mark completed gaps [x], update [~] partials
 - `docs/completed_work.md` — append new session section with what was done
-- `docs/context_log.md` — fill in files read/edited/created with line counts
-- `docs/data_models.md` — move [NEW] fields to [EXISTS] if implemented this session
+- `docs/data_models.md` — for each field implemented: move it from its [NEW] block into the [EXISTS] block of the same section, keeping the comment
 - `CLAUDE.md` — update Pipeline Step Order and modifiers list if steps added/reordered
+
+**After commit and push:** Remind the user to consider updating `docs/context_log.md`
+(files read/edited/created with line counts and token estimates) if they want the session
+recorded for future scope calibration. It is optional — only worth doing for large sessions.
