@@ -54,3 +54,9 @@ class GearBonuses:
     add_ele: Dict[str, int] = field(default_factory=dict)    # {ele: bonus%}
     ignore_def_rate: Dict[str, int] = field(default_factory=dict)  # {race: %}
     skill_atk: Dict[str, int] = field(default_factory=dict)  # {skill: %}
+
+    # Incoming damage rate modifiers (for target-side CardFix / PvP)
+    near_atk_def_rate: int = 0   # bNearAtkDef — % reduction vs melee
+    long_atk_def_rate: int = 0   # bLongAtkDef — % reduction vs ranged
+    magic_def_rate:    int = 0   # bMagicDefRate — % reduction vs magic
+    atk_rate:          int = 0   # bAtkRate — flat % bonus to physical ATK

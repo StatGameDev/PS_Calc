@@ -103,8 +103,12 @@ _BONUS1_ROUTES: dict[str, object] = {
     "bDef":      lambda b, v: setattr(b, "def_",  b.def_  + v),
     "bMaxHP":    lambda b, v: setattr(b, "maxhp", b.maxhp + v),
     "bMaxSP":    lambda b, v: setattr(b, "maxsp", b.maxsp + v),
-    "bAspdRate": lambda b, v: setattr(b, "aspd_percent", b.aspd_percent + v),
-    "bAspd":     lambda b, v: setattr(b, "aspd_add",     b.aspd_add     + v),
+    "bAspdRate":    lambda b, v: setattr(b, "aspd_percent",     b.aspd_percent     + v),
+    "bAspd":        lambda b, v: setattr(b, "aspd_add",         b.aspd_add         + v),
+    "bNearAtkDef":  lambda b, v: setattr(b, "near_atk_def_rate", b.near_atk_def_rate + v),
+    "bLongAtkDef":  lambda b, v: setattr(b, "long_atk_def_rate", b.long_atk_def_rate + v),
+    "bMagicDefRate": lambda b, v: setattr(b, "magic_def_rate",   b.magic_def_rate   + v),
+    "bAtkRate":     lambda b, v: setattr(b, "atk_rate",          b.atk_rate         + v),
 }
 
 

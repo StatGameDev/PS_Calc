@@ -44,6 +44,37 @@ class BaseDamage:
         wlv = weapon.level                              # wa->wlv from inventory_data->wlv
         atkmax = weapon.atk                             # wa->atk
 
+        # SC_IMPOSITIO: flat weapon ATK bonus per level (val2 = level * 5)
+        # status.c #ifndef RENEWAL ~line 4562: watk += sc->data[SC_IMPOSITIO]->val2
+        imp_lv = build.active_status_levels.get("SC_IMPOSITIO", 0)
+        if imp_lv:
+            atkmax += imp_lv * 5
+            result.add_step(
+                name="SC_IMPOSITIO",
+                value=imp_lv * 5,
+                note=f"SC_IMPOSITIO Lv{imp_lv}: +{imp_lv * 5} weapon ATK",
+                formula=f"level * 5 = {imp_lv} * 5 = {imp_lv * 5}",
+                hercules_ref="status.c #ifndef RENEWAL ~line 4562: watk += sc->data[SC_IMPOSITIO]->val2",
+            )
+
+        # Arrow ATK: bow-type weapons add ammo ATK to weapon ATK
+        # battle.c: sd->arrow_atk contributes to weapon ATK for arrow attacks
+        if weapon.weapon_type == "Bow":
+            ammo_id = build.equipped.get("ammo")
+            if ammo_id is not None:
+                ammo = loader.get_item(ammo_id)
+                if ammo and ammo.get("type") == "IT_AMMO":
+                    arrow_atk = ammo.get("atk", 0)
+                    if arrow_atk:
+                        atkmax += arrow_atk
+                        result.add_step(
+                            name="Arrow ATK",
+                            value=arrow_atk,
+                            note=f"Ammo ID {ammo_id}: +{arrow_atk} ATK added to weapon ATK",
+                            formula=f"atkmax += ammo.atk = {arrow_atk}",
+                            hercules_ref="battle.c: sd->arrow_atk contributes to weapon ATK for bow attacks",
+                        )
+
         # PC normal-attack atkmin: st->dex scaled by weapon level
         # battle.c:635: atkmin = atkmin*(80 + wlv*20)/100  (verified A7 — correct)
         atkmin = status.dex * (80 + wlv * 20) // 100

@@ -1,7 +1,21 @@
 from core.models.target import Target
 from core.models.damage import DamageRange, DamageResult
 from core.models.build import PlayerBuild
+from core.models.gear_bonuses import GearBonuses
 from core.config import BattleConfig
+
+_RACE_TO_RC = {
+    "Formless":  "RC_Formless",
+    "Undead":    "RC_Undead",
+    "Brute":     "RC_Brute",
+    "Plant":     "RC_Plant",
+    "Insect":    "RC_Insect",
+    "Fish":      "RC_Fish",
+    "Demon":     "RC_Demon",
+    "Demi-Human": "RC_DemiHuman",
+    "Angel":     "RC_Angel",
+    "Dragon":    "RC_Dragon",
+}
 
 
 class DefenseFix:
@@ -15,7 +29,8 @@ class DefenseFix:
     Source: battle.c battle_calc_defense, pre-renewal path (~line 1397)."""
 
     @staticmethod
-    def calculate(target: Target, build: PlayerBuild, dmg: DamageRange, config: BattleConfig, result: DamageResult,
+    def calculate(target: Target, build: PlayerBuild, gear_bonuses: GearBonuses,
+                  dmg: DamageRange, config: BattleConfig, result: DamageResult,
                   is_crit: bool = False) -> DamageRange:
         """VIT penalty applied to def1/def2 before reduction (exact source position).
 
@@ -40,9 +55,18 @@ class DefenseFix:
             return dmg
 
         def1 = max(0, min(100, target.def_))
-        if getattr(build, 'ignore_hard_def', False):
+
+        # G5 ignore_def: cards like Thanatos bypass a % of hard DEF
+        race_rc = _RACE_TO_RC.get(target.race, "")
+        boss_rc = "RC_Boss" if target.is_boss else "RC_NonBoss"
+        ignore_pct = (gear_bonuses.ignore_def_rate.get(race_rc, 0)
+                      + gear_bonuses.ignore_def_rate.get(boss_rc, 0))
+        if getattr(build, "ignore_hard_def", False) or ignore_pct >= 100:
             def1 = 0
-            note_def = "Hard DEF ignored"
+            note_def = "Hard DEF ignored (100%)"
+        elif ignore_pct > 0:
+            def1 = max(0, def1 * (100 - ignore_pct) // 100)
+            note_def = f"Hard DEF {target.def_} → {def1} (−{ignore_pct}% ignored)"
         else:
             note_def = f"Hard DEF {def1}"
 

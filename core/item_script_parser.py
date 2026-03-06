@@ -104,6 +104,10 @@ _BONUS1_TEMPLATES: dict[str, object] = {
     "bUnbreakableWeapon": lambda _v: "Weapon cannot be broken.",
     "bUnbreakableHelm": lambda _v: "Headgear cannot be broken.",
     "bIgnoreDefRace": lambda v: f"Ignores DEF of {_RACE_NAMES.get(str(v), str(v))}.",
+    "bNearAtkDef":   lambda v: f"Near-range damage resistance +{v}%.",
+    "bLongAtkDef":   lambda v: f"Long-range damage resistance +{v}%.",
+    "bMagicDefRate": lambda v: f"Magic damage reduction +{v}%.",
+    "bAtkRate":      lambda v: f"Physical ATK +{v}%.",
 }
 
 def _race(v: str) -> str:

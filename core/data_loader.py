@@ -92,6 +92,8 @@ class DataLoader:
             element_level=entry["element_level"],
             is_boss=entry["is_boss"],
             level=entry["level"],
+            mdef_=entry.get("mdef", 0),
+            int_=stats.get("int", 0),
         )
 
     # =============================================================

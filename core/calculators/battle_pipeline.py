@@ -7,10 +7,12 @@ from core.models.skill import SkillInstance
 from core.models.target import Target
 from core.config import BattleConfig
 from core.data_loader import loader
+from core.gear_bonus_aggregator import GearBonusAggregator
 from core.calculators.status_calculator import StatusCalculator
 from core.calculators.modifiers.base_damage import BaseDamage
 from core.calculators.modifiers.skill_ratio import SkillRatio
 from core.calculators.modifiers.attr_fix import AttrFix
+from core.calculators.modifiers.card_fix import CardFix
 from core.calculators.modifiers.defense_fix import DefenseFix
 from core.calculators.modifiers.mastery_fix import MasteryFix
 from core.calculators.modifiers.active_status_bonus import ActiveStatusBonus
@@ -77,6 +79,8 @@ class BattlePipeline:
                     is_crit: bool) -> DamageResult:
         """Run a single damage branch (normal or crit) through the full modifier chain."""
         result = DamageResult()
+        gear_bonuses = GearBonusAggregator.compute(build.equipped)
+        is_ranged = effective_is_ranged(build, weapon)
 
         # Informational input steps — show values entering the pipeline
         result.add_step(
@@ -113,7 +117,7 @@ class BattlePipeline:
             dmg = CritAtkRate.calculate(build, dmg, result)
 
         # === DEFENSE FIX — skipped entirely on crit (flag.idef=flag.idef2=1) ===
-        dmg = DefenseFix.calculate(target, build, dmg, self.config, result, is_crit=is_crit)
+        dmg = DefenseFix.calculate(target, build, gear_bonuses, dmg, self.config, result, is_crit=is_crit)
 
         # === ACTIVE STATUS BONUSES — POST-defense (lines 5770-5795) ===
         dmg = ActiveStatusBonus.calculate(weapon, build, skill, dmg, result)
@@ -129,8 +133,10 @@ class BattlePipeline:
         # === ATTR FIX ===
         dmg = AttrFix.calculate(weapon, target, dmg, result)
 
+        # === CARD FIX — race/ele/size/long_atk bonuses; target resist (PvP) ===
+        dmg = CardFix.calculate(build, gear_bonuses, weapon, target, is_ranged, dmg, result)
+
         # === FINAL RATE BONUS ===
-        is_ranged = effective_is_ranged(build, weapon)
         dmg = FinalRateBonus.calculate(is_ranged, dmg, self.config, result)
 
         # Final summary step

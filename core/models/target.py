@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict
 
 @dataclass
 class Target:
@@ -15,3 +16,13 @@ class Target:
     agi: int = 0              # tstatus->agi — used in FLEE calc: flee = level + agi (status.c)
     is_pc: bool = False
     targeted_count: int = 1   # unit_counttargeted(bl) value for VIT penalty (pre-renewal exact)
+    sub_race: Dict[str, int] = field(default_factory=dict)   # RC_* keys — player's race resistance
+    sub_ele:  Dict[str, int] = field(default_factory=dict)   # Ele_* keys — element resistance
+    sub_size: Dict[str, int] = field(default_factory=dict)   # Size_* keys — size resistance
+    near_attack_def_rate: int = 0   # % reduction vs melee
+    long_attack_def_rate: int = 0   # % reduction vs ranged
+    magic_def_rate: int = 0         # % reduction vs magic
+    mdef_: int = 0                  # tstatus->mdef (hard MDEF)
+    int_:  int = 0                  # tstatus->int (soft MDEF)
+    armor_element: int = 0          # 0 = Neutral
+    flee:  int = 0                  # tstatus->flee

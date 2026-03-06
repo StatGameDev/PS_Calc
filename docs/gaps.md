@@ -1,5 +1,5 @@
 # PS_Calc — Gap Tracker
-_Last updated: Session A planning. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
+_Last updated: Session A. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
 _Status: [ ] open, [x] done, [~] partial_
 
 ---
@@ -8,18 +8,18 @@ _Status: [ ] open, [x] done, [~] partial_
 
 | ID | Status | Description | Hercules ref | Notes |
 |---|---|---|---|---|
-| G1 | [ ] | SC_IMPOSITIO misclassified as Renewal-only. Adds `val2` (level×5) flat to weapon ATK. | status.c #ifndef RENEWAL line ~4562 | active_status_bonus.py comment is wrong; add to BaseDamage as flat watk |
-| G2 | [ ] | Attacker-side CardFix entirely absent. Chains: `addrace[target.race]`, `addele[target.def_ele]`, `addsize[target.size]`, boss/nonboss, `long_attack_atk_rate` (BF_LONG, #ifndef RENEWAL). | battle.c:5872 attacker side; cardfix fn ~1060 | GearBonuses stubs populated; nothing reads them. New `card_fix.py` after AttrFix, before FinalRateBonus |
-| G3 | [ ] | Arrow ATK not added for bow builds. `sd->arrow_atk` contributes to weapon ATK for arrow attacks. Ammo `atk` field never fetched. | battle.c arrow_atk path | Fetch `loader.get_item(build.equipped["ammo"])["atk"]` in BaseDamage |
+| G1 | [x] | SC_IMPOSITIO misclassified as Renewal-only. Adds `val2` (level×5) flat to weapon ATK. | status.c #ifndef RENEWAL line ~4562 | Fixed in Session A: base_damage.py after atkmax, before atkmin |
+| G2 | [x] | Attacker-side CardFix entirely absent. Chains: `addrace[target.race]`, `addele[target.def_ele]`, `addsize[target.size]`, boss/nonboss, `long_attack_atk_rate` (BF_LONG, #ifndef RENEWAL). | battle.c:5872 attacker side; cardfix fn ~1060 | Fixed in Session A: new card_fix.py after AttrFix, before FinalRateBonus |
+| G3 | [x] | Arrow ATK not added for bow builds. `sd->arrow_atk` contributes to weapon ATK for arrow attacks. Ammo `atk` field never fetched. | battle.c arrow_atk path | Fixed in Session A: base_damage.py fetches ammo ATK for Bow weapon type |
 | G4 | [ ] | ASC_KATAR percentage mastery missing. Pre-renewal masteryfix: `damage += damage * (10 + 2*skill_lv) / 100` for W_KATAR. | battle.c masteryfix #else block (pre-re) | AS_KATAR flat exists; ASC_KATAR % branch and passive_section entry both absent |
-| G5 | [ ] | ignore_def not wired into DefenseFix. `ignore_def_race[target.race] + ignore_def_race[boss_key]` reduces def1 %. Also `ignore_def_ele`. | battle.c ~5703-5712 | GearBonuses.ignore_def_rate populated; DefenseFix doesn't read it |
-| G6 | [ ] | Target model cannot represent a player defender. `is_pc` field exists but unused. Fields needed: sub_race, sub_ele, sub_size, near/long_attack_def_rate, magic_def_rate, mdef_, int_, armor_element, flee. | battle.c battle_calc_cardfix target side | All default to 0 for mob targets — zero behaviour change until PvP used |
+| G5 | [x] | ignore_def not wired into DefenseFix. `ignore_def_race[target.race] + ignore_def_race[boss_key]` reduces def1 %. Also `ignore_def_ele`. | battle.c ~5703-5712 | Fixed in Session A: defense_fix.py reads ignore_def_rate by race_rc + boss_rc |
+| G6 | [x] | Target model cannot represent a player defender. `is_pc` field exists but unused. Fields needed: sub_race, sub_ele, sub_size, near/long_attack_def_rate, magic_def_rate, mdef_, int_, armor_element, flee. | battle.c battle_calc_cardfix target side | Fixed in Session A: all 9 fields added to target.py with zero defaults |
 | G7 | [ ] | VIT DEF PC branch dead code — `target.is_pc` never True. Formula in defense_fix.py IS correct per C source (battle.c:1487-1488). Branch becomes live in Session D when player_build_to_target() is implemented. | battle.c:1487-1488 #ifndef RENEWAL | No formula change needed. Lines 1495/1498 are AL_DP (Angelus) and RA_RANGERMAIN skill bonuses on top — not the base formula (roadmap misread) |
 | G41 | [ ] | [LOW PRIORITY] PC VIT DEF: Hercules comment (line 1486) disagrees with C implementation. Comment: `[VIT*0.5]+rnd([VIT*0.3],max([VIT*0.3],[VIT^2/150]-1))` → [64,81] for VIT=80. Code: `def2/2+rnd()%(def2*(def2-15)/150)` → [40,73] for VIT=80. Player testing matches comment, not code. | battle.c:1486-1488 | Do NOT change code based on comment. Investigate against official server data before any fix. Currently follow C implementation. |
-| G8 | [ ] | Target-side CardFix not implemented. Multiplies: sub_ele, sub_size, sub_race, boss, near/long_def_rate. Only fires when target.is_pc. | battle.c battle_calc_cardfix cflag=0 BF_WEAPON | Goes in card_fix.py alongside attacker side |
+| G8 | [x] | Target-side CardFix not implemented. Multiplies: sub_ele, sub_size, sub_race, boss, near/long_def_rate. Only fires when target.is_pc. | battle.c battle_calc_cardfix cflag=0 BF_WEAPON | Fixed in Session A: card_fix.py fires target side when is_pc=True (activates in Session D) |
 | G9 | [ ] | ASPD skill buffs not in StatusCalculator. SC_TWOHANDQUICKEN, SC_ADRENALINE, SC_SPEARQUICKEN, SC_ONEHAND modify amotion in status.c. | status.c SC_TWOHANDQUICKEN etc. | active_status_levels read for damage SCs but not ASPD |
-| G10 | [ ] | bAtkRate bonus not in system. `sd->bonus.atk_rate` applied before SkillRatio (#ifndef RENEWAL line 5330). | battle.c:5330 | Not in item parser, GearBonuses, or pipeline anywhere |
-| G11 | [ ] | bLongAtkRate (GearBonuses.long_atk_rate) accumulated but never applied. Belongs inside CardFix for BF_LONG. | battle.c cardfix #ifndef RENEWAL line ~1262 | Fix as part of G2 CardFix implementation |
+| G10 | [~] | bAtkRate bonus not in system. `sd->bonus.atk_rate` applied before SkillRatio (#ifndef RENEWAL line 5330). | battle.c:5330 | Session A: field added to GearBonuses + aggregator + parser, consumed in CardFix. Position wrong per Hercules (should be before SkillRatio) — fix in Session B |
+| G11 | [x] | bLongAtkRate (GearBonuses.long_atk_rate) accumulated but never applied. Belongs inside CardFix for BF_LONG. | battle.c cardfix #ifndef RENEWAL line ~1262 | Fixed in Session A: CardFix applies long_atk_rate when is_ranged=True |
 | G12 | [ ] | F3 — Armor refine DEF not calculated. No scraper, no table, no pipeline step. | Hercules refine_db.conf | Refine slider exists in GUI; value goes nowhere |
 | G13 | [ ] | F1 — Card slot UI absent. No sub-slot buttons per item. | — | GearBonusAggregator handles any key in build.equipped — data side is ready |
 | G14 | [ ] | bWeaponAtk (weapon-type ATK%) not in system. `sd->weapon_atk_rate[weapontype]` applied in base damage. | battle.c:679-685 | Rare in pre-re DB; low priority |
@@ -50,7 +50,7 @@ _Status: [ ] open, [x] done, [~] partial_
 |---|---|---|---|---|
 | G26 | [ ] | No incoming physical pipeline. IncomingDamageSection shows mob ATK range as display text only. | — | Need IncomingPhysicalPipeline class |
 | G27 | [ ] | Player armor element not tracked. Determines how player defends against elemental attacks. | attr_fix table | PlayerBuild has no armor element field; needed to look up attr_fix for incoming |
-| G28 | [ ] | mob_db int_, str, dex not loaded into Target. Mob MATK derived from int_. | mob_db stats.int | loader.get_monster() doesn't populate these |
+| G28 | [~] | mob_db int_, str, dex not loaded into Target. Mob MATK derived from int_. | mob_db stats.int | Session A: int_ now loaded (stats.get("int",0)); str/dex not yet loaded |
 | G29 | [ ] | Target-side player cards not modelled for incoming. sub_race[mob.race], sub_ele[mob.element], near/long_def_rate from player cards. | battle.c cardfix target side | Same G6/G8 infrastructure; these fields just need populating from player gear |
 
 ---
@@ -102,3 +102,10 @@ _Status: [ ] open, [x] done, [~] partial_
 | — | F5 2H weapon locks left hand | 5 |
 | — | F6 Assassin dual-wield restriction | 5 |
 | — | derived_section live ASPD/HP/SP labels | 5 |
+| G1 | SC_IMPOSITIO flat weapon ATK (base_damage.py) | A |
+| G2 | Attacker-side CardFix (card_fix.py) | A |
+| G3 | Arrow ATK for bow builds (base_damage.py) | A |
+| G5 | ignore_def wired into DefenseFix | A |
+| G6 | Target model fields for PvP (target.py) | A |
+| G8 | Target-side CardFix in card_fix.py (activates Session D) | A |
+| G11 | bLongAtkRate applied in CardFix for ranged | A |
