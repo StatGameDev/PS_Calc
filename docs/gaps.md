@@ -84,7 +84,7 @@ _Status: [ ] open, [x] done, [~] partial_
 | G38 | [ ] | F3 — Armor refine DEF (needs import_refine_db.py scraper) |
 | G39 | [ ] | F7 — Inline equipment dropdown (low priority) |
 | G40 | [ ] | P1 — StepsBar expanded state persists across focus changes |
-| G42 | [ ] | ASPD display shows integer (e.g. 185) — should show one decimal place (e.g. 185.3). StatusCalculator uses `(2000-amotion)//10`; needs `/10` (float) and derived_section format string updated. |
+| G42 | [x] | ASPD display shows integer (e.g. 185) — should show one decimal place (e.g. 185.3). StatusCalculator uses `(2000-amotion)//10`; needs `/10` (float) and derived_section format string updated. | Fixed Session C (cont): StatusData.aspd→float; /10 not //10; derived_section {:.1f} |
 
 ---
 
