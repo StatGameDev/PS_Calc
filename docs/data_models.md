@@ -23,31 +23,25 @@ luk: int = 0            # crit roll: cri -= luk*2 (battle.c:4957)
 agi: int = 0            # mob FLEE = level + agi (for hit/miss)
 is_pc: bool = False     # gates PC-specific branches (VIT DEF formula, target-side CardFix)
 targeted_count: int = 1 # unit_counttargeted for VIT DEF penalty
-```
-
-### Fields to add [NEW]:
-```python
-# For player defenders (PvP / incoming damage)
-sub_race: dict = field(default_factory=dict)  # {race_key: int%} — e.g. {"RC_DemiHuman": 30}
-sub_ele: dict  = field(default_factory=dict)  # {ele_id_str: int%}
-sub_size: dict = field(default_factory=dict)  # {size_key: int%}
+# Added Session A (G6):
+sub_race: Dict[str, int] = field(default_factory=dict)  # RC_* keys — player race resistance
+sub_ele:  Dict[str, int] = field(default_factory=dict)  # Ele_* keys — element resistance
+sub_size: Dict[str, int] = field(default_factory=dict)  # Size_* keys — size resistance
 near_attack_def_rate: int = 0   # bNearAtkDef — melee physical damage reduction %
 long_attack_def_rate: int = 0   # bLongAtkDef — ranged physical damage reduction %
 magic_def_rate: int = 0         # bMagicDefRate — magic damage reduction %
-
-# For magic (both mob and player targets)
 mdef_: int = 0          # hard MDEF — from mob_db "mdef" or player equip
 int_: int = 0           # used to derive mdef2 (soft MDEF) from mob or player INT
 armor_element: int = 0  # element the target defends as (from armor card/endow)
-                        # For mobs: same as element. For players: from equipped armor.
-
-# For hit/miss vs player defenders
-flee: int = 0           # full FLEE (level + agi + gear bonuses) — used when is_pc=True
+flee: int = 0           # full FLEE — used when is_pc=True
 ```
 
+### Fields to add [NEW]:
+_All previously listed [NEW] fields were added in Session A. No remaining Target fields to add._
+
 ### How mob_db populates Target (loader.get_monster):
-**Currently populated**: def_, vit, luk, agi, size, race, element, element_level, is_boss, level
-**Missing — add to loader**: mdef_ (from mob_db "mdef"), int_ (from mob_db "stats.int")
+**Currently populated**: def_, vit, luk, agi, size, race, element, element_level, is_boss, level, mdef_, int_
+**Still missing**: armor_element (always = element for mobs — set when player_build_to_target() is implemented)
 Note: for mobs, `armor_element = element` (same defending element), `sub_race/ele/size = {}` (mobs have no cards)
 
 ### How a PlayerBuild populates a Target (player_build_to_target — to implement):

@@ -57,8 +57,10 @@ Always check guards before implementing:
     sed -n 'START,ENDp' Hercules/src/map/battle.c | grep -n "RENEWAL"
 
 Known renewal-only mechanics (must NOT appear in pre-renewal code):
-LUK→HIT, LUK→FLEE, SC_IMPOSITIO ATK_ADD in battle_calc_base_damage2,
-SC_GS_MADNESSCANCEL ATK_ADD in battle_calc_base_damage2.
+LUK→HIT, LUK→FLEE, SC_GS_MADNESSCANCEL ATK_ADD in battle_calc_base_damage2.
+
+Note: SC_IMPOSITIO is PRE-RENEWAL (#ifndef RENEWAL in status.c ~line 4562).
+It adds `val2` (level×5) flat to watk. Implemented in base_damage.py (Session A).
 
 ---
 
@@ -88,6 +90,7 @@ Always grep first. Never load entire files.
         refine_fix.py        — RefineFix: deterministic atk2 (post-defense)
         mastery_fix.py       — MasteryFix (battle_calc_masteryfix, #ifndef RENEWAL)
         attr_fix.py          — AttrFix: elemental multiplier table
+        card_fix.py          — CardFix: race/ele/size/long_atk bonuses + PvP target resist (Session A)
         final_rate_bonus.py  — FinalRateBonus: short/long damage rates
         crit_chance.py       — calculate_crit_chance, CRIT_ELIGIBLE_SKILLS
         hit_chance.py        — calculate_hit_chance (E1, Session 2/3)
@@ -115,6 +118,9 @@ Always grep first. Never load entire files.
     pipeline_specs.md  — full pipeline step specs for BF_WEAPON, BF_MAGIC, incoming
     data_models.md     — Target/StatusData/GearBonuses/PlayerBuild field specs (current vs needed)
     context_log.md     — historical context % used per session; used to calibrate future scope
+    completed_work.md  — full history of completed work (Sessions 1–A); append each session
+    gui_plan.md        — GUI architecture reference, future phases 5–8, known bugs archive
+    phases_done.md     — GUI phase specs archive (Phases 0–4)
 
     Load these on demand — do NOT load all at session start.
     Always load gaps.md + session_roadmap.md when planning or scoping a session.
@@ -164,8 +170,8 @@ static-analysis explanation. Ask the user for runtime cooperation.
 
 ## Pipeline Step Order
 
-    BaseDamage → SkillRatio → DefenseFix → CritAtkRate (crit only) →
-    RefineFix → ActiveStatusBonus → MasteryFix → AttrFix → FinalRateBonus
+    BaseDamage → SkillRatio → CritAtkRate (crit only) → DefenseFix (skip on crit) →
+    ActiveStatusBonus → RefineFix → MasteryFix → AttrFix → CardFix → FinalRateBonus
 
 ---
 
@@ -205,3 +211,10 @@ so any instance can read it.
 
 `docs/current_state.md` is the only file that should be updated at handoff.
 Do not duplicate its contents into MEMORY.md or gaps.md.
+
+**End-of-session docs maintenance (before commit):**
+- `docs/gaps.md` — mark completed gaps [x], update [~] partials
+- `docs/completed_work.md` — append new session section with what was done
+- `docs/context_log.md` — fill in files read/edited/created with line counts
+- `docs/data_models.md` — move [NEW] fields to [EXISTS] if implemented this session
+- `CLAUDE.md` — update Pipeline Step Order and modifiers list if steps added/reordered
