@@ -100,7 +100,7 @@ class StatusCalculator:
             amotion += 500 - 100 * cav_lv  # status.c #ifndef RENEWAL_ASPD
         min_amotion = 2000 - self.config.max_aspd * 10
         amotion = max(min_amotion, min(2000, amotion))
-        status.aspd = (2000 - amotion) // 10  # player-facing 0–max_aspd display value
+        status.aspd = (2000 - amotion) / 10  # player-facing display value (float, e.g. 185.3)
 
         # === MAX HP ===
         # status_calc_pc_ MaxHP (pre-renewal):

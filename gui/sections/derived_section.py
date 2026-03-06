@@ -117,7 +117,7 @@ class DerivedSection(Section):
         self._value_labels["flee"].setText(flee_str)
         self._value_labels["hit"].setText(str(status.hit))
         self._value_labels["cri"].setText(f"{cri_pct:.1f}%")
-        self._value_labels["aspd"].setText(str(status.aspd))
+        self._value_labels["aspd"].setText(f"{status.aspd:.1f}")
         self._value_labels["hp"].setText(str(status.max_hp))
         self._value_labels["sp"].setText(str(status.max_sp))
 

@@ -17,7 +17,7 @@ class StatusData:
     hit: int = 0
     flee: int = 0
     flee2: int = 0
-    aspd: int = 0
+    aspd: float = 0.0
     max_hp: int = 0
     max_sp: int = 0
 

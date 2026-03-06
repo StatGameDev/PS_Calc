@@ -200,6 +200,60 @@ Hercules: ratio→defense→attr_fix per-hit, then hit_count×N after).
 
 ---
 
+## Session C  2026-03-07  claude-sonnet-4-6
+ctx_used: ~100% (hit limit during commit/push phase; docs/aspd.md created but gaps.md/completed_work.md update + commit deferred to next segment)
+
+Work items completed:
+- C1: G4 ASC_KATAR % mastery — mastery_fix.py + passive_section job-filtered row
+- C2: G9 ASPD SC buffs — status_calc_aspd_rate 1000-scale; SC_ASSNCROS deferred (Bard AGI dependency)
+- C3: G10 bAtkRate — moved to pre-SkillRatio position in battle_pipeline; removed from CardFix
+- Doc maintenance: gaps.md G4/G9/G10; completed_work.md Session C; docs/aspd.md created; G42 added
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md (Session C section) | ~35 | ~245 |
+| core/calculators/modifiers/mastery_fix.py | ~30 | ~210 |
+| gui/sections/passive_section.py | ~330 | ~2,310 |
+| core/calculators/status_calculator.py | 131 | ~917 |
+| gui/main_window.py (partial ~10 lines) | 10 | ~70 |
+| core/calculators/battle_pipeline.py | ~165 | ~1,155 |
+| core/calculators/modifiers/card_fix.py | ~145 | ~1,015 |
+| core/calculators/modifiers/base_damage.py | 209 | ~1,463 |
+| core/models/gear_bonuses.py | 65 | ~455 |
+| docs/gaps.md | 120 | ~480 |
+| docs/completed_work.md (tail ~30 lines) | 30 | ~120 |
+| docs/context_log.md | 229 | ~916 |
+| docs/aspd.md (created this session, re-read) | 108 | ~432 |
+| Hercules greps (status.c ASPD, battle.c ASC_KATAR) | ~60 | ~420 |
+| **subtotal reads** | **~1,667** | **~10,208** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| core/calculators/modifiers/mastery_fix.py | +19 | ~133 |
+| gui/sections/passive_section.py | +44 | ~308 |
+| core/calculators/status_calculator.py | +29 | ~203 |
+| gui/main_window.py | +1 | ~7 |
+| core/calculators/battle_pipeline.py | +15 | ~105 |
+| core/calculators/modifiers/card_fix.py | -2 | ~14 |
+| docs/gaps.md | +7 net | ~28 |
+| docs/completed_work.md | +31 | ~124 |
+| docs/context_log.md | +this entry | ~200 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| docs/aspd.md | 120 | ~480 |
+
+Total est_tokens: ~10,208 reads + ~1,122 edits + 480 create + 6,000 fixed + ~18,000 conv ≈ 36,000 (~18% of 200k)
+Notes: Context hit ~100% before docs update + commit could complete. Resumed cleanly in next segment.
+ASPD formula investigation required mid-session — initial 7% implementation was wrong; user testing
+confirmed 30% (status_calc_aspd_rate val2=300). SC_SPEARQUICKEN changed to has_level=True after
+discovering level-dependent val2. bAtkRate position fix was a clean correction with no investigation needed.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
