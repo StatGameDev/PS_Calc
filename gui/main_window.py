@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Build:"))
         self._build_combo = QComboBox()
         self._build_combo.setMinimumWidth(200)
-        self._build_combo.currentTextChanged.connect(self._on_build_selected)
+        self._build_combo.currentIndexChanged.connect(self._on_build_index_changed)
         layout.addWidget(self._build_combo)
 
         new_btn = QPushButton("New")
@@ -192,21 +192,46 @@ class MainWindow(QMainWindow):
 
     # ── Build list helpers ─────────────────────────────────────────────────
 
+    @staticmethod
+    def _read_build_display_name(path: str) -> str:
+        """Fast read of just the 'name' field from a build JSON. Returns stem on failure."""
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f).get("name") or ""
+        except Exception:
+            return ""
+
     def _refresh_builds(self, select_name: str | None = None) -> None:
-        names = sorted(BuildManager.list_builds(app_config.SAVES_DIR))
+        """Populate combo with display names (item data = file stem).
+        select_name can be a display name or a file stem — both are searched.
+        """
+        stems = sorted(BuildManager.list_builds(app_config.SAVES_DIR))
+        # Prefer the display name of the currently selected build when no hint given
         want = select_name or self._build_combo.currentText()
         self._build_combo.blockSignals(True)
         self._build_combo.clear()
-        self._build_combo.addItems(names)
-        if want in names:
-            self._build_combo.setCurrentText(want)
-        elif names:
+        for stem in stems:
+            path = os.path.join(app_config.SAVES_DIR, f"{stem}.json")
+            display = self._read_build_display_name(path) or stem
+            self._build_combo.addItem(display, userData=stem)
+        # Select by display name first, then by stem (item data)
+        idx = self._build_combo.findText(want)
+        if idx < 0:
+            idx = self._build_combo.findData(want)
+        if idx >= 0:
+            self._build_combo.setCurrentIndex(idx)
+        elif self._build_combo.count() > 0:
             self._build_combo.setCurrentIndex(0)
         self._build_combo.blockSignals(False)
-        # Load the currently visible build
-        name = self._build_combo.currentText()
-        if name:
-            self._on_build_selected(name)
+        # Load whichever build is now selected
+        stem = self._build_combo.currentData()
+        if stem:
+            self._on_build_selected(stem)
+
+    def _on_build_index_changed(self, index: int) -> None:
+        stem = self._build_combo.itemData(index)
+        if stem:
+            self._on_build_selected(stem)
 
     def _on_new_build(self) -> None:
         from gui.dialogs.new_build_dialog import NewBuildDialog
