@@ -25,6 +25,7 @@ class PlayerBuild:
     bonus_luk: int = 0
 
     equip_def: int = 0          # Hard DEF
+    equip_mdef: int = 0         # Hard MDEF (from bMdef scripts)
     bonus_def2: int = 0         # Extra soft DEF from items / foods / SCs
 
     bonus_batk: int = 0

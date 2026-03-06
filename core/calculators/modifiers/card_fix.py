@@ -110,3 +110,47 @@ class CardFix:
         )
 
         return dmg
+
+    @staticmethod
+    def calculate_magic(target: Target, magic_ele_name: str,
+                        dmg: DamageRange, result: DamageResult) -> DamageRange:
+        """BF_MAGIC target-side CardFix (player target only).
+
+        Attacker-side magic bonuses (bAddRace for magic etc.) are #ifdef RENEWAL — skip.
+        Target side (is_pc=True only): sub_ele, sub_race (RC_DemiHuman), magic_def_rate.
+        Source: pipeline_specs.md BF_MAGIC Outgoing spec.
+        """
+        if not target.is_pc:
+            result.add_step(
+                name="Card Fix (Magic)",
+                value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+                multiplier=1.0,
+                note="target is mob — no magic card resist",
+                formula="no change",
+                hercules_ref="magic_addrace etc. are #ifdef RENEWAL; target-side only for is_pc",
+            )
+            return dmg
+
+        # Target-side: sub_ele (magic element), sub_race (attacker=DemiHuman), magic_def_rate
+        def_pct = (
+            target.sub_ele.get(magic_ele_name, 0)
+            + target.sub_ele.get("Ele_All", 0)
+            + target.sub_race.get("RC_DemiHuman", 0)   # player attacker race = DemiHuman
+            + target.magic_def_rate                     # bMagicDefRate
+        )
+
+        net = 100 - def_pct
+        if net != 100:
+            dmg = dmg.scale(net, 100)
+
+        result.add_step(
+            name="Card Fix (Magic)",
+            value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+            multiplier=net / 100.0,
+            note=(f"Ele({magic_ele_name})-{target.sub_ele.get(magic_ele_name,0)}%"
+                  f"  Race(DemiHuman)-{target.sub_race.get('RC_DemiHuman',0)}%"
+                  f"  MagicDef-{target.magic_def_rate}%"),
+            formula=f"dmg * (100 - {def_pct}) // 100 = dmg * {net} // 100",
+            hercules_ref="pipeline_specs.md BF_MAGIC: target-side sub_ele/sub_race/magic_def_rate (is_pc only)",
+        )
+        return dmg

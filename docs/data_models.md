@@ -77,22 +77,15 @@ str, agi, vit, int_, dex, luk  # (int_ not int — keyword collision)
 batk, hit, flee, flee2, cri
 def_, def2     # hard and soft DEF
 aspd, max_hp, max_sp
+# Added Session B:
+matk_min: int = 0   # INT + (INT/7)^2 — status.c:3783 #else not RENEWAL
+matk_max: int = 0   # INT + (INT/5)^2 — status.c:3790 #else not RENEWAL
+mdef: int = 0       # hard MDEF — from build.equip_mdef (bMdef scripts; IT_ARMOR has no mdef field)
+mdef2: int = 0      # soft MDEF = int_ + vit//2 — status.c:3867 #else not RENEWAL
 ```
 
 ### Fields to add [NEW]:
-```python
-matk_min: int = 0   # INT + (INT/7)^2 — pre-re magic ATK minimum
-matk_max: int = 0   # INT + (INT/5)^2 — pre-re magic ATK maximum
-mdef: int = 0       # hard MDEF (from equip + stat contribution)
-mdef2: int = 0      # soft MDEF (INT-based flat; exact formula needs status.c grep)
-```
-
-### StatusCalculator additions needed:
-1. MATK: `matk_min = int_ + (int_//7)**2`, `matk_max = int_ + (int_//5)**2`
-   Source: status.c:3783-3792 `#ifndef RENEWAL`
-2. MDEF (hard): from equip_def equivalent (sum of equipped armor mdef values — item_db field needed?)
-   Note: IT_ARMOR items in item_db do NOT appear to have a `mdef` field (only `def`). Needs investigation.
-3. MDEF (soft, mdef2): INT-based formula — grep `status_base_matk` or `mdef2` in status.c
+_All previously listed [NEW] fields were added in Session B. No remaining StatusData fields to add._
 
 ---
 
@@ -116,15 +109,14 @@ atk_rate: int = 0           # bAtkRate — generic ATK% (currently consumed in C
 ### Fields to add [NEW]:
 ```python
 ignore_def_ele: dict = {}   # bIgnoreDefEle — ignore DEF by element (G5 extension)
-ignore_mdef_rate: dict = {} # bIgnoreMdefRate — ignore MDEF by race/boss (G24)
 ```
 
 ### item_script_parser additions needed:
 ```
 "bIgnoreDefEle"   → GearBonuses.ignore_def_ele (arity=2)
-"bIgnoreMdefRace" → GearBonuses.ignore_mdef_rate (arity=2)
 ```
 _Added Session A: bNearAtkDef, bLongAtkDef, bMagicDefRate, bAtkRate — all wired._
+_Added Session B: mdef_ (bMdef hard MDEF), ignore_mdef_rate (bIgnoreMdefRate by race/boss) — both wired._
 
 ---
 
@@ -144,6 +136,12 @@ armor_element: int = 0      # Element the player defends as for incoming damage.
 Note: `armor_element` can be derived from equipped armor's element card in the future (via
 `GearBonusAggregator` or a dedicated pass). For now, expose as a manual override similar
 to `weapon_element`.
+
+### Other [EXISTS] fields added in Session B:
+```python
+equip_mdef: int = 0     # Hard MDEF total from bMdef item scripts (PlayerBuild field;
+                         # fed into StatusData.mdef via StatusCalculator + main_window)
+```
 
 ---
 
@@ -182,20 +180,21 @@ BattleResult:
     crit_chance: float
     hit_chance: float
     perfect_dodge: float
+    # Added Session B:
+    magic: Optional[DamageResult] = None   # BF_MAGIC outgoing result (mirrored to .normal for GUI)
 ```
 
 ### Fields to add for full product [NEW]:
 ```python
 BattleResult:
-    magic: Optional[DamageResult] = None   # BF_MAGIC outgoing result
     incoming_physical: Optional[DamageResult] = None
     incoming_magic: Optional[DamageResult] = None
     # OR: separate result objects from separate pipeline runs — TBD at design time
 ```
 
-Architecture note: it may be cleaner to keep BattleResult as physical-only and have
-`MagicResult`, `IncomingResult` as separate types returned from separate pipeline objects.
-Decide during Session B/D implementation.
+Architecture note: BattleResult is used for both physical and magic outgoing (magic routed
+via MagicPipeline, stored in `.magic` and mirrored to `.normal` for GUI compatibility).
+Incoming pipelines may follow the same pattern or use separate result types — decide at Session D.
 
 ---
 

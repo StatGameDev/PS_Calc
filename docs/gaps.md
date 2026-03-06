@@ -1,5 +1,5 @@
 # PS_Calc — Gap Tracker
-_Last updated: Session A. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
+_Last updated: Session B. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
 _Status: [ ] open, [x] done, [~] partial_
 
 ---
@@ -33,14 +33,14 @@ _Status: [ ] open, [x] done, [~] partial_
 
 | ID | Status | Description | Hercules ref | Notes |
 |---|---|---|---|---|
-| G18 | [ ] | No MATK in StatusCalculator. Pre-re: matk_min = INT+(INT/7)^2, matk_max = INT+(INT/5)^2. | status.c:3783,3792 #ifndef RENEWAL | StatusData missing matk_min, matk_max |
-| G19 | [ ] | No BF_MAGIC pipeline. No MagicPipeline class. | battle.c:3828 battle_calc_magic_attack | All magic skills unsupported |
-| G20 | [ ] | No MDEF defense step. Pre-re formula: `damage * (100-mdef)/100 - mdef2` (magic_defense_type=0 default). | battle.c:1581-1584 #ifndef RENEWAL | StatusData missing mdef, mdef2 fields |
-| G21 | [ ] | MATK display absent from derived_section. | — | GUI gap |
-| G22 | [ ] | No magic skill ratio support in skill_ratio.py. | battle.c calc_skillratio BF_MAGIC path | Common magic skills: Fire/Ice/Lighting Bolt, Jupitel, Lord of Vermillion, etc. |
-| G23 | [ ] | Magic target-side CardFix unimplemented. sub_ele, sub_size, sub_race, near/long_def_rate, magic_def_rate. Only fires when target.is_pc. | battle.c:4134 cflag=0 BF_MAGIC | IMPORTANT: attacker-side magic cardfix (magic_addrace etc.) is #ifdef RENEWAL — does NOT apply pre-re |
-| G24 | [ ] | ignore_mdef not in GearBonuses or pipeline. `sd->ignore_mdef[race] + [boss]` applied before magic defense. | battle.c:1564-1569 | Same pattern as G5 (ignore_def) |
-| G25 | [ ] | Player MDEF not in StatusData. Hard MDEF from equip+cards; soft MDEF from INT. | status.c mdef2 formula | Needed for incoming magic too |
+| G18 | [x] | No MATK in StatusCalculator. Pre-re: matk_min = INT+(INT/7)^2, matk_max = INT+(INT/5)^2. | status.c:3783,3792 #ifndef RENEWAL | Fixed Session B: StatusData+StatusCalculator, derived_section MATK row |
+| G19 | [x] | No BF_MAGIC pipeline. No MagicPipeline class. | battle.c:3828 battle_calc_magic_attack | Fixed Session B: magic_pipeline.py; routed from BattlePipeline on attack_type=="Magic" |
+| G20 | [x] | No MDEF defense step. Pre-re formula: `damage * (100-mdef)/100 - mdef2` (magic_defense_type=0 default). | battle.c:1581-1584 #ifndef RENEWAL | Fixed Session B: DefenseFix.calculate_magic(); mdef2=int_+vit//2 computed inline |
+| G21 | [x] | MATK display absent from derived_section. | — | Fixed Session B: MATK row (min–max) + MDEF row (hard+soft) added |
+| G22 | [x] | No magic skill ratio support in skill_ratio.py. | battle.c calc_skillratio BF_MAGIC path | Fixed Session B: _BF_MAGIC_RATIOS dict (15 spells) + calculate_magic(); cosmetic vs actual hits per damage_div_fix |
+| G23 | [x] | Magic target-side CardFix unimplemented. sub_ele, sub_size, sub_race, near/long_def_rate, magic_def_rate. Only fires when target.is_pc. | battle.c:4134 cflag=0 BF_MAGIC | Fixed Session B: CardFix.calculate_magic(); attacker-side magic bonuses correctly skipped (#ifdef RENEWAL) |
+| G24 | [x] | ignore_mdef not in GearBonuses or pipeline. `sd->ignore_mdef[race] + [boss]` applied before magic defense. | battle.c:1564-1569 | Fixed Session B: ignore_mdef_rate in GearBonuses+aggregator; wired in DefenseFix.calculate_magic() |
+| G25 | [x] | Player MDEF not in StatusData. Hard MDEF from equip+cards; soft MDEF from INT. | status.c mdef2 formula | Fixed Session B: mdef+mdef2 in StatusData; equip_mdef in PlayerBuild; bMdef route in aggregator |
 
 ---
 
@@ -109,3 +109,11 @@ _Status: [ ] open, [x] done, [~] partial_
 | G6 | Target model fields for PvP (target.py) | A |
 | G8 | Target-side CardFix in card_fix.py (activates Session D) | A |
 | G11 | bLongAtkRate applied in CardFix for ranged | A |
+| G18 | MATK in StatusCalculator + StatusData + derived_section | B |
+| G19 | MagicPipeline class (full BF_MAGIC outgoing) | B |
+| G20 | DefenseFix.calculate_magic (mdef+mdef2, per-hit) | B |
+| G21 | MATK+MDEF rows in derived_section | B |
+| G22 | Magic skill ratios (_BF_MAGIC_RATIOS, cosmetic vs actual hits) | B |
+| G23 | CardFix.calculate_magic (target-side only) | B |
+| G24 | ignore_mdef_rate in GearBonuses + aggregator + DefenseFix | B |
+| G25 | mdef/mdef2 in StatusData; equip_mdef in PlayerBuild; bMdef bIngoreMdefRate routes | B |

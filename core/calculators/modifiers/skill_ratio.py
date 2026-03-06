@@ -3,6 +3,28 @@ from core.models.damage import DamageRange, DamageResult
 from core.models.build import PlayerBuild
 from core.data_loader import loader
 
+# Pre-renewal magic skill ratios from battle_calc_skillratio BF_MAGIC switch.
+# Source: battle.c:1631-1785 #else not RENEWAL.
+# All unlisted skills use default ratio = 100.
+# ELE_UNDEAD = 9 (map.h). Default undead_detect_type=0 → element check only.
+_BF_MAGIC_RATIOS = {
+    "MG_NAPALMBEAT":   lambda lv, tgt: 70 + 10 * lv,
+    "MG_FIREBALL":     lambda lv, tgt: 70 + 10 * lv,   # pre-re: same formula as napalmbeat
+    "MG_SOULSTRIKE":   lambda lv, tgt: 100 + (5 * lv if (tgt and tgt.element == 9) else 0),
+    "MG_FIREWALL":     lambda lv, tgt: 50,
+    "MG_THUNDERSTORM": lambda lv, tgt: 80,              # pre-re: skillratio -= 20
+    "MG_FROSTDIVER":   lambda lv, tgt: 100 + 10 * lv,
+    "AL_HOLYLIGHT":    lambda lv, tgt: 125,
+    "AL_RUWACH":       lambda lv, tgt: 145,
+    "WZ_FROSTNOVA":    lambda lv, tgt: (100 + 10 * lv) * 2 // 3,
+    "WZ_FIREPILLAR":   lambda lv, tgt: 40 + 20 * lv,   # lv <= 10; lv > 10 not in pre-re
+    "WZ_SIGHTRASHER":  lambda lv, tgt: 100 + 20 * lv,
+    "WZ_WATERBALL":    lambda lv, tgt: 100 + 30 * lv,
+    "WZ_STORMGUST":    lambda lv, tgt: 100 + 40 * lv,
+    "HW_NAPALMVULCAN": lambda lv, tgt: 70 + 10 * lv,
+    "WZ_VERMILION":    lambda lv, tgt: 80 + 20 * lv,   # pre-re: #else RENEWAL (20*lv-20)
+}
+
 
 class SkillRatio:
     """Exact Skill Ratio step.
@@ -58,6 +80,7 @@ class SkillRatio:
 
         result.add_step(
             name=f"Skill Ratio (ID {skill.id} Lv {skill.level})",
+
             value=dmg.avg,
             min_value=dmg.min,
             max_value=dmg.max,
@@ -70,3 +93,50 @@ class SkillRatio:
                          "battle.c: wd.damage = (int64)wd.damage * ratio / 100;"
         )
         return dmg
+
+    @staticmethod
+    def calculate_magic(skill: SkillInstance, dmg: DamageRange, build: PlayerBuild, target,
+                        result: DamageResult) -> tuple:
+        """Applies BF_MAGIC skill ratio (per-hit only). Returns (dmg, hit_count).
+
+        hit_count is returned separately so the caller can apply it AFTER defense and
+        attr_fix, matching the exact Hercules source order:
+          MATK_RATE(skillratio) → calc_defense → attr_fix → × ad.div_
+        Source: battle_calc_magic_attack, battle.c:1631-1785 (#else not RENEWAL).
+        """
+        skill_data = loader.get_skill(skill.id)
+        skill_name = skill_data.get("name", "") if skill_data else ""
+
+        ratio_fn = _BF_MAGIC_RATIOS.get(skill_name)
+        ratio = ratio_fn(skill.level, target) if ratio_fn else 100
+
+        # Raw hit count from skills.json number_of_hits — sign is significant:
+        #   positive (e.g. +5): actual multi-hit — caller multiplies dmg × n after defense+attrfix
+        #   negative (e.g. -3): cosmetic multi-hit — animation shows n hits, dmg is NOT multiplied
+        # Source: battle.c:3823 damage_div_fix macro:
+        #   if (div > 1) dmg *= div;          ← actual multi-hit
+        #   else if (div < 0) div *= -1;      ← cosmetic: just flip sign for display, dmg unchanged
+        hit_count_raw = 1
+        if skill_data:
+            noh = skill_data.get("number_of_hits")
+            if noh and skill.level <= len(noh):
+                hit_count_raw = noh[skill.level - 1]   # raw, NOT abs()
+
+        dmg = dmg.scale(ratio, 100)
+
+        display_hits = abs(hit_count_raw)
+        cosmetic = hit_count_raw < 0
+        result.add_step(
+            name=f"Magic Skill Ratio (ID {skill.id} Lv {skill.level})",
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
+            multiplier=ratio / 100.0,
+            note=skill_data.get("description", "") if skill_data else "",
+            formula=(f"MATK × {ratio}%  ({display_hits} cosmetic hits — dmg not multiplied)"
+                     if cosmetic else
+                     f"MATK × {ratio}%  ({display_hits} hits applied after defense)"),
+            hercules_ref="battle.c:1631-1785: battle_calc_skillratio BF_MAGIC switch (#else not RENEWAL)\n"
+                         "battle.c:3823: damage_div_fix: div>1 → dmg*=div; div<0 → cosmetic (div negated, dmg unchanged)"
+        )
+        return dmg, hit_count_raw

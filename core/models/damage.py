@@ -116,3 +116,4 @@ class BattleResult:
     crit_chance: float = 0.0
     hit_chance: float = 100.0      # basic hit% (80 + HIT - FLEE, clamped to [min, max])
     perfect_dodge: float = 0.0    # target's perfect dodge chance (luk+10)/10 %
+    magic: Optional["DamageResult"] = None  # BF_MAGIC result (Session B); also mirrored in normal for GUI

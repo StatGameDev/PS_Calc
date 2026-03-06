@@ -136,3 +136,48 @@ class DefenseFix:
                          "battle.c: else { vit_def = (def2/20)*(def2/20); vit_def = def2 + (vit_def>0 ? rnd()%vit_def : 0); }"
         )
         return dmg
+
+    @staticmethod
+    def calculate_magic(target: Target, gear_bonuses: GearBonuses,
+                        dmg: DamageRange, result: DamageResult) -> DamageRange:
+        """BF_MAGIC defense reduction (pre-renewal, magic_defense_type=0).
+
+        Formula: damage = damage * (100 - mdef) / 100 - mdef2
+        ignore_mdef: sd->ignore_mdef[race] + ignore_mdef[boss/nonboss] reduces mdef%.
+        Source: battle.c:1549-1592 BF_MAGIC case (#else not RENEWAL, magic_defense_type=0).
+        """
+        mdef = max(0, min(100, target.mdef_))
+        # Soft MDEF: int_ + vit//2 (status.c:3867 #else not RENEWAL)
+        mdef2 = target.int_ + (target.vit >> 1)
+
+        # ignore_mdef: reduce mdef by percentage (same pattern as ignore_def_rate)
+        # battle.c:1566-1572: i = sd->ignore_mdef[boss/nonboss] + ignore_mdef[race]
+        race_rc = _RACE_TO_RC.get(target.race, "")
+        boss_rc = "RC_Boss" if target.is_boss else "RC_NonBoss"
+        ignore_pct = (gear_bonuses.ignore_mdef_rate.get(race_rc, 0)
+                      + gear_bonuses.ignore_mdef_rate.get(boss_rc, 0))
+        if ignore_pct > 0:
+            ignore_pct = min(100, ignore_pct)
+            mdef = max(0, mdef - mdef * ignore_pct // 100)
+            note_ignore = f" (−{ignore_pct}% ignored → {mdef})"
+        else:
+            note_ignore = ""
+
+        # battle.c:1585 #else not RENEWAL, magic_defense_type=0:
+        # damage = damage * (100 - mdef) / 100 - mdef2
+        dmg = dmg.scale(100 - mdef, 100)
+        dmg = dmg.subtract(mdef2, mdef2, mdef2)
+        dmg = dmg.floor_at(1)
+
+        result.add_step(
+            name="Magic Defense Fix",
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
+            multiplier=1.0,
+            note=f"MDEF {target.mdef_}{note_ignore} → ×{(100-mdef)/100:.0%} − mdef2 {mdef2}",
+            formula=f"max(1, dmg * (100 - mdef) // 100 - mdef2)",
+            hercules_ref="battle.c:1585 (#else not RENEWAL, magic_defense_type=0):\n"
+                         "damage = damage * (100-mdef)/100 - mdef2;"
+        )
+        return dmg

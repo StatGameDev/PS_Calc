@@ -74,6 +74,8 @@ class GearBonusAggregator:
                 bonuses.add_ele[key] = bonuses.add_ele.get(key, 0) + val
             elif bt == "bIgnoreDefRate":
                 bonuses.ignore_def_rate[key] = bonuses.ignore_def_rate.get(key, 0) + val
+            elif bt == "bIgnoreMdefRate":
+                bonuses.ignore_mdef_rate[key] = bonuses.ignore_mdef_rate.get(key, 0) + val
             elif bt == "bSkillAtk":
                 bonuses.skill_atk[key] = bonuses.skill_atk.get(key, 0) + val
 
@@ -101,6 +103,7 @@ _BONUS1_ROUTES: dict[str, object] = {
     "bCritAtkRate": lambda b, v: setattr(b, "crit_atk_rate", b.crit_atk_rate + v),
     "bLongAtkRate": lambda b, v: setattr(b, "long_atk_rate", b.long_atk_rate + v),
     "bDef":      lambda b, v: setattr(b, "def_",  b.def_  + v),
+    "bMdef":     lambda b, v: setattr(b, "mdef_", b.mdef_ + v),
     "bMaxHP":    lambda b, v: setattr(b, "maxhp", b.maxhp + v),
     "bMaxSP":    lambda b, v: setattr(b, "maxsp", b.maxsp + v),
     "bAspdRate":    lambda b, v: setattr(b, "aspd_percent",     b.aspd_percent     + v),

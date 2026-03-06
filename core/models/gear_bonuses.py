@@ -33,6 +33,7 @@ class GearBonuses:
 
     # Defensive
     def_: int = 0       # bDef (hard DEF)
+    mdef_: int = 0      # bMdef (hard MDEF)
 
     # Status bonuses
     maxhp: int = 0      # bMaxHP
@@ -52,7 +53,8 @@ class GearBonuses:
     sub_race: Dict[str, int] = field(default_factory=dict)   # {race: resist%}
     add_size: Dict[str, int] = field(default_factory=dict)   # {size: bonus%}
     add_ele: Dict[str, int] = field(default_factory=dict)    # {ele: bonus%}
-    ignore_def_rate: Dict[str, int] = field(default_factory=dict)  # {race: %}
+    ignore_def_rate: Dict[str, int] = field(default_factory=dict)   # {race: %}
+    ignore_mdef_rate: Dict[str, int] = field(default_factory=dict)  # {race: %}
     skill_atk: Dict[str, int] = field(default_factory=dict)  # {skill: %}
 
     # Incoming damage rate modifiers (for target-side CardFix / PvP)

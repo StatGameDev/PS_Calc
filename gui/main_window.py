@@ -339,6 +339,7 @@ class MainWindow(QMainWindow):
             bonus_flee=build.bonus_flee + gb.flee,
             bonus_cri=build.bonus_cri + gb.cri,
             equip_def=build.equip_def + gb.def_,
+            equip_mdef=build.equip_mdef + gb.mdef_,
             bonus_maxhp=build.bonus_maxhp + gb.maxhp,
             bonus_maxsp=build.bonus_maxsp + gb.maxsp,
             bonus_aspd_percent=build.bonus_aspd_percent + gb.aspd_percent,

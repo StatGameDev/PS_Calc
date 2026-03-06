@@ -510,3 +510,55 @@ Root planning files moved/deleted: `GUI_PLAN.md` → `docs/gui_plan.md`,
 `GUI_TODO.md` deleted, `MODELS.md` deleted.
 `CLAUDE.md` updated: pipeline order, SC_IMPOSITIO note, card_fix.py entry, new docs refs,
 end-of-session maintenance checklist added.
+
+---
+
+## Session B — MATK + BF_MAGIC Outgoing Pipeline
+
+**B1 — MATK in StatusCalculator (G18)**
+`core/models/status.py`: added `matk_min`, `matk_max`, `mdef`, `mdef2` fields.
+`status_calculator.py`: `matk_min = int_ + (int_//7)**2`, `matk_max = int_ + (int_//5)**2`.
+Gotcha: roadmap text had typo for matk_max (`int_**2 + ...`); Hercules source is `int_ + (int_//5)**2`.
+Both test values (295/460 for INT=99) confirmed against source.
+
+**B2 — MDEF in StatusCalculator (G25)**
+`status.mdef = build.equip_mdef` (hard, from bMdef scripts).
+`status.mdef2 = int_ + vit//2` (soft, status.c:3867 #else not RENEWAL).
+`core/models/build.py`: added `equip_mdef: int = 0`.
+`core/models/gear_bonuses.py`: added `mdef_: int = 0` + `ignore_mdef_rate: Dict`.
+`core/gear_bonus_aggregator.py`: added `bMdef` route + `bIgnoreMdefRate` arity-2 route.
+`gui/main_window.py`: wired `equip_mdef` in `_apply_gear_bonuses`.
+Note: IT_ARMOR items have no raw `mdef` field in item_db.json — equip MDEF comes from bMdef scripts only.
+
+**B3 — MATK + MDEF rows in derived_section (G21)**
+`gui/sections/derived_section.py`: MATK row (shows "min–max"), MDEF row (shows "hard + soft").
+
+**B4 — Magic skill ratios (G22)**
+`core/calculators/modifiers/skill_ratio.py`: `_BF_MAGIC_RATIOS` dict (15 pre-renewal spells from
+battle.c:1631-1785). `calculate_magic()` returns `(dmg, hit_count_raw)` — raw sign preserved.
+Key discovery: `damage_div_fix` macro (battle.c:3823): positive div → actual multi-hit (dmg × N);
+negative div → cosmetic multi-hit (dmg unchanged, div negated for display only).
+WZ_FIREPILLAR has negative number_of_hits → cosmetic, no multiplication.
+`hit_count` is returned separate from ratio so MagicPipeline can apply after defense+attr_fix.
+
+**B5 — DefenseFix.calculate_magic (G20, G24)**
+`core/calculators/modifiers/defense_fix.py`: `calculate_magic()` added.
+Formula: `damage * (100-mdef)/100 - mdef2` (magic_defense_type=0 default, battle.c:1585).
+`mdef2` computed inline from `target.int_ + (target.vit >> 1)` (not stored on Target).
+`ignore_mdef_rate` wired: reads `gear_bonuses.ignore_mdef_rate[race_rc + boss_rc]`.
+
+**B6 — CardFix.calculate_magic (G23)**
+`core/calculators/modifiers/card_fix.py`: `calculate_magic()` added.
+Target-side only (mob target gets info-only step).
+Applies: sub_ele(magic element), sub_race(RC_DemiHuman), magic_def_rate.
+Attacker-side magic bonuses correctly omitted — #ifdef RENEWAL in Hercules.
+
+**B7 — MagicPipeline (G19)**
+`core/calculators/magic_pipeline.py`: new file.
+Step order (exact per battle_calc_magic_attack):
+  MATK roll → SkillRatio (per-hit) → DefenseFix (per-hit) → AttrFix (per-hit) → Hit count ×N → CardFix(magic) → FinalRateBonus
+SC_MAXIMIZEPOWER: uses matk_max (no roll) when active.
+Skill element from skills.json `element` field ("Ele_Fire" → strip prefix → "Fire" for attr_fix lookup).
+`BattleResult.magic: Optional[DamageResult]` added to damage.py; mirrored to `.normal` for GUI.
+`battle_pipeline.py`: routes `attack_type == "Magic"` skills to MagicPipeline.
+Note: matk_percent and skillatk_bonus are stubs (no GearBonuses fields yet).

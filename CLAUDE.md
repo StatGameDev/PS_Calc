@@ -79,12 +79,13 @@ Always grep first. Never load entire files.
 
 ### Core calculator files (`core/calculators/`)
 
-    core/calculators/battle_pipeline.py        — BattlePipeline orchestrator
-    core/calculators/status_calculator.py      — StatusCalculator (HIT, FLEE, BATK, CRI, DEF)
+    core/calculators/battle_pipeline.py        — BattlePipeline orchestrator (routes Magic → MagicPipeline)
+    core/calculators/magic_pipeline.py         — MagicPipeline: BF_MAGIC outgoing (Session B)
+    core/calculators/status_calculator.py      — StatusCalculator (HIT, FLEE, BATK, CRI, DEF, MATK, MDEF)
     core/calculators/modifiers/
         base_damage.py       — weapon ATK range, SizeFix, overrefine (battle_calc_base_damage2)
-        skill_ratio.py       — SkillRatio (battle_calc_skillratio)
-        defense_fix.py       — DefenseFix: hard DEF % + VIT DEF rnd range
+        skill_ratio.py       — SkillRatio (battle_calc_skillratio); calculate_magic() for BF_MAGIC
+        defense_fix.py       — DefenseFix: hard DEF % + VIT DEF rnd range; calculate_magic() for MDEF
         crit_atk_rate.py     — CritAtkRate (pre-defense crit bonus)
         active_status_bonus.py — SC_AURABLADE etc. (post-defense)
         refine_fix.py        — RefineFix: deterministic atk2 (post-defense)
@@ -170,8 +171,18 @@ static-analysis explanation. Ask the user for runtime cooperation.
 
 ## Pipeline Step Order
 
+**BF_WEAPON** (BattlePipeline → `_run_branch`):
+
     BaseDamage → SkillRatio → CritAtkRate (crit only) → DefenseFix (skip on crit) →
     ActiveStatusBonus → RefineFix → MasteryFix → AttrFix → CardFix → FinalRateBonus
+
+**BF_MAGIC** (BattlePipeline routes to MagicPipeline when `attack_type == "Magic"`):
+
+    MATK roll → SkillRatio(magic, per-hit) → DefenseFix(magic, per-hit) →
+    AttrFix(magic, per-hit) → HitCount×N → CardFix(magic, target-side only) → FinalRateBonus
+
+    Source: battle.c:3828 battle_calc_magic_attack (#else not RENEWAL)
+    Result stored in BattleResult.magic; mirrored to .normal for GUI display.
 
 ---
 

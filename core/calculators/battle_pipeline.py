@@ -1,5 +1,6 @@
 from core.build_manager import effective_is_ranged
 from core.models.damage import DamageRange, DamageResult, BattleResult
+from core.calculators.magic_pipeline import MagicPipeline
 from core.models.build import PlayerBuild
 from core.models.status import StatusData
 from core.models.weapon import Weapon
@@ -49,7 +50,27 @@ class BattlePipeline:
                   skill: SkillInstance,
                   target: Target,
                   build: PlayerBuild) -> BattleResult:
-        """Run both normal and crit branches. Returns BattleResult."""
+        """Run both normal and crit branches. Returns BattleResult.
+
+        If the skill's attack_type is 'Magic' (from skills.json), routes to MagicPipeline.
+        Magic result is stored in BattleResult.magic and also mirrored to .normal so
+        the existing GUI StepsBar / summary display shows it without changes.
+        """
+        skill_data = loader.get_skill(skill.id)
+        attack_type = skill_data.get("attack_type", "Weapon") if skill_data else "Weapon"
+
+        if attack_type == "Magic":
+            magic_result = MagicPipeline(self.config).calculate(status, skill, target, build)
+            hit_chance, perfect_dodge = calculate_hit_chance(status, target, self.config)
+            return BattleResult(
+                normal=magic_result,   # mirrored so GUI shows steps without changes
+                magic=magic_result,
+                crit=None,
+                crit_chance=0.0,
+                hit_chance=hit_chance,
+                perfect_dodge=perfect_dodge,
+            )
+
         # Load skill data early (used by SkillRatio and NK checks)
         loader.get_skill(skill.id)
 

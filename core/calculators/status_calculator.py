@@ -88,4 +88,15 @@ class StatusCalculator:
         status.max_sp = sp_base * (100 + status.int_) // 100
         status.max_sp += build.bonus_maxsp
 
+        # === MATK ===
+        # status.c:3783-3792 #else not RENEWAL (status_base_matk_min / _max)
+        status.matk_min = status.int_ + (status.int_ // 7) ** 2
+        status.matk_max = status.int_ + (status.int_ // 5) ** 2
+
+        # === MDEF ===
+        # Hard MDEF (mdef): from bMdef item scripts, routed through equip_mdef on PlayerBuild
+        status.mdef = build.equip_mdef
+        # Soft MDEF (mdef2): int_ + vit//2  (status.c:3867 #else not RENEWAL)
+        status.mdef2 = status.int_ + (status.vit >> 1)
+
         return status

@@ -31,7 +31,9 @@ class DerivedSection(Section):
 
         rows = [
             ("BATK",  "batk",  "—"),
+            ("MATK",  "matk",  "—"),   # shown as "min–max range"
             ("DEF",   "def",   "—"),   # shown as "hard + soft"
+            ("MDEF",  "mdef",  "—"),   # shown as "hard + soft"
             ("FLEE",  "flee",  "—"),   # shown as "flee + perfect_dodge"
             ("HIT",   "hit",   "—"),
             ("CRI",   "cri",   "—"),
@@ -106,7 +108,9 @@ class DerivedSection(Section):
         cri_pct = status.cri / 10.0  # cri stored in 0.1% units
 
         self._value_labels["batk"].setText(str(status.batk))
+        self._value_labels["matk"].setText(f"{status.matk_min}–{status.matk_max}")
         self._value_labels["def"].setText(f"{status.def_} + {status.def2}")
+        self._value_labels["mdef"].setText(f"{status.mdef} + {status.mdef2}")
         flee_str = str(status.flee)
         if status.flee2:
             flee_str += f" + {status.flee2}"

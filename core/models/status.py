@@ -20,3 +20,8 @@ class StatusData:
     aspd: int = 0
     max_hp: int = 0
     max_sp: int = 0
+
+    matk_min: int = 0  # Pre-renewal MATK min (status.c:3783 #else not RENEWAL)
+    matk_max: int = 0  # Pre-renewal MATK max (status.c:3790 #else not RENEWAL)
+    mdef: int = 0      # Hard MDEF (from bMdef scripts)
+    mdef2: int = 0     # Soft MDEF = int_ + vit//2 (status.c:3867 #else not RENEWAL)
