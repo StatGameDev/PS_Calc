@@ -217,12 +217,13 @@ class MainWindow(QMainWindow):
                 self._refresh_builds(select_name=name)
 
     def _on_save_build(self) -> None:
-        """Save the current build to saves/{name}.json (overwrite without prompt)."""
-        build = self._current_build
-        if build is None or not build.name:
+        """Save the current build to saves/{_current_build_name}.json (overwrite without prompt).
+        Uses the filename stem it was loaded from, not build.name (display name), so
+        'Agi BS' loaded from agi_bs.json always overwrites agi_bs.json."""
+        if self._current_build is None or not self._current_build_name:
             return
         self._collect_build()
-        path = os.path.join(app_config.SAVES_DIR, f"{build.name}.json")
+        path = os.path.join(app_config.SAVES_DIR, f"{self._current_build_name}.json")
         try:
             BuildManager.save_build(build, path)
         except Exception as exc:
@@ -240,7 +241,7 @@ class MainWindow(QMainWindow):
             return
 
         self._current_build = build
-        self._save_btn.setEnabled(bool(build.name))
+        self._save_btn.setEnabled(bool(self._current_build_name))
         self._load_build_into_sections(build)
 
         # Sync server toggle to the loaded build's server field

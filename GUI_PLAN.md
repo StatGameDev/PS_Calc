@@ -51,6 +51,66 @@ get_overrefine(3, 7) = 16. Code path correct — no fix needed.
 `_on_save_build()`: collects build from sections, then `BuildManager.save_build(build, path)`.
 Overwrites without confirmation. No "Save As" (Phase 8 polish).
 
+**B9 — Save writes wrong filename when display name ≠ file stem** ✅ _Fixed Session 4 (same commit)_
+Root cause: `_on_save_build` used `build.name` ("Agi BS") for the path instead of
+`self._current_build_name` ("agi_bs"), creating a new file instead of overwriting.
+Fix: use `self._current_build_name` for the path and the enabled guard.
+
+---
+
+## Equipment System Gaps _(Session 5)_
+
+**F1 — No card slots in equipment UI**
+The equipment section has one item per slot (weapon, armor, etc.) but no sub-slots for cards.
+Pre-renewal allows up to 4 card slots per item (weapon_type-dependent).
+Required:
+- Each equipped item needs 0–4 card sub-slots based on item `slots` field from item_db.
+- Card sub-slots should open the Equipment Browser filtered to IT_CARD only.
+- Parsed card scripts feed into `GearBonusAggregator` (already handles any item in `equipped`).
+- Depends on: the slot key scheme for cards (e.g. `"right_hand_card_0"` through `"_card_3"`).
+
+**F2 — Armor base DEF not added from item_db**
+IT_ARMOR items have a `def` field (hard DEF) that is currently ignored.
+Only `bDef` script bonus is applied via `GearBonusAggregator`.
+Required: in `_apply_gear_bonuses` (or a separate pass), sum `item["def"]` for all equipped
+IT_ARMOR items and add to `equip_def`.
+Note: weapon ATK is handled via `resolve_weapon` → Weapon.atk, so the pattern is different.
+
+**F3 — Armor refine DEF not calculated**
+Refining armor adds hard DEF per refine level (Hercules: `refine_db.conf` table for armor).
+Currently no armor refine DEF is computed. `refine_fix.py` handles weapon ATK2 only.
+Required: scrape refine_db.conf for armor DEF table (analogous to `import_item_db.py`),
+add to `GearBonuses.def_` during aggregation using `build.refine_levels[slot]`.
+
+**F4 — Gear bonuses invisible in Stats section**
+The Stats section bonus fields show manually-entered values only. Gear bonuses (from `_apply_gear_bonuses`)
+are silently applied to the pipeline but not surfaced anywhere in the UI.
+Users cannot tell whether a card's bStr bonus is being applied.
+Required: a read-only "from gear" indicator or tooltip next to each bonus field, or a
+dedicated "Gear Bonuses" row in the Derived section. Decide display approach first.
+
+**F5 — 2H weapon does not block Left Hand slot**
+Equipping a 2H weapon (Spear, 2HAxe, 2HStaff, etc.) should disable and clear the Left Hand slot.
+Currently both slots are independent and the UI allows logically invalid combinations.
+Required:
+- In `equipment_section.py`, detect `weapon.weapon_type in RANGED_WEAPON_TYPES` or weapon
+  `loc` field containing both hands → disable L. Hand row, clear its item ID.
+- Trigger: whenever right_hand item changes.
+- Also: 2H weapon items are currently not filtered out from the Equipment Browser when
+  opening the L. Hand slot — should show only shield/off-hand eligible items.
+
+**F6 — Class-based dual-wield restriction not enforced**
+In pre-renewal only Assassin (job_id 10) and Assassin Cross (job_id 22) can equip a
+weapon in the Left Hand slot. All other jobs should have L. Hand disabled entirely
+(unless holding a shield — which is a separate slot in the full system).
+Currently L. Hand is unrestricted for all classes.
+Required: check `build.job_id` when rendering the Left Hand row; disable if not Assassin/AssX.
+
+**F7 — Equipment slots use Edit button only (no inline dropdown)**
+Each slot has only an "Edit" button that opens the Equipment Browser dialog.
+There is no inline combo/dropdown for quick re-selection without the full browser.
+Low priority — the browser dialog is functional. Consider for Session 5 polish.
+
 ---
 
 ## Pending Enhancements _(Session 5)_
