@@ -106,41 +106,32 @@ crit_atk_rate, long_atk_rate, def_, maxhp, maxsp, aspd_percent, aspd_add
 all_effects: List[ItemEffect]
 # Attacker E2 stubs (populated, not yet wired to pipeline)
 add_race, sub_ele, sub_race, add_size, add_ele, ignore_def_rate, skill_atk
+# Added Session A:
+near_atk_def_rate: int = 0  # bNearAtkDef — reduce incoming melee physical
+long_atk_def_rate: int = 0  # bLongAtkDef — reduce incoming ranged physical
+magic_def_rate: int = 0     # bMagicDefRate — reduce incoming magic
+atk_rate: int = 0           # bAtkRate — generic ATK% (currently consumed in CardFix; should move before SkillRatio — G10)
 ```
 
 ### Fields to add [NEW]:
 ```python
-# Additional attacker fields
-atk_rate: int = 0          # bAtkRate — generic ATK% before SkillRatio (G10)
-ignore_def_ele: dict = {}  # bIgnoreDefEle — ignore DEF by element (G5 extension)
+ignore_def_ele: dict = {}   # bIgnoreDefEle — ignore DEF by element (G5 extension)
 ignore_mdef_rate: dict = {} # bIgnoreMdefRate — ignore MDEF by race/boss (G24)
-
-# Defender fields (player as target of incoming damage)
-sub_race: dict = {}         # bSubRace — already in existing stubs but named same
-                             # EXISTING sub_race is attacker "add vs race" — RENAME CONFLICT
-                             # Need to clarify: bSubRace is DEFENSIVE (reduce incoming from race)
-                             # bAddRace is OFFENSIVE (increase outgoing vs race)
-                             # Current: sub_race = bSubRace (defensive) — naming is correct
-near_atk_def_rate: int = 0  # bNearAtkDef — reduce incoming melee physical
-long_atk_def_rate: int = 0  # bLongAtkDef — reduce incoming ranged physical
-magic_def_rate: int = 0     # bMagicDefRate — reduce incoming magic
 ```
 
 ### item_script_parser additions needed:
 ```
-"bNearAtkDef"   → GearBonuses.near_atk_def_rate
-"bLongAtkDef"   → GearBonuses.long_atk_def_rate
-"bMagicDefRate" → GearBonuses.magic_def_rate
-"bAtkRate"      → GearBonuses.atk_rate
-"bIgnoreDefEle" → GearBonuses.ignore_def_ele (arity=2)
+"bIgnoreDefEle"   → GearBonuses.ignore_def_ele (arity=2)
 "bIgnoreMdefRace" → GearBonuses.ignore_mdef_rate (arity=2)
 ```
+_Added Session A: bNearAtkDef, bLongAtkDef, bMagicDefRate, bAtkRate — all wired._
 
 ---
 
 ## PlayerBuild (core/models/build.py)
 
-### Current fields [EXISTS]: (see MODELS.md)
+### Current fields [EXISTS]:
+_See `core/models/build.py` for full field list._
 
 ### Fields to add [NEW]:
 ```python
@@ -160,14 +151,14 @@ to `weapon_element`.
 
 All exist in JSON but `loader.get_monster()` doesn't populate them into Target:
 
-| JSON field | Where needed |
-|---|---|
-| `mdef` | `Target.mdef_` — mob hard MDEF for incoming magic |
-| `stats.int` | `Target.int_` — for mob MATK calc and mob soft MDEF (mdef2) |
-| `stats.str` | Mob physical ATK derivation (for custom mob ATK if needed) |
-| `stats.dex` | Mob HIT calculation |
-| `atk_min` | `IncomingPhysicalPipeline` — already shown in IncomingDamageSection display |
-| `atk_max` | Same |
+| JSON field | Where needed | Status |
+|---|---|---|
+| `mdef` | `Target.mdef_` — mob hard MDEF for incoming magic | [x] Added Session A |
+| `stats.int` | `Target.int_` — for mob MATK calc and mob soft MDEF (mdef2) | [x] Added Session A |
+| `stats.str` | Mob physical ATK derivation (for custom mob ATK if needed) | [ ] not yet loaded |
+| `stats.dex` | Mob HIT calculation | [ ] not yet loaded |
+| `atk_min` | `IncomingPhysicalPipeline` — already shown in IncomingDamageSection display | [ ] pipeline not yet implemented |
+| `atk_max` | Same | [ ] pipeline not yet implemented |
 
 ---
 

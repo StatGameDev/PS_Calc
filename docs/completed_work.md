@@ -7,8 +7,8 @@ Format: item ID (if applicable), description, and any gotchas worth remembering.
 ## Pipeline Core
 
 **Initial implementation**
-Full damage pipeline with all modifiers. Step order:
-`BaseDamage → SkillRatio → DefenseFix → CritAtkRate → RefineFix → ActiveStatusBonus → MasteryFix → AttrFix → FinalRateBonus`
+Full damage pipeline with all modifiers. Step order (corrected across sessions):
+`BaseDamage → SkillRatio → CritAtkRate (crit only) → DefenseFix (skip on crit) → ActiveStatusBonus → RefineFix → MasteryFix → AttrFix → CardFix → FinalRateBonus`
 Every modifier is a `@staticmethod def calculate(...)` — no instantiation.
 Every calculation calls `result.add_step(...)` — no silent mutation.
 
@@ -434,3 +434,79 @@ including required file changes). Not implemented this session due to context li
   with all bonus_* fields augmented by gear bonuses.
   Original build unchanged → save_build always writes clean manual values.
   Called in `_run_status_calc()` and `_run_battle_pipeline()` before StatusCalculator.
+
+---
+
+## Session 5 — F2/F5/F6 Equipment Correctness + Derived Section Live Stats
+
+**F2 — Armor base DEF from item_db**
+`gui/sections/equipment_section.py` + `gui/main_window.py`: armor DEF now read from
+`item_db.json` and summed into `StatusCalculator` hard DEF input.
+
+**F5 — 2H weapon locks left hand**
+When a 2H weapon is equipped, the L. Hand slot is disabled and cleared.
+Enforced in `equipment_section.py` on item select and on load.
+
+**F6 — Assassin dual-wield restriction**
+L. Hand slot enabled only for Assassin (job_id 12) and Assassin Cross (job_id 24).
+All other jobs have the slot locked with a tooltip explanation.
+Enforced in `equipment_section.py` driven by `build.job_id`.
+
+**Derived section live stats**
+`gui/sections/derived_section.py` updated to display live ASPD, MaxHP, MaxSP from
+`StatusData`. Previously these showed placeholder values.
+
+---
+
+## Session A — Pipeline Gaps G1/G2/G3/G5/G6/G8/G11
+
+**W1 — Target model extended (G6)**
+`core/models/target.py`: 9 new fields added for PvP/incoming-damage support:
+`sub_race, sub_ele, sub_size` (Dict[str,int]); `near_attack_def_rate`,
+`long_attack_def_rate`, `magic_def_rate`, `mdef_`, `int_`, `armor_element`, `flee`.
+All default to 0 / {}. Mobs unaffected (defaults apply).
+
+**W2 — GearBonuses + aggregator + parser extended**
+`core/models/gear_bonuses.py`: 4 new fields: `near_atk_def_rate`, `long_atk_def_rate`,
+`magic_def_rate`, `atk_rate`.
+`core/gear_bonus_aggregator.py`: 4 new routes in `_BONUS1_ROUTES`.
+`core/item_script_parser.py`: 4 new description templates.
+
+**W3 — loader.get_monster() populates mdef_ and int_ (G28 partial)**
+`core/data_loader.py`: `Target.mdef_` ← `entry["mdef"]`; `Target.int_` ← `stats["int"]`.
+
+**W4 — SC_IMPOSITIO fixed (G1)**
+`core/calculators/modifiers/base_damage.py`: SC_IMPOSITIO level×5 added to `atkmax`
+after weapon ATK, before atkmin. Previously misclassified as renewal-only.
+Source: status.c #ifndef RENEWAL ~line 4562.
+
+**W5 — Arrow ATK for bow builds (G3)**
+`base_damage.py`: for Bow weapon type, fetches ammo `atk` from item_db and adds to
+`atkmax`. Missed entirely in original implementation.
+
+**W6 — CardFix implemented (G2, G8, G11)**
+`core/calculators/modifiers/card_fix.py`: new file.
+Attacker side: add_race + add_ele + add_size (with RC_All/Ele_All/Size_All) + atk_rate
++ long_atk_rate (BF_LONG). Boss/NonBoss RC keys included.
+Target side (is_pc only): sub_ele + sub_size + sub_race + near/long_attack_def_rate.
+Wired in `battle_pipeline.py` after AttrFix, before FinalRateBonus.
+Gotcha: atk_rate consumed here but Hercules applies it before SkillRatio (G10 ~partial).
+
+**W7 — VIT DEF PC formula confirmed (G7)**
+No code change. `defense_fix.py` formula already matches battle.c:1487-1488.
+Branch activates in Session D when `player_build_to_target()` is implemented.
+
+**W8 — ignore_def wired (G5)**
+`defense_fix.py`: reads `gear_bonuses.ignore_def_rate[race_rc]` + `[boss_rc]`.
+Partial ignore reduces hard DEF proportionally; 100%+ zeroes it.
+
+**W9 — GearBonuses + CardFix wired in pipeline**
+`battle_pipeline.py`: `gear_bonuses = GearBonusAggregator.compute(build.equipped)`
+hoisted to top of `_run_branch()`. `DefenseFix` and `CardFix` receive `gear_bonuses`.
+
+**Docs maintenance**
+Root planning files moved/deleted: `GUI_PLAN.md` → `docs/gui_plan.md`,
+`COMPLETED_WORK.md` → `docs/completed_work.md`, `PHASES_DONE.md` → `docs/phases_done.md`,
+`GUI_TODO.md` deleted, `MODELS.md` deleted.
+`CLAUDE.md` updated: pipeline order, SC_IMPOSITIO note, card_fix.py entry, new docs refs,
+end-of-session maintenance checklist added.

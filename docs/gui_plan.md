@@ -1,5 +1,5 @@
 # PS_Calc GUI Plan
-_Load at the start of any GUI session. PHASES_DONE.md contains full Phase 0–4 specs._
+_Load at the start of any GUI session. `docs/phases_done.md` contains full Phase 0–4 specs._
 
 ---
 
@@ -102,7 +102,7 @@ Required:
   opening the L. Hand slot — should show only shield/off-hand eligible items.
 
 **F6 — Class-based dual-wield restriction not enforced**
-In pre-renewal only Assassin (job_id 10) and Assassin Cross (job_id 22) can equip a
+In pre-renewal only Assassin (job_id 12) and Assassin Cross (job_id 24) can equip a
 weapon in the Left Hand slot. All other jobs should have L. Hand disabled entirely
 (unless holding a shield — which is a separate slot in the full system).
 Currently L. Hand is unrestricted for all classes.
