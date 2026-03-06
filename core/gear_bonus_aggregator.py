@@ -31,6 +31,11 @@ class GearBonusAggregator:
             item = loader.get_item(item_id)
             if item is None:
                 continue
+
+            # F2: sum base DEF from IT_ARMOR items (item["def"] field)
+            if item.get("type") == "IT_ARMOR":
+                bonuses.def_ += item.get("def", 0)
+
             script = item.get("script") or ""
             if not script:
                 continue

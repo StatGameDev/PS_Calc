@@ -35,9 +35,9 @@ class DerivedSection(Section):
             ("FLEE",  "flee",  "—"),   # shown as "flee + perfect_dodge"
             ("HIT",   "hit",   "—"),
             ("CRI",   "cri",   "—"),
-            ("ASPD",  "aspd",  "— (placeholder)"),
-            ("HP",    "hp",    "— (placeholder)"),
-            ("SP",    "sp",    "— (placeholder)"),
+            ("ASPD",  "aspd",  "—"),
+            ("HP",    "hp",    "—"),
+            ("SP",    "sp",    "—"),
         ]
 
         for row_i, (display, key_s, default) in enumerate(rows):
@@ -113,9 +113,9 @@ class DerivedSection(Section):
         self._value_labels["flee"].setText(flee_str)
         self._value_labels["hit"].setText(str(status.hit))
         self._value_labels["cri"].setText(f"{cri_pct:.1f}%")
-        self._value_labels["aspd"].setText(f"{status.aspd}  (placeholder)")
-        self._value_labels["hp"].setText(f"{status.max_hp}  (placeholder)")
-        self._value_labels["sp"].setText(f"{status.max_sp}  (placeholder)")
+        self._value_labels["aspd"].setText(str(status.aspd))
+        self._value_labels["hp"].setText(str(status.max_hp))
+        self._value_labels["sp"].setText(str(status.max_sp))
 
         # Keep compact labels in sync
         for key_s, clbl in self._compact_values.items():

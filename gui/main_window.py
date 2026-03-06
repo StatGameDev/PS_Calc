@@ -181,6 +181,7 @@ class MainWindow(QMainWindow):
         """Wire all builder section change signals to _on_build_changed."""
         self._build_header.build_name_changed.connect(self._on_build_changed)
         self._build_header.job_changed.connect(self._on_build_changed)
+        self._build_header.job_changed.connect(self._equip_section.update_for_job)
         self._build_header.level_changed.connect(self._on_build_changed)
         self._stats_section.stats_changed.connect(self._on_build_changed)
         self._equip_section.equipment_changed.connect(self._on_build_changed)

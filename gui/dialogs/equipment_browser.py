@@ -32,9 +32,10 @@ _SLOT_ITEM_TYPE: dict[str, str] = {
 }
 
 # Items matching a slot must have any of these EQP tags in their loc list.
+# EQP_WEAPON = 1H weapons; EQP_ARMS = 2H weapons (both go in right hand).
 _SLOT_EQP: dict[str, set[str]] = {
-    "right_hand": {"EQP_WEAPON"},
-    "left_hand":  {"EQP_SHIELD"},
+    "right_hand": {"EQP_WEAPON", "EQP_ARMS"},
+    "left_hand":  {"EQP_SHIELD"},  # base: shields only; Assassin gets 1H weapons added at runtime
     "ammo":       {"EQP_AMMO"},
     "armor":      {"EQP_ARMOR"},
     "garment":    {"EQP_GARMENT"},
@@ -98,6 +99,7 @@ class EquipmentBrowserDialog(QDialog):
         self,
         slot_key: str,
         current_item_id: Optional[int] = None,
+        job_id: int = 0,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -116,6 +118,16 @@ class EquipmentBrowserDialog(QDialog):
             it for it in all_items
             if set(it.get("loc", [])) & valid_eqp
         ]
+
+        # F6: Assassin/Assassin Cross (job 10/22) can also equip 1H weapons in left hand.
+        # Merge in IT_WEAPON items with EQP_WEAPON (1H only — EQP_ARMS/2H excluded).
+        if slot_key == "left_hand" and job_id in (12, 24):  # Assassin, Assassin Cross
+            weapons_1h = [
+                it for it in loader.get_items_by_type("IT_WEAPON")
+                if "EQP_WEAPON" in it.get("loc", [])
+            ]
+            seen_ids = {it["id"] for it in self._items}
+            self._items = self._items + [it for it in weapons_1h if it["id"] not in seen_ids]
 
         layout = QVBoxLayout(self)
         layout.setSpacing(8)

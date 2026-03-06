@@ -18,6 +18,18 @@ from core.data_loader import loader
 from core.models.build import PlayerBuild
 from gui.section import Section
 
+# Weapon types that occupy both hands (F5: disables left_hand slot).
+# These use loc=EQP_ARMS in item_db and block the left hand entirely.
+_TWO_HANDED_WEAPON_TYPES: frozenset[str] = frozenset({
+    "2HSword", "2HSpear", "2HAxe", "2HStaff",
+    "Bow", "MusicalInstrument", "Whip", "Katar", "Fuuma",
+    "Revolver", "Rifle", "Gatling", "Shotgun", "Grenade",
+})
+
+# Jobs that may equip 1H weapons (dual-wield) in left hand (F6).
+# All jobs can use shields; only these jobs additionally see 1H weapons in the browser.
+_DUAL_WIELD_JOBS: frozenset[int] = frozenset({12, 24})  # Assassin, Assassin Cross
+
 # (slot_key, display_label, has_refine)
 _SLOTS: list[tuple[str, str, bool]] = [
     ("right_hand", "R. Hand",  True),
@@ -67,6 +79,7 @@ class EquipmentSection(Section):
         self._name_labels:  dict[str, QLabel]        = {}
         self._refine_spins: dict[str, QSpinBox]      = {}
         self._edit_btns:    dict[str, QPushButton]   = {}
+        self._current_job_id: int = 0
 
         # ── Slot grid ──────────────────────────────────────────────────────
         grid_widget = QWidget()
@@ -129,16 +142,50 @@ class EquipmentSection(Section):
 
     def _open_browser(self, slot_key: str) -> None:
         from gui.dialogs.equipment_browser import EquipmentBrowserDialog
-        dlg = EquipmentBrowserDialog(slot_key, self._item_ids.get(slot_key), parent=self)
+        dlg = EquipmentBrowserDialog(
+            slot_key, self._item_ids.get(slot_key),
+            job_id=self._current_job_id, parent=self,
+        )
         if dlg.exec() == QDialog.DialogCode.Accepted:
             new_id = dlg.selected_item_id()
             self._item_ids[slot_key] = new_id
             self._name_labels[slot_key].setText(_resolve_item_name(new_id))
             if new_id is None and slot_key in self._refine_spins:
                 self._refine_spins[slot_key].setValue(0)
+            if slot_key == "right_hand":
+                self._update_left_hand_state()
             if self._compact_widget is not None:
                 self._update_compact_labels()
             self.equipment_changed.emit()
+
+    def _is_right_hand_two_handed(self) -> bool:
+        rh_id = self._item_ids.get("right_hand")
+        if rh_id is None:
+            return False
+        item = loader.get_item(rh_id)
+        if item is None:
+            return False
+        return item.get("weapon_type", "") in _TWO_HANDED_WEAPON_TYPES
+
+    def _update_left_hand_state(self) -> None:
+        """Enable or disable the left_hand slot (F5: blocked by 2H right-hand weapon)."""
+        is_2h = self._is_right_hand_two_handed()
+        enabled = not is_2h
+
+        edit_btn = self._edit_btns.get("left_hand")
+        if edit_btn:
+            edit_btn.setEnabled(enabled)
+
+        if not enabled:
+            # Clear the slot when blocked by a 2H weapon
+            self._item_ids["left_hand"] = None
+            self._name_labels["left_hand"].setText("— Empty —")
+            if "left_hand" in self._refine_spins:
+                self._refine_spins["left_hand"].setValue(0)
+
+        name_lbl = self._name_labels.get("left_hand")
+        if name_lbl:
+            name_lbl.setEnabled(enabled)
 
     # ── Compact API ────────────────────────────────────────────────────────
 
@@ -196,11 +243,17 @@ class EquipmentSection(Section):
 
     # ── Public API ────────────────────────────────────────────────────────
 
+    def update_for_job(self, job_id: int) -> None:
+        """Track job for left_hand browser filtering (F6: Assassin dual-wield)."""
+        self._current_job_id = job_id
+
     def load_build(self, build: PlayerBuild) -> None:
         """Populate all equipment widgets from build without emitting change signals."""
         for spin in self._refine_spins.values():
             spin.blockSignals(True)
         self._element_combo.blockSignals(True)
+
+        self._current_job_id = build.job_id
 
         for slot_key, _, has_refine in _SLOTS:
             item_id = build.equipped.get(slot_key)
@@ -223,6 +276,15 @@ class EquipmentSection(Section):
         for spin in self._refine_spins.values():
             spin.blockSignals(False)
         self._element_combo.blockSignals(False)
+
+        # Apply F5 state without emitting signals (2H right-hand blocks left hand)
+        is_2h = self._is_right_hand_two_handed()
+        edit_btn = self._edit_btns.get("left_hand")
+        name_lbl = self._name_labels.get("left_hand")
+        if edit_btn:
+            edit_btn.setEnabled(not is_2h)
+        if name_lbl:
+            name_lbl.setEnabled(not is_2h)
 
         if self._compact_widget is not None:
             self._update_compact_labels()
