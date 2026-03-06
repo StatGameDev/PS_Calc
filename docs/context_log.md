@@ -127,6 +127,79 @@ Notes: Pure doc cleanup session. No code changes. data_models.md was pre-loaded 
 
 ---
 
+## Session B  2026-03-06  claude-sonnet-4-6
+ctx_used: ~100% segment 1 (compacted mid doc-maintenance), ~30% segment 2 (doc finish + commit)
+
+Work items completed:
+- B1: StatusData MATK — matk_min/matk_max added to status.py + status_calculator.py
+- B2: StatusData MDEF — mdef (hard, from equip_mdef) + mdef2 (soft = int_+vit//2)
+- B3: GearBonuses mdef_ + ignore_mdef_rate; PlayerBuild equip_mdef; main_window wiring
+- B4: derived_section — MATK (range) and MDEF (hard+soft) display rows
+- B5: skill_ratio.py calculate_magic() — 15 pre-renewal spells, raw hit_count with sign encoding
+- B6: defense_fix.py calculate_magic() — MDEF% + mdef2 per-hit (battle.c:1585)
+- B7: card_fix.py calculate_magic() — target-side PvP magic resist only (attacker magic is #ifdef RENEWAL)
+- B8: magic_pipeline.py — new MagicPipeline (battle_calc_magic_attack #else not RENEWAL)
+      Correct per-hit order: SkillRatio → DefenseFix → AttrFix → HitCount×N
+      Positive hit_count = actual multiply; negative = cosmetic step only (damage_div_fix macro)
+- B9: battle_pipeline.py — route attack_type==Magic to MagicPipeline; BattleResult.magic field
+- Doc maintenance: gaps.md G18-G25 done; completed_work.md Session B; data_models.md; CLAUDE.md
+
+Files read (estimated — not recorded precisely):
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md (partial) | ~80 | ~560 |
+| core/models/status.py | ~40 | ~280 |
+| core/calculators/status_calculator.py | ~110 | ~770 |
+| core/models/gear_bonuses.py | 65 | 455 |
+| core/gear_bonus_aggregator.py | ~130 | ~910 |
+| core/models/build.py | ~70 | ~490 |
+| gui/main_window.py (partial) | ~40 | ~280 |
+| gui/sections/derived_section.py | ~80 | ~560 |
+| core/calculators/modifiers/skill_ratio.py | ~120 | ~840 |
+| core/calculators/modifiers/defense_fix.py | 139 | ~973 |
+| core/calculators/modifiers/card_fix.py | ~101 | ~707 |
+| core/calculators/battle_pipeline.py | 152 | 1,064 |
+| core/models/damage.py | ~60 | ~420 |
+| core/models/target.py | 28 | 196 |
+| docs/data_models.md | 207 | ~828 |
+| docs/context_log.md | 156 | ~624 |
+| Hercules greps (battle.c, status.c) | ~120 | ~840 |
+| **subtotal reads** | **~1,698** | **~10,797** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| core/models/status.py | +7 | ~49 |
+| core/calculators/status_calculator.py | +11 | ~77 |
+| core/models/gear_bonuses.py | +4 | ~28 |
+| core/gear_bonus_aggregator.py | +3 | ~21 |
+| core/models/build.py | +1 | ~7 |
+| gui/main_window.py | +1 | ~7 |
+| gui/sections/derived_section.py | +4 | ~28 |
+| core/calculators/modifiers/skill_ratio.py | +72 | ~504 |
+| core/calculators/modifiers/defense_fix.py | +45 | ~315 |
+| core/calculators/modifiers/card_fix.py | +44 | ~308 |
+| core/calculators/battle_pipeline.py | +23 | ~161 |
+| core/models/damage.py | +1 | ~7 |
+| docs/gaps.md | +26 | ~104 |
+| docs/completed_work.md | +52 | ~208 |
+| docs/data_models.md | +37 | ~148 |
+| CLAUDE.md | +19 | ~133 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| core/calculators/magic_pipeline.py | 161 | 1,127 |
+
+Total est_tokens: ~10,797 reads + ~2,105 edits + 1,127 create + 6,000 fixed + ~15,000 conv ≈ 35,000 (~18% of 200k per segment)
+Notes: Two context segments. Compaction hit during doc maintenance of segment 1 — resumed cleanly.
+Cosmetic vs actual hit count distinction required mid-session investigation + re-implementation of
+skill_ratio.calculate_magic (initially used abs(), corrected to return raw signed hit_count).
+Per-hit defense order also corrected mid-session (initially multiplied before defense, fixed to match
+Hercules: ratio→defense→attr_fix per-hit, then hit_count×N after).
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
