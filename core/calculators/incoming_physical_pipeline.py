@@ -1,0 +1,149 @@
+from core.models.damage import DamageRange, DamageResult
+from core.models.target import Target
+from core.models.build import PlayerBuild
+from core.models.gear_bonuses import GearBonuses
+from core.config import BattleConfig
+from core.data_loader import loader
+from core.calculators.modifiers.defense_fix import DefenseFix
+from core.calculators.modifiers.card_fix import CardFix
+
+
+class IncomingPhysicalPipeline:
+    """
+    Pre-renewal incoming physical damage pipeline (mob → player).
+
+    Step order:
+      MobBaseATK — weapon roll [atk_min, atk_max−1] + batk (fixed at spawn)
+      AttrFix    — mob element vs player armor element
+      DefenseFix — BF_WEAPON, player as defender (is_pc=True → PC VIT DEF formula, G7)
+      CardFix    — target-side only (player resistance cards; mob has no gear)
+
+    Mob ATK is computed internally from mob_db. The mob_atk_bonus_rate parameter
+    provides a %-modifier on the weapon component for buff/debuff support
+    (e.g. Provoke = +23, Curse = negative). When SC effects are implemented,
+    the caller computes the combined net rate from active SCs and passes it here.
+    Batk is kept separate because Hercules buffs target rhw.atk/atk2, not batk.
+
+    Source: battle.c battle_calc_base_damage2 (#else RENEWAL);
+            mob.c:4937 mob_read_db_sub;
+            status.c:3749-3774 status_base_atk BL_MOB (#else not RENEWAL).
+    """
+
+    def __init__(self, config: BattleConfig):
+        self.config = config
+
+    def calculate(
+        self,
+        mob_id: int,
+        player_target: Target,
+        gear_bonuses: GearBonuses,
+        build: PlayerBuild,
+        is_ranged: bool = False,
+        mob_atk_bonus_rate: int = 0,   # % modifier to weapon component (Provoke, Curse, etc.)
+    ) -> DamageResult:
+        result = DamageResult()
+
+        mob_data = loader.get_monster_data(mob_id)
+        if mob_data is None:
+            return result
+
+        mob_name          = mob_data.get("name", f"Mob {mob_id}")
+        mob_element       = mob_data.get("element", 0)
+        mob_race          = mob_data.get("race", "Formless")
+        mob_size          = mob_data.get("size", "Medium")
+        db_atk_min        = mob_data.get("atk_min", 1)
+        db_atk_max        = mob_data.get("atk_max", 1)
+        mob_str           = mob_data.get("stats", {}).get("str", 0)
+
+        # --- Mob Base ATK ---
+        # BATK: str + (str//10)^2 — pre-renewal BL_MOB path (no dex/luk terms).
+        # status.c:3749-3774 status_base_atk #else not RENEWAL, BL_MOB case.
+        batk = mob_str + (mob_str // 10) ** 2
+
+        # Weapon component roll: rnd()%(atk2 - atk1) + atk1 → [atk_min, atk_max-1]
+        # mob_atk_bonus_rate mirrors SC effects that change rhw.atk/atk2 post-spawn.
+        # Applied to weapon component only (batk is a separate status field).
+        atk_min = db_atk_min * (100 + mob_atk_bonus_rate) // 100 if mob_atk_bonus_rate else db_atk_min
+        atk_max = db_atk_max * (100 + mob_atk_bonus_rate) // 100 if mob_atk_bonus_rate else db_atk_max
+
+        eff_min = atk_min + batk
+        eff_max = max(eff_min, (atk_max - 1) + batk)
+        eff_avg = (eff_min + eff_max) // 2
+
+        modifier_note = f" ×{100 + mob_atk_bonus_rate}% weapon component" if mob_atk_bonus_rate else ""
+        dmg = DamageRange(eff_min, eff_max, eff_avg)
+
+        result.add_step(
+            name="Mob Base ATK",
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
+            note=(f"{mob_name}: weapon [{db_atk_min}, {db_atk_max - 1}]"
+                  f" + batk {batk} (str {mob_str}){modifier_note}"
+                  f" → [{eff_min}, {eff_max}] (fixed at spawn)"),
+            formula="rnd(atk_min, atk_max-1) + str + (str//10)^2",
+            hercules_ref="mob.c:4937 mob_read_db_sub rhw.atk/atk2;\n"
+                         "status.c:3749 status_base_atk BL_MOB (#else not RENEWAL)",
+        )
+
+        # --- Attr Fix: mob element vs player armor element ---
+        mob_ele_name    = loader.get_element_name(mob_element)
+        player_ele_name = loader.get_element_name(player_target.armor_element)
+        multiplier = loader.get_attr_fix_multiplier(
+            mob_ele_name, player_ele_name, player_target.element_level or 1
+        )
+        if multiplier != 100:
+            dmg = dmg.scale(multiplier, 100)
+        result.add_step(
+            name="Attr Fix",
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
+            multiplier=multiplier / 100.0,
+            note=f"{mob_ele_name} vs {player_ele_name} Lv{player_target.element_level or 1} ({multiplier}%)",
+            formula=f"dmg * {multiplier} // 100",
+            hercules_ref="battle.c: battle_calc_elem_damage (attr_fix table)",
+        )
+
+        # --- Defense Fix: player as defender, is_pc=True → PC VIT DEF formula (G7) ---
+        # Mob is the attacker — no gear, so no ignore_def bonuses (empty GearBonuses).
+        # build=None: getattr(None, "ignore_hard_def", False) → False, which is correct
+        # (mob attacks cannot ignore player hard DEF via gear cards).
+        dmg = DefenseFix.calculate(
+            target=player_target,
+            build=None,
+            gear_bonuses=GearBonuses(),
+            dmg=dmg,
+            config=self.config,
+            result=result,
+            is_crit=False,
+        )
+
+        # --- Card Fix: target-side only (player resistance cards vs mob attacker) ---
+        # Mob has no attacker-side gear. Player's sub_ele/sub_race/sub_size and
+        # near/long_attack_def_rate are keyed against mob's actual element/race/size.
+        dmg = CardFix.calculate_incoming_physical(
+            mob_race=mob_race,
+            mob_element=mob_element,
+            mob_size=mob_size,
+            is_ranged=is_ranged,
+            player_target=player_target,
+            dmg=dmg,
+            result=result,
+        )
+
+        result.add_step(
+            "Final Incoming Physical Damage",
+            value=dmg.avg,
+            min_value=dmg.min,
+            max_value=dmg.max,
+            note="mob → player, pre-renewal BF_WEAPON",
+            formula="",
+            hercules_ref="",
+        )
+
+        result.min_damage = dmg.min
+        result.max_damage = dmg.max
+        result.avg_damage = dmg.avg
+
+        return result

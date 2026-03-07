@@ -138,6 +138,20 @@ class EquipmentSection(Section):
         elem_layout.addStretch()
         self.add_content_widget(elem_row)
 
+        # ── Armor element override ─────────────────────────────────────────
+        armor_elem_row = QWidget()
+        armor_elem_layout = QHBoxLayout(armor_elem_row)
+        armor_elem_layout.setContentsMargins(0, 0, 0, 0)
+        armor_elem_layout.setSpacing(6)
+        armor_elem_layout.addWidget(QLabel("Armor Element:"))
+        self._armor_element_combo = QComboBox()
+        for idx, name in enumerate(_ELEMENT_NAMES):
+            self._armor_element_combo.addItem(name, idx)
+        self._armor_element_combo.currentIndexChanged.connect(self.equipment_changed)
+        armor_elem_layout.addWidget(self._armor_element_combo)
+        armor_elem_layout.addStretch()
+        self.add_content_widget(armor_elem_row)
+
     # ── Browser ────────────────────────────────────────────────────────────
 
     def _open_browser(self, slot_key: str) -> None:
@@ -273,6 +287,12 @@ class EquipmentSection(Section):
             idx = self._element_combo.findData(we)
             self._element_combo.setCurrentIndex(idx if idx >= 0 else 0)
 
+        # Armor element combo: int 0-9, default 0 (Neutral)
+        self._armor_element_combo.blockSignals(True)
+        ae_idx = self._armor_element_combo.findData(build.armor_element)
+        self._armor_element_combo.setCurrentIndex(ae_idx if ae_idx >= 0 else 0)
+        self._armor_element_combo.blockSignals(False)
+
         for spin in self._refine_spins.values():
             spin.blockSignals(False)
         self._element_combo.blockSignals(False)
@@ -298,3 +318,4 @@ class EquipmentSection(Section):
             if has_refine and slot_key in self._refine_spins
         }
         build.weapon_element = self._element_combo.currentData()  # None or int 0-9
+        build.armor_element = self._armor_element_combo.currentData() or 0  # int 0-9

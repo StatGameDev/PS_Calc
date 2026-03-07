@@ -593,3 +593,83 @@ uses `has_level=True` because val2 is level-dependent). See docs/aspd.md for ful
 Source: battle.c:5330 `#ifndef RENEWAL`: `ATK_ADDRATE(sd->bonus.atk_rate)`.
 `core/calculators/modifiers/card_fix.py`: `atk_rate` removed from the CardFix attacker-side
 `atk_bonus` sum where it was incorrectly placed (post-defense, post-AttrFix).
+
+---
+
+## Session D — Partial (Hercules investigation + armor_element stub)
+
+**G27 — armor_element field**
+`core/models/build.py`: `armor_element: int = 0` added.
+`core/build_manager.py`: saved under `flags.armor_element`; loaded with default 0.
+
+**Mob ATK architecture investigation**
+Determined two-part mob ATK: weapon component `[atk_min, atk_max-1]` from mob_db +
+`batk = str + (str//10)^2` from stats.str (BL_MOB path, no dex/luk).
+Source: mob.c:4937 mob_read_db_sub; status.c:3749 status_base_atk #else not RENEWAL.
+Key finding: SC buffs (Provoke etc.) modify `rhw.atk/atk2` (weapon component), not batk.
+Design decision: pipeline computes baseline internally from mob_db; `mob_atk_bonus_rate`
+parameter provides the buff/debuff hook. See current_state.md Session D for full notes.
+
+**G33 confirmed done from Session B** — MDEF in StatusData/StatusCalculator already complete.
+
+---
+
+## Session E — Incoming Pipelines (G7, G26–G29, G31–G32)
+
+**E1 — player_build_to_target() (item 1)**
+`core/build_manager.py`: new static method `player_build_to_target(build, status, gear_bonuses) -> Target`.
+Maps player's StatusData + GearBonuses into a Target with `is_pc=True`, size=Medium,
+race=DemiHuman, element_level=1. Activates G7 (PC VIT DEF branch) automatically.
+`sub_size={}` — GearBonuses has add_size (offensive) not sub_size (defensive); stubbed.
+New imports: GearBonuses, StatusData, Target at top-level (no circular dependency).
+
+**E2 — IncomingPhysicalPipeline (item 2, G26, G28, G29)**
+`core/calculators/incoming_physical_pipeline.py`: new file.
+Steps: MobBaseATK → AttrFix → DefenseFix(is_pc=True) → CardFix.calculate_incoming_physical().
+Mob ATK computed internally from mob_db (`atk_min/atk_max` + batk from stats.str).
+`mob_atk_bonus_rate: int = 0` parameter for future buff/debuff SC effects (mirrors Hercules
+SC modification of rhw.atk/atk2). Batk kept separate (not modified by most SCs).
+Mob ATK note: "fixed at spawn" — correct framing per Hercules mob_read_db_sub.
+DefenseFix called with `build=None`, `GearBonuses()` (mob has no attacker-side gear/cards).
+`core/calculators/modifiers/card_fix.py`: new `calculate_incoming_physical(mob_race, mob_element,
+mob_size, is_ranged, player_target, dmg, result)`. Keys player's sub_ele/sub_race/sub_size
+against mob's actual race/element/size (not hardcoded DemiHuman like the outgoing path).
+
+**E3 — IncomingMagicPipeline (item 3, G31, G32)**
+`core/calculators/incoming_magic_pipeline.py`: new file.
+Steps: MobMATKRoll → SkillRatio (optional) → AttrFix → DefenseFix.calculate_magic()
+→ CardFix.calculate_incoming_magic().
+Mob MATK: `int_ + (int_//7)^2` to `int_ + (int_//5)^2` from mob_data stats.int.
+`mob_matk_bonus_rate: int = 0` for future buff/debuff support.
+Optional `skill: SkillInstance` — when provided, applies skill ratio and resolves element
+from skills.json; falls back to mob's natural element. `build=None` safe (SkillRatio unused it).
+`core/calculators/modifiers/card_fix.py`: new `calculate_incoming_magic(mob_race, magic_ele_name,
+player_target, dmg, result)`. Uses mob's actual race for sub_race lookup (not hardcoded
+RC_DemiHuman like `calculate_magic` which assumes player-vs-player).
+Empty `GearBonuses()` passed to DefenseFix — mob has no ignore_mdef cards.
+
+**E4 — IncomingDamageSection rebuilt (item 4)**
+`gui/sections/incoming_damage.py`: complete rewrite. Old stub (refresh_mob + refresh_status)
+replaced with step breakdown panel.
+Physical/Magic toggle buttons (mutually exclusive without QButtonGroup).
+Summary row: `Physical: min–avg–max  Magic: min–avg–max`.
+Step table with Show Source toggle — same pattern as step_breakdown.py.
+New public API: `refresh(physical: DamageResult, magic: DamageResult)`.
+
+**E5 — Armor element selector (item 5)**
+`gui/sections/equipment_section.py`: new `_armor_element_combo` (QComboBox, 10 elements, default
+Neutral). Added after weapon element row. Connects to `equipment_changed` signal.
+`load_build()`: reads `build.armor_element` (int 0-9) with signals blocked.
+`collect_into()`: writes `build.armor_element` back. Save/load already wired via Session D's
+`flags.armor_element` in build_manager.py — no changes needed there.
+
+**E6 — Wire incoming pipelines (item 6)**
+`gui/main_window.py`: imports + instances for IncomingPhysicalPipeline, IncomingMagicPipeline.
+`_run_battle_pipeline()`: computes gear_bonuses and player_target once; runs both incoming
+pipelines when mob_id is set; calls `_incoming_damage.refresh(phys, magic)`.
+Old `refresh_mob` + `refresh_status` calls removed.
+
+**New gap added**
+G43 [ ]: Incoming pipeline attack type not skill-driven. GUI has no mob skill picker.
+Physical pipeline always assumes auto-attack; magic pipeline defaults to mob natural element.
+Needs design decision on UI surface before implementation.

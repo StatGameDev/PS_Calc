@@ -3,6 +3,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from core.models.build import PlayerBuild
+from core.models.gear_bonuses import GearBonuses
+from core.models.status import StatusData
+from core.models.target import Target
 from core.models.weapon import Weapon, RANGED_WEAPON_TYPES
 
 DEFAULT_SAVES_DIR = "saves"
@@ -159,6 +162,44 @@ class BuildManager:
     def list_builds(directory: str = DEFAULT_SAVES_DIR) -> List[str]:
         """Return stem names of all build files found in directory."""
         return [p.stem for p in Path(directory).glob("*.json")]
+
+    @staticmethod
+    def player_build_to_target(
+        build: PlayerBuild,
+        status: StatusData,
+        gear_bonuses: GearBonuses,
+    ) -> Target:
+        """Convert a player's computed state into a Target for incoming damage pipelines.
+
+        Used when the player is the defender (mob → player, or PvP incoming).
+        All players are DemiHuman / Medium / element_level 1 in pre-renewal.
+
+        sub_size is left empty — GearBonuses.add_size is offensive (attacker bonus),
+        not defensive resistance. Add a sub_size field to GearBonuses when cards
+        that reduce damage by size are implemented.
+        """
+        return Target(
+            def_=status.def_,
+            vit=status.vit,
+            level=build.base_level,
+            is_pc=True,
+            size="Medium",
+            race="DemiHuman",
+            element=build.armor_element,
+            armor_element=build.armor_element,
+            element_level=1,
+            luk=status.luk,
+            agi=status.agi,
+            flee=status.flee,
+            mdef_=status.mdef,
+            int_=status.int_,
+            sub_race=dict(gear_bonuses.sub_race),
+            sub_ele=dict(gear_bonuses.sub_ele),
+            sub_size={},   # no sub_size in GearBonuses yet
+            near_attack_def_rate=gear_bonuses.near_atk_def_rate,
+            long_attack_def_rate=gear_bonuses.long_atk_def_rate,
+            magic_def_rate=gear_bonuses.magic_def_rate,
+        )
 
     @staticmethod
     def resolve_weapon(

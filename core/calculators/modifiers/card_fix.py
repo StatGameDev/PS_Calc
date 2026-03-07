@@ -110,6 +110,115 @@ class CardFix:
         return dmg
 
     @staticmethod
+    def calculate_incoming_physical(
+        mob_race: str,
+        mob_element: int,
+        mob_size: str,
+        is_ranged: bool,
+        player_target: Target,
+        dmg: DamageRange,
+        result: DamageResult,
+    ) -> DamageRange:
+        """Target-side CardFix for incoming physical (mob → player).
+
+        Mob has no gear, so attacker-side bonuses are zero.
+        Player's sub_ele/sub_race/sub_size and near/long_attack_def_rate apply,
+        keyed against the mob's actual element, race, and size.
+        Source: battle.c battle_calc_cardfix cflag=0, target-side path.
+        """
+        if not player_target.is_pc:
+            result.add_step(
+                name="Card Fix (Incoming Physical)",
+                value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+                multiplier=1.0,
+                note="target is not a player — no card resist",
+                formula="no change",
+                hercules_ref="battle.c battle_calc_cardfix: target-side only for is_pc",
+            )
+            return dmg
+
+        ele_key  = _ELE_TO_KEY.get(mob_element, "Ele_Neutral")
+        race_rc  = _RACE_TO_RC.get(mob_race, "")
+        size_key = _SIZE_TO_KEY.get(mob_size, "")
+
+        def_pct = (
+            player_target.sub_ele.get(ele_key, 0)
+            + player_target.sub_ele.get("Ele_All", 0)
+            + player_target.sub_size.get(size_key, 0)
+            + player_target.sub_race.get(race_rc, 0)
+            + (player_target.long_attack_def_rate if is_ranged else player_target.near_attack_def_rate)
+        )
+
+        net = 100 - def_pct
+        if net != 100:
+            dmg = dmg.scale(net, 100)
+
+        result.add_step(
+            name="Card Fix (Incoming Physical)",
+            value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+            multiplier=net / 100.0,
+            note=(f"Ele({ele_key})-{player_target.sub_ele.get(ele_key,0)}%"
+                  f"  Race({race_rc})-{player_target.sub_race.get(race_rc,0)}%"
+                  f"  Size({size_key})-{player_target.sub_size.get(size_key,0)}%"
+                  f"  {'Long' if is_ranged else 'Near'}Def"
+                  f"-{player_target.long_attack_def_rate if is_ranged else player_target.near_attack_def_rate}%"),
+            formula=f"dmg * (100 - {def_pct}) // 100 = dmg * {net} // 100",
+            hercules_ref="battle.c battle_calc_cardfix cflag=0: sub_ele/sub_race/sub_size/"
+                         "near_long_attack_def_rate (target-side, is_pc only)",
+        )
+        return dmg
+
+    @staticmethod
+    def calculate_incoming_magic(
+        mob_race: str,
+        magic_ele_name: str,
+        player_target: Target,
+        dmg: DamageRange,
+        result: DamageResult,
+    ) -> DamageRange:
+        """Target-side CardFix for incoming magic (mob → player).
+
+        Like calculate_magic but uses the mob's actual race instead of hardcoded
+        RC_DemiHuman. Attacker-side magic bonuses are Renewal-only — skipped.
+        Source: battle.c battle_calc_cardfix cflag=0 BF_MAGIC, target-side path.
+        """
+        if not player_target.is_pc:
+            result.add_step(
+                name="Card Fix (Incoming Magic)",
+                value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+                multiplier=1.0,
+                note="target is not a player — no magic card resist",
+                formula="no change",
+                hercules_ref="battle.c battle_calc_cardfix: target-side only for is_pc",
+            )
+            return dmg
+
+        race_rc = _RACE_TO_RC.get(mob_race, "")
+        def_pct = (
+            player_target.sub_ele.get(magic_ele_name, 0)
+            + player_target.sub_ele.get("Ele_All", 0)
+            + player_target.sub_race.get(race_rc, 0)
+            + player_target.magic_def_rate
+        )
+
+        net = 100 - def_pct
+        if net != 100:
+            dmg = dmg.scale(net, 100)
+
+        result.add_step(
+            name="Card Fix (Incoming Magic)",
+            value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+            multiplier=net / 100.0,
+            note=(f"Ele({magic_ele_name})-{player_target.sub_ele.get(magic_ele_name,0)}%"
+                  f"  Race({race_rc})-{player_target.sub_race.get(race_rc,0)}%"
+                  f"  MagicDef-{player_target.magic_def_rate}%"),
+            formula=f"dmg * (100 - {def_pct}) // 100 = dmg * {net} // 100",
+            hercules_ref="battle.c battle_calc_cardfix cflag=0 BF_MAGIC: sub_ele/sub_race/"
+                         "magic_def_rate (target-side, is_pc only)",
+        )
+        return dmg
+
+    @staticmethod
     def calculate_magic(target: Target, magic_ele_name: str,
                         dmg: DamageRange, result: DamageResult) -> DamageRange:
         """BF_MAGIC target-side CardFix (player target only).

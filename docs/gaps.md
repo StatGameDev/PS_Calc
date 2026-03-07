@@ -14,7 +14,7 @@ _Status: [ ] open, [x] done, [~] partial_
 | G4 | [x] | ASC_KATAR percentage mastery missing. Pre-renewal masteryfix: `damage += damage * (10 + 2*skill_lv) / 100` for W_KATAR. | battle.c masteryfix #else block (pre-re) | Fixed Session C: mastery_fix.py + passive_section ASC_KATAR row (job-filtered to Assassin Cross) |
 | G5 | [x] | ignore_def not wired into DefenseFix. `ignore_def_race[target.race] + ignore_def_race[boss_key]` reduces def1 %. Also `ignore_def_ele`. | battle.c ~5703-5712 | Fixed in Session A: defense_fix.py reads ignore_def_rate by race_rc + boss_rc |
 | G6 | [x] | Target model cannot represent a player defender. `is_pc` field exists but unused. Fields needed: sub_race, sub_ele, sub_size, near/long_attack_def_rate, magic_def_rate, mdef_, int_, armor_element, flee. | battle.c battle_calc_cardfix target side | Fixed in Session A: all 9 fields added to target.py with zero defaults |
-| G7 | [ ] | VIT DEF PC branch dead code — `target.is_pc` never True. Formula in defense_fix.py IS correct per C source (battle.c:1487-1488). Branch becomes live in Session D when player_build_to_target() is implemented. | battle.c:1487-1488 #ifndef RENEWAL | No formula change needed. Lines 1495/1498 are AL_DP (Angelus) and RA_RANGERMAIN skill bonuses on top — not the base formula (roadmap misread) |
+| G7 | [x] | VIT DEF PC branch dead code — `target.is_pc` never True. Formula in defense_fix.py IS correct per C source (battle.c:1487-1488). Branch becomes live in Session D when player_build_to_target() is implemented. | battle.c:1487-1488 #ifndef RENEWAL | Fixed Session E: player_build_to_target() sets is_pc=True; PC VIT DEF formula now active for all incoming physical hits. |
 | G41 | [ ] | [LOW PRIORITY] PC VIT DEF: Hercules comment (line 1486) disagrees with C implementation. Comment: `[VIT*0.5]+rnd([VIT*0.3],max([VIT*0.3],[VIT^2/150]-1))` → [64,81] for VIT=80. Code: `def2/2+rnd()%(def2*(def2-15)/150)` → [40,73] for VIT=80. Player testing matches comment, not code. | battle.c:1486-1488 | Do NOT change code based on comment. Investigate against official server data before any fix. Currently follow C implementation. |
 | G8 | [x] | Target-side CardFix not implemented. Multiplies: sub_ele, sub_size, sub_race, boss, near/long_def_rate. Only fires when target.is_pc. | battle.c battle_calc_cardfix cflag=0 BF_WEAPON | Fixed in Session A: card_fix.py fires target side when is_pc=True (activates in Session D) |
 | G9 | [~] | ASPD skill buffs not in StatusCalculator. SC_TWOHANDQUICKEN, SC_ADRENALINE, SC_SPEARQUICKEN, SC_ONEHAND modify amotion in status.c. | status.c SC_TWOHANDQUICKEN etc. | Fixed Session C: status_calc_aspd_rate 1000-scale approach; SC_ASSNCROS deferred (Bard AGI dependency — needs party buff input). See docs/aspd.md. |
@@ -44,14 +44,14 @@ _Status: [ ] open, [x] done, [~] partial_
 
 ---
 
-## Incoming Physical (Mob → Player) — DISPLAY STUB ONLY
+## Incoming Physical (Mob → Player)
 
 | ID | Status | Description | Hercules ref | Notes |
 |---|---|---|---|---|
-| G26 | [ ] | No incoming physical pipeline. IncomingDamageSection shows mob ATK range as display text only. | — | Need IncomingPhysicalPipeline class |
+| G26 | [x] | No incoming physical pipeline. IncomingDamageSection shows mob ATK range as display text only. | — | Fixed Session E: IncomingPhysicalPipeline; step breakdown panel; wired in main_window. |
 | G27 | [x] | Player armor element not tracked. Determines how player defends against elemental attacks. | attr_fix table | Session D: armor_element: int = 0 added to PlayerBuild; saved/loaded under flags.armor_element |
-| G28 | [~] | mob_db int_, str, dex not loaded into Target. Mob MATK derived from int_. | mob_db stats.int | Session A: int_ now loaded (stats.get("int",0)); str/dex not yet loaded |
-| G29 | [ ] | Target-side player cards not modelled for incoming. sub_race[mob.race], sub_ele[mob.element], near/long_def_rate from player cards. | battle.c cardfix target side | Same G6/G8 infrastructure; these fields just need populating from player gear |
+| G28 | [x] | mob_db int_, str, dex not loaded into Target. Mob MATK derived from int_. | mob_db stats.int | Fixed Session E: pipelines read stats.str/stats.int directly from get_monster_data(); no Target changes needed. |
+| G29 | [x] | Target-side player cards not modelled for incoming. sub_race[mob.race], sub_ele[mob.element], near/long_def_rate from player cards. | battle.c cardfix target side | Fixed Session E: CardFix.calculate_incoming_physical() keys sub_ele/sub_race/sub_size against mob's actual element/race/size. |
 
 ---
 
@@ -63,12 +63,12 @@ _Status: [ ] open, [x] done, [~] partial_
 
 ---
 
-## Incoming Magic (Mob or Player → Player) — ENTIRELY ABSENT
+## Incoming Magic (Mob or Player → Player)
 
 | ID | Status | Description | Hercules ref | Notes |
 |---|---|---|---|---|
-| G31 | [ ] | No mob MATK derivation. Mob MATK = mob.int_ + (int_/7)^2 to int_ + (int_/5)^2. | status.c same formula | Session A: int_ loaded into Target; pipeline reads it directly. No extra loading needed. |
-| G32 | [ ] | No incoming magic pipeline. Player as target of magic. | — | Needs MagicPipeline run with mob/player as src, player Target (is_pc=True) as target |
+| G31 | [x] | No mob MATK derivation. Mob MATK = mob.int_ + (int_/7)^2 to int_ + (int_/5)^2. | status.c same formula | Fixed Session E: IncomingMagicPipeline computes from mob_data stats.int directly. |
+| G32 | [x] | No incoming magic pipeline. Player as target of magic. | — | Fixed Session E: IncomingMagicPipeline; optional skill parameter for mob skill ratios; wired in main_window. |
 | G33 | [x] | Player MDEF not calculated. Hard MDEF from equip, soft MDEF from INT. | status.c calc_mdef | Done in Session B: StatusData.mdef + mdef2; StatusCalculator computes both |
 
 ---
@@ -85,6 +85,7 @@ _Status: [ ] open, [x] done, [~] partial_
 | G39 | [ ] | F7 — Inline equipment dropdown (low priority) |
 | G40 | [ ] | P1 — StepsBar expanded state persists across focus changes |
 | G42 | [x] | ASPD display shows integer (e.g. 185) — should show one decimal place (e.g. 185.3). StatusCalculator uses `(2000-amotion)//10`; needs `/10` (float) and derived_section format string updated. | Fixed Session C (cont): StatusData.aspd→float; /10 not //10; derived_section {:.1f} |
+| G43 | [ ] | Incoming pipeline attack type not skill-driven. IncomingPhysicalPipeline always assumes mob auto-attack. IncomingMagicPipeline accepts an optional skill but the GUI has no way to select it — defaults to mob natural element, no ratio. Need: mob skill selector in combat controls (or separate incoming controls), and the GUI should gate which pipeline result is shown based on the selected attack type. | — | Design first: what UI surface makes sense for "mob skill picker"? Separate section? Reuse combat_controls? |
 
 ---
 

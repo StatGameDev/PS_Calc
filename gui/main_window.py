@@ -21,6 +21,8 @@ import dataclasses
 
 from core.build_manager import BuildManager
 from core.calculators.battle_pipeline import BattlePipeline
+from core.calculators.incoming_magic_pipeline import IncomingMagicPipeline
+from core.calculators.incoming_physical_pipeline import IncomingPhysicalPipeline
 from core.calculators.status_calculator import StatusCalculator
 from core.config import BattleConfig
 from core.data_loader import loader
@@ -62,6 +64,8 @@ class MainWindow(QMainWindow):
         self._current_build_name: str = ""
         self._config = BattleConfig()
         self._pipeline = BattlePipeline(self._config)
+        self._incoming_phys_pipeline = IncomingPhysicalPipeline(self._config)
+        self._incoming_magic_pipeline = IncomingMagicPipeline(self._config)
 
         # Load layout config (file I/O outside widget constructors)
         with open("gui/layout_config.json", "r", encoding="utf-8") as f:
@@ -377,10 +381,34 @@ class MainWindow(QMainWindow):
         mob_id = self._combat_controls.get_target_mob_id() or eff_build.target_mob_id
         target = loader.get_monster(mob_id) if mob_id is not None else Target()
 
-        # Always refresh target/incoming — independent of pipeline success (B5).
+        # Always refresh target section — independent of pipeline success (B5).
         self._target_section.refresh_mob(mob_id)
-        self._incoming_damage.refresh_mob(mob_id)
-        self._incoming_damage.refresh_status(status)
+
+        # Incoming damage pipelines — player as defender.
+        gear_bonuses = GearBonusAggregator.compute(eff_build.equipped)
+        player_target = BuildManager.player_build_to_target(eff_build, status, gear_bonuses)
+        phys_result = None
+        magic_result = None
+        if mob_id is not None:
+            try:
+                phys_result = self._incoming_phys_pipeline.calculate(
+                    mob_id=mob_id,
+                    player_target=player_target,
+                    gear_bonuses=gear_bonuses,
+                    build=eff_build,
+                )
+            except Exception as exc:
+                print(f"WARNING: IncomingPhysicalPipeline error: {exc}")
+            try:
+                magic_result = self._incoming_magic_pipeline.calculate(
+                    mob_id=mob_id,
+                    player_target=player_target,
+                    gear_bonuses=gear_bonuses,
+                    build=eff_build,
+                )
+            except Exception as exc:
+                print(f"WARNING: IncomingMagicPipeline error: {exc}")
+        self._incoming_damage.refresh(phys_result, magic_result)
 
         try:
             result = self._pipeline.calculate(status, weapon, skill, target, eff_build)
