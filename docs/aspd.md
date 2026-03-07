@@ -1,40 +1,118 @@
 # PS_Calc — ASPD Investigation Notes
-_Session C. Source: Hercules/src/map/status.c. Revisit before claiming G9 complete._
+_Session C + verification pass. Source: Hercules/src/map/status.c, skill.c._
 
 ---
 
-## The Two ASPD Functions — What They Do
+## The Three ASPD Functions — What They Do
 
-### status_base_amotion_pc (flag&1 branch, ~line 5440)
+### status_base_amotion_pc (line 3662)
 
-Returns `bonus + pots` — an integer representing SC/buff contributions to ASPD.
-`bonus = 7` for SC_TWOHANDQUICKEN / SC_ONEHANDQUICKEN / SC_ADRENALINE / SC_SPEARQUICKEN
-(these SCs all set `bonus = max(bonus, 7)` — only the highest applies, no stacking).
-`return (bonus + pots)` at line 5559; `#else return 0; #endif` follows.
+Computes the raw base amotion (delay) before SC modifiers.
 
-**Unknown**: The `#if/#else/#endif` guard around this function is unread. It may be
-`#ifndef RENEWAL_ASPD` (pre-re returns bonus; renewal returns 0) or the reverse.
-Without reading the guard, it is not known whether this function is the relevant
-pre-renewal path or not.
+```c
+#ifdef RENEWAL_ASPD
+    // ... complex renewal formula using floats ...
+#else
+    // PRE-RENEWAL PATH:
+    amotion = aspd_base[job][weapontype];  // dual-wield: (w1+w2)*7/10
+    amotion -= amotion * (4*agi + dex) / 1000;  // stat reduction
+    amotion += sd->bonus.aspd_add;  // flat bAspd bonus
+    // Angra Manyu: return 0
+#endif
+return amotion;
+```
 
-**Unknown**: How the returned `bonus + pots` value is applied to `amotion` in
-`status_calc_pc_`. Presumably: `amotion -= base_amotion * bonus / 100` (i.e. `bonus=7`
-= 7% of base_amotion). But this is an inference, not confirmed from source.
+### status_calc_aspd (line 5431) — RENEWAL_ASPD ONLY, returns 0 pre-renewal
 
-### status_calc_aspd_rate (~line 5587)
+**CONFIRMED**: Entire body is inside `#ifdef RENEWAL_ASPD`. The `#else` branch is `return 0`.
 
-Comment in source (line 5588): *"Note that the scale of aspd_rate is 1000 = 100%."*
-Function: `static short status_calc_aspd_rate(struct block_list *bl, struct status_change *sc, int aspd_rate)`
+```c
+static short status_calc_aspd(struct block_list *bl, struct status_change *sc, short flag)
+{
+#ifdef RENEWAL_ASPD
+    // flag&1: fixed values — bonus = 7 for TWOHANDQUICKEN/ONEHANDQUICKEN/ADRENALINE/SPEARQUICKEN
+    // flag&2: percentage values
+    return (bonus + pots);
+#else
+    return 0;  // <-- PRE-RENEWAL ALWAYS RETURNS THIS
+#endif
+}
+```
 
-Computes `max` of active SC val2/val3 values, then `aspd_rate -= max`.
-Applied to amotion as: `amotion = amotion * aspd_rate / 1000`.
+The `bonus = 7` for quicken SCs is **Renewal ASPD only**. It has no effect pre-renewal.
 
-SC values confirmed from status_change_start (~line 7811-7823):
+### status_calc_aspd_rate (line 5587) — NO RENEWAL GUARD, runs pre-renewal
+
+```c
+/// Note that the scale of aspd_rate is 1000 = 100%.
+static short status_calc_aspd_rate(..., int aspd_rate)
+```
+
+Takes `max` of active SC val2/val3 values, subtracts from `aspd_rate`.
+Result is applied as: `amotion = amotion * aspd_rate / 1000`.
+
+This is the correct pre-renewal SC-ASPD function.
+
+---
+
+## Pre-Renewal PC ASPD Flow (confirmed from status_calc_sc_, ~line 3335)
+
+```c
+// status.c ~line 3335
+amotion = status->base_amotion_pc(sd, st);          // raw amotion from stats+table
+
+#ifndef RENEWAL_ASPD
+st->aspd_rate = status->calc_aspd_rate(bl, sc, bst->aspd_rate);  // apply SC reductions
+#endif
+
+if (st->aspd_rate != 1000)
+    amotion = amotion * st->aspd_rate / 1000;        // scale amotion by rate
+```
+
+`bst->aspd_rate` starts at 1000 (set in status_calc_pc_) and is already reduced by
+passive skills (`#ifndef RENEWAL_ASPD` block at ~line 2115):
+- SA_ADVANCEDBOOK (Book): `-5 * skill_lv`
+- SG_DEVIL (Star Gladiator, maxed): `-30 * skill_lv`
+- GS_SINGLEACTION (Gunslinger): `-((skill_lv+1)/2) * 10`
+- Riding Peco: `+500 - 100 * KN_CAVALIERMASTERY`
+
+`status_calc_aspd` (the `bonus=7` function) is **not called** in the pre-renewal PC path.
+It only appears inside `#ifdef RENEWAL_ASPD` at line 3353.
+
+---
+
+## SC Values for status_calc_aspd_rate (1000-scale)
+
+Confirmed from status_change_start (~line 7811-7823):
 - `SC_ONEHANDQUICKEN`: val2 = 300
 - `SC_TWOHANDQUICKEN`: val2 = 300
 - `SC_SPEARQUICKEN`: val2 = 200 + 10 × val1 (level-dependent, `#ifndef RENEWAL_ASPD`)
-- `SC_ADRENALINE`: val3 = (val2) ? 300 : 200  — val2=1 = self/Blacksmith (300), val2=0 = party (200)
-- `SC_ASSNCROS`: val2 = f(Bard's AGI) — set by calling skill code, not status_change_start
+- `SC_ADRENALINE`: val3 = (val2) ? 300 : 200 — val2=1 = self/Blacksmith (300), val2=0 = party (200)
+- `SC_ASSNCROS`: val2 = see formula below
+
+### SC_ASSNCROS val2 formula (confirmed from skill.c lines 13296-13307 + 14277)
+
+`skill_unitsetting` (skill.c line 13072) computes for BA_ASSASSINCROSS:
+
+```c
+// #else (pre-renewal):
+val1 = pc->checkskill(sd, BA_MUSICALLESSON) / 2;
+val1 += 10 + skill_lv + (bard_st->agi / 10);  // ASPD increase
+val1 *= 10;  // scale to 1000 = 100%
+```
+
+This `val1` becomes the skill group's `sg->val1`. When the SC is applied to a target
+stepping into the song area (`skill_unit_onplace_timer`, line 14277):
+
+```c
+tsc->data[SC_ASSNCROS]->val2 = sg->val1;
+```
+
+So: **`SC_ASSNCROS val2 = (MusicalLesson_lv/2 + 10 + song_lv + bard_agi/10) * 10`**
+(1000-scale; e.g. Bard AGI=99, song lv=10, MusLesson=10 → (5+10+10+9)*10 = 340)
+
+Weapon restriction (same in both ASPD functions, status.c lines 5638-5645):
+NOT applied to W_BOW / W_REVOLVER / W_RIFLE / W_GATLING / W_SHOTGUN / W_GRENADE.
 
 ---
 
@@ -49,11 +127,11 @@ amotion = amotion * (1000 - sc_aspd_reduction) // 1000
 ```
 
 Values used:
-- SC_TWOHANDQUICKEN: 300  ✓ (confirmed correct by user testing)
+- SC_TWOHANDQUICKEN: 300  (confirmed correct by user testing)
 - SC_ONEHANDQUICKEN: 300
 - SC_ADRENALINE:     300  (self-cast assumed; party = 200 — not distinguished)
 - SC_SPEARQUICKEN:   200 + 10 × level  (level from active_status_levels)
-- SC_ASSNCROS:       NOT IMPLEMENTED (deferred)
+- SC_ASSNCROS:       NOT IMPLEMENTED (deferred — needs party buff UI)
 
 ---
 
@@ -70,26 +148,11 @@ responsibly until this is enforced.
 Current implementation always uses 300. A separate "party Adrenaline" toggle would be
 needed to support this properly.
 
-### SC_ASSNCROS — Bard's AGI dependency
-Assassin's Cross of Sunset (BA_ASSASSINCROSS) is a Bard song. val2 is set by the
-calling skill code in skill.c, not in status_change_start. Per user research:
-> "Assassin cross song is a Buff Bard can generate, which has a value that depends on
-> the Bard's Agi Stat. Most Bard Buffs depend on the Bard's stats and a Skill the Bard has."
-
-This requires a separate user input (Bard's AGI and skill level) that fits the
-Party Buffs section, not Self Buffs. Deferred until party buff input is designed.
+### SC_ASSNCROS — requires party buff UI
+Formula is now confirmed (see above). Requires a separate user input for Bard's AGI
+and song level, which fits the Party Buffs section, not Self Buffs. Deferred until
+party buff input is designed.
 The SC_ASSNCROS checkbox in passive_section.py currently does nothing in the calculation.
-
-### flag&1 branch relationship to status_calc_aspd_rate
-It is unresolved whether both functions apply for pre-renewal PCs (double-counting
-the same SCs) or whether only one runs. If `status_base_amotion_pc` flag&1 branch
-is renewal-only (returns 0 pre-re), then the current implementation using
-`status_calc_aspd_rate` values is fully correct. If both run, the bonus from quicken
-SCs is counted twice and must be reconciled.
-
-Testing confirmed 30% reduction for SC_TWOHANDQUICKEN — consistent with
-`status_calc_aspd_rate` val2=300, not with the flag&1 `bonus=7` (7%) approach.
-This strongly suggests `status_calc_aspd_rate` is the correct pre-renewal function.
 
 ---
 
@@ -107,15 +170,10 @@ Tracked as G42 in gaps.md.
 
 ---
 
-## What To Verify Next
+## Remaining Open Items
 
-1. Read `status_calc_pc_` in status.c to find:
-   a. The `#if/#else` guard around `status_base_amotion_pc` return path
-   b. Whether `status_calc_aspd_rate` is conditionally called for pre-renewal PCs
-   c. How `(bonus + pots)` return value is applied to `amotion`
-
-2. Read skill.c BA_ASSASSINCROSS to find SC_ASSNCROS val2 formula (Bard AGI input).
-   Required before implementing Assassin's Cross song ASPD.
-
-3. Consider making SC_ADRENALINE weapon-type-aware (restrict to axe/mace) if the
+1. Consider making SC_ADRENALINE weapon-type-aware (restrict to axe/mace) when the
    calculator gains weapon-type-aware buff display in a future session.
+
+2. SC_ASSNCROS implementation deferred until Party Buffs UI is designed.
+   Formula confirmed — no further Hercules research needed.

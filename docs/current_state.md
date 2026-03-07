@@ -6,16 +6,40 @@
 ---
 
 ## Last Completed Session
-**Session E** — All six work items complete.
+**Post-Session E — Documentation pass (no code changes).**
 
 Files changed:
-- `core/build_manager.py` — `player_build_to_target(build, status, gear_bonuses) -> Target` added
-- `core/calculators/incoming_physical_pipeline.py` — new: MobBaseATK → AttrFix → DefenseFix → CardFix
-- `core/calculators/incoming_magic_pipeline.py` — new: MobMATKRoll → SkillRatio(optional) → AttrFix → DefenseFix → CardFix
-- `core/calculators/modifiers/card_fix.py` — two new static methods: `calculate_incoming_physical`, `calculate_incoming_magic`
-- `gui/sections/incoming_damage.py` — complete rewrite: step breakdown panel with Physical/Magic toggle
-- `gui/sections/equipment_section.py` — armor element combo added (loads/saves build.armor_element)
-- `gui/main_window.py` — incoming pipelines wired; `refresh(phys, magic)` replaces old stubs
+- `docs/aspd.md` — all unknowns from "What to Verify Next" resolved (see below)
+- `docs/BARD_DANCER_SONGS.md` — new file; full Bard/Dancer song reference
+- `CLAUDE.md` — BARD_DANCER_SONGS.md added to docs listing
+- `memory/MEMORY.md` — BARD_DANCER_SONGS.md added to reference docs
+
+### aspd.md — Resolved Unknowns
+
+1. **`status_calc_aspd` guard confirmed**: entire function body is `#ifdef RENEWAL_ASPD`.
+   Pre-renewal always returns 0. The `bonus = 7` for quicken SCs is Renewal ASPD only.
+   The doc had the wrong function name ("status_base_amotion_pc") — corrected to `status_calc_aspd`.
+
+2. **Pre-renewal PC ASPD call chain confirmed** (status_calc_sc_ ~line 3335):
+   - `base_amotion_pc` → raw amotion from aspd_base table minus stat reduction plus aspd_add
+   - `calc_aspd_rate(bl, sc, bst->aspd_rate)` called `#ifndef RENEWAL_ASPD`
+   - `amotion = amotion * aspd_rate / 1000`
+   - `status_calc_aspd` (bonus=7 function) is NOT called in this path. Current implementation is correct.
+
+3. **SC_ASSNCROS val2 formula confirmed** (skill.c:13296 + 14277):
+   `val2 = (BA_MUSICALLESSON_lv/2 + 10 + song_lv + bard_agi/10) * 10`
+   Not applied to bow/revolver/rifle/gatling/shotgun/grenade.
+
+### BARD_DANCER_SONGS.md — Contents
+
+- Three skill categories: Solo Songs (BA_*, UF_SONG), Solo Dances (DC_*, UF_DANCE), Ensembles (BD_*, UF_ENSEMBLE)
+- Note: skills.json uses `skill_info: "Song"` for both Bard songs AND Dancer dances; UF_SONG vs UF_DANCE only at unit level
+- UF_DUALMODE, UF_NOMOB meanings documented
+- Soul Link: no calculation modelling needed; document as GUI note only
+- Ensemble scope: all BD_* in scope, deeper research deferred until party buffs implemented
+- Party buff scope table: all solo song IDs with caster stat(s) and passive level used (user to append more IDs)
+- Confirmed formulas: SC_ASSNCROS, SC_POEMBRAGI, SC_APPLEIDUN, SC_DONTFORGETME, SC_FORTUNE, SC_SERVICEFORYU
+- Still unconfirmed (needs grep): BA_WHISTLE, DC_HUMMING exact formulas
 
 ## Key Architecture Notes (for next instance)
 
@@ -37,14 +61,8 @@ Files changed:
 - CardFix.calculate_incoming_magic uses mob's actual race (not hardcoded RC_DemiHuman like the outgoing calculate_magic)
 - DefenseFix.calculate_magic called with empty GearBonuses — mob has no ignore_mdef cards
 
-**IncomingDamageSection public API changed**
-- Old: `refresh_mob(mob_id)` + `refresh_status(status)` — GONE
-- New: `refresh(physical: Optional[DamageResult], magic: Optional[DamageResult])`
-
-**CardFix new methods**
-- `calculate_incoming_physical(mob_race, mob_element, mob_size, is_ranged, player_target, dmg, result)`
-- `calculate_incoming_magic(mob_race, magic_ele_name, player_target, dmg, result)`
-- Both fire only when player_target.is_pc=True
+**IncomingDamageSection public API**
+- `refresh(physical: Optional[DamageResult], magic: Optional[DamageResult])`
 
 ## Open Gaps Remaining (after Session E)
 
@@ -52,7 +70,7 @@ Files changed:
 - **G30 [ ]**: PvP incoming physical absent. Architecturally: run full BF_WEAPON outgoing pipeline with second PlayerBuild as attacker, player_build_to_target() result as defender.
 - **G12 [ ]**: F3 — Armor refine DEF. Needs import_refine_db.py scraper + pipeline step.
 - **G13 [ ]**: F1 — Card slot UI absent.
-- **G9 [~]**: SC_ASSNCROS ASPD buff deferred (needs party buff AGI input).
+- **G9 [~]**: SC_ASSNCROS ASPD buff deferred (needs party buff AGI input). Formula confirmed in aspd.md + BARD_DANCER_SONGS.md.
 - **G41 [ ]**: LOW PRIORITY — PC VIT DEF formula discrepancy (Hercules comment vs C code).
 
 ## Known Issues
@@ -66,6 +84,7 @@ Files changed:
 3. **G12 — Armor refine DEF** — write import_refine_db.py scraper, add DEF reduction step in IncomingPhysicalPipeline.
 
 ## Docs Updated This Session
-- `docs/gaps.md` — G7, G26, G28, G29, G31, G32 marked [x]; G43 added
-- `docs/completed_work.md` — Session D stub + Session E appended
-- `docs/current_state.md` — this file
+- `docs/aspd.md` — all unknowns resolved, function name corrected, pre-renewal flow confirmed
+- `docs/BARD_DANCER_SONGS.md` — new; full song reference with confirmed formulas
+- `CLAUDE.md` — BARD_DANCER_SONGS.md added to docs listing
+- `memory/MEMORY.md` — BARD_DANCER_SONGS.md added to reference docs
