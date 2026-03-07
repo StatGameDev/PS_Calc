@@ -1,8 +1,9 @@
 from core.models.weapon import Weapon
 from core.models.build import PlayerBuild
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
 from core.models.target import Target
 from core.data_loader import loader
+from pmf.operations import _add_flat, _scale_floor, pmf_stats
 
 
 
@@ -12,8 +13,8 @@ class MasteryFix:
     battle.c: damage = battle->add_mastery(sd, target, damage, left_hand);"""
 
     @staticmethod
-    def calculate(weapon: Weapon, build: PlayerBuild, target: Target, dmg: DamageRange, result: DamageResult) -> DamageRange:
-        """Adds the flat mastery bonus to the full DamageRange."""
+    def calculate(weapon: Weapon, build: PlayerBuild, target: Target, pmf: dict, result: DamageResult) -> dict:
+        """Adds the flat mastery bonus to the PMF."""
         mastery_key = loader.get_mastery_weapon_map().get(weapon.weapon_type)
 
         bonus: int = 0
@@ -35,13 +36,14 @@ class MasteryFix:
             note = f"{mastery_key} Lv {mastery_level} for {weapon.weapon_type} ({weapon.hand} hand) (+{bonus})"
             formula = f"dmg + (mastery_level * {mult} from tables/mastery_fix.json)"
 
-        dmg = dmg.add(bonus)
+        pmf = _add_flat(pmf, bonus)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Mastery Fix",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=1.0,
             note=note,
             formula=formula,
@@ -55,16 +57,17 @@ class MasteryFix:
         asc_katar_lv = build.mastery_levels.get("ASC_KATAR", 0)
         if weapon.weapon_type == "Katar" and asc_katar_lv > 0:
             ratio = 100 + 10 + 2 * asc_katar_lv   # e.g. lv5 → 120, lv10 → 130
-            dmg = dmg.scale(ratio, 100)
+            pmf = _scale_floor(pmf, ratio, 100)
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name="Adv. Katar Mastery",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=ratio / 100,
                 note=f"ASC_KATAR Lv {asc_katar_lv}: ×{ratio / 100:.2f}",
                 formula=f"dmg * (100 + 10 + 2 × {asc_katar_lv}) / 100",
                 hercules_ref="battle.c:927-929 #else: damage += damage * (10 + 2 * skill2_lv) / 100"
             )
 
-        return dmg
+        return pmf

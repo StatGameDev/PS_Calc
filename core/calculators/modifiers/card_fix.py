@@ -2,7 +2,8 @@ from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
 from core.models.weapon import Weapon
 from core.models.target import Target
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
+from pmf.operations import _scale_floor, pmf_stats
 
 # Map target.race display names → RC_* keys used in GearBonuses dicts
 _RACE_TO_RC = {
@@ -51,8 +52,8 @@ class CardFix:
                   weapon: Weapon,
                   target: Target,
                   is_ranged: bool,
-                  dmg: DamageRange,
-                  result: DamageResult) -> DamageRange:
+                  pmf: dict,
+                  result: DamageResult) -> dict:
 
         # --- Attacker-side bonuses ---
         race_rc  = _RACE_TO_RC.get(target.race, "")
@@ -89,13 +90,14 @@ class CardFix:
 
         net = 100 + atk_bonus - def_pct
         if net != 100:
-            dmg = dmg.scale(net, 100)
+            pmf = _scale_floor(pmf, net, 100)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Card Fix",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=net / 100.0,
             note=(f"Race {race_rc}+{add_race.get(race_rc,0)}%"
                   f"  {'Boss' if target.is_boss else 'NonBoss'}+{add_race.get(boss_rc,0)}%"
@@ -107,7 +109,7 @@ class CardFix:
             hercules_ref="battle.c: bAddRace/bAddEle/bAddSize bonuses; bLongAtkRate for ranged (G11)",
         )
 
-        return dmg
+        return pmf
 
     @staticmethod
     def calculate_incoming_physical(
@@ -116,9 +118,9 @@ class CardFix:
         mob_size: str,
         is_ranged: bool,
         player_target: Target,
-        dmg: DamageRange,
+        pmf: dict,
         result: DamageResult,
-    ) -> DamageRange:
+    ) -> dict:
         """Target-side CardFix for incoming physical (mob → player).
 
         Mob has no gear, so attacker-side bonuses are zero.
@@ -126,16 +128,17 @@ class CardFix:
         keyed against the mob's actual element, race, and size.
         Source: battle.c battle_calc_cardfix cflag=0, target-side path.
         """
+        mn, mx, av = pmf_stats(pmf)
         if not player_target.is_pc:
             result.add_step(
                 name="Card Fix (Incoming Physical)",
-                value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+                value=av, min_value=mn, max_value=mx,
                 multiplier=1.0,
                 note="target is not a player — no card resist",
                 formula="no change",
                 hercules_ref="battle.c battle_calc_cardfix: target-side only for is_pc",
             )
-            return dmg
+            return pmf
 
         ele_key  = _ELE_TO_KEY.get(mob_element, "Ele_Neutral")
         race_rc  = _RACE_TO_RC.get(mob_race, "")
@@ -151,11 +154,12 @@ class CardFix:
 
         net = 100 - def_pct
         if net != 100:
-            dmg = dmg.scale(net, 100)
+            pmf = _scale_floor(pmf, net, 100)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Card Fix (Incoming Physical)",
-            value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+            value=av, min_value=mn, max_value=mx,
             multiplier=net / 100.0,
             note=(f"Ele({ele_key})-{player_target.sub_ele.get(ele_key,0)}%"
                   f"  Race({race_rc})-{player_target.sub_race.get(race_rc,0)}%"
@@ -166,32 +170,33 @@ class CardFix:
             hercules_ref="battle.c battle_calc_cardfix cflag=0: sub_ele/sub_race/sub_size/"
                          "near_long_attack_def_rate (target-side, is_pc only)",
         )
-        return dmg
+        return pmf
 
     @staticmethod
     def calculate_incoming_magic(
         mob_race: str,
         magic_ele_name: str,
         player_target: Target,
-        dmg: DamageRange,
+        pmf: dict,
         result: DamageResult,
-    ) -> DamageRange:
+    ) -> dict:
         """Target-side CardFix for incoming magic (mob → player).
 
         Like calculate_magic but uses the mob's actual race instead of hardcoded
         RC_DemiHuman. Attacker-side magic bonuses are Renewal-only — skipped.
         Source: battle.c battle_calc_cardfix cflag=0 BF_MAGIC, target-side path.
         """
+        mn, mx, av = pmf_stats(pmf)
         if not player_target.is_pc:
             result.add_step(
                 name="Card Fix (Incoming Magic)",
-                value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+                value=av, min_value=mn, max_value=mx,
                 multiplier=1.0,
                 note="target is not a player — no magic card resist",
                 formula="no change",
                 hercules_ref="battle.c battle_calc_cardfix: target-side only for is_pc",
             )
-            return dmg
+            return pmf
 
         race_rc = _RACE_TO_RC.get(mob_race, "")
         def_pct = (
@@ -203,11 +208,12 @@ class CardFix:
 
         net = 100 - def_pct
         if net != 100:
-            dmg = dmg.scale(net, 100)
+            pmf = _scale_floor(pmf, net, 100)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Card Fix (Incoming Magic)",
-            value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+            value=av, min_value=mn, max_value=mx,
             multiplier=net / 100.0,
             note=(f"Ele({magic_ele_name})-{player_target.sub_ele.get(magic_ele_name,0)}%"
                   f"  Race({race_rc})-{player_target.sub_race.get(race_rc,0)}%"
@@ -216,27 +222,28 @@ class CardFix:
             hercules_ref="battle.c battle_calc_cardfix cflag=0 BF_MAGIC: sub_ele/sub_race/"
                          "magic_def_rate (target-side, is_pc only)",
         )
-        return dmg
+        return pmf
 
     @staticmethod
     def calculate_magic(target: Target, magic_ele_name: str,
-                        dmg: DamageRange, result: DamageResult) -> DamageRange:
+                        pmf: dict, result: DamageResult) -> dict:
         """BF_MAGIC target-side CardFix (player target only).
 
         Attacker-side magic bonuses (bAddRace for magic etc.) are #ifdef RENEWAL — skip.
         Target side (is_pc=True only): sub_ele, sub_race (RC_DemiHuman), magic_def_rate.
         Source: pipeline_specs.md BF_MAGIC Outgoing spec.
         """
+        mn, mx, av = pmf_stats(pmf)
         if not target.is_pc:
             result.add_step(
                 name="Card Fix (Magic)",
-                value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+                value=av, min_value=mn, max_value=mx,
                 multiplier=1.0,
                 note="target is mob — no magic card resist",
                 formula="no change",
                 hercules_ref="magic_addrace etc. are #ifdef RENEWAL; target-side only for is_pc",
             )
-            return dmg
+            return pmf
 
         # Target-side: sub_ele (magic element), sub_race (attacker=DemiHuman), magic_def_rate
         def_pct = (
@@ -248,11 +255,12 @@ class CardFix:
 
         net = 100 - def_pct
         if net != 100:
-            dmg = dmg.scale(net, 100)
+            pmf = _scale_floor(pmf, net, 100)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Card Fix (Magic)",
-            value=dmg.avg, min_value=dmg.min, max_value=dmg.max,
+            value=av, min_value=mn, max_value=mx,
             multiplier=net / 100.0,
             note=(f"Ele({magic_ele_name})-{target.sub_ele.get(magic_ele_name,0)}%"
                   f"  Race(DemiHuman)-{target.sub_race.get('RC_DemiHuman',0)}%"
@@ -260,4 +268,4 @@ class CardFix:
             formula=f"dmg * (100 - {def_pct}) // 100 = dmg * {net} // 100",
             hercules_ref="pipeline_specs.md BF_MAGIC: target-side sub_ele/sub_race/magic_def_rate (is_pc only)",
         )
-        return dmg
+        return pmf

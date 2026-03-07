@@ -1,7 +1,8 @@
 from core.models.skill import SkillInstance
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
 from core.models.build import PlayerBuild
 from core.data_loader import loader
+from pmf.operations import _scale_floor, pmf_stats
 
 # Pre-renewal magic skill ratios from battle_calc_skillratio BF_MAGIC switch.
 # Source: battle.c:1631-1785 #else not RENEWAL.
@@ -35,8 +36,8 @@ class SkillRatio:
     battle.c: wd.damage = (int64)wd.damage * ratio / 100;"""
 
     @staticmethod
-    def calculate(skill: SkillInstance, dmg: DamageRange, build: PlayerBuild, result: DamageResult) -> DamageRange:
-        """Applies skill ratio and hit count to the full DamageRange."""
+    def calculate(skill: SkillInstance, pmf: dict, build: PlayerBuild, result: DamageResult) -> dict:
+        """Applies skill ratio and hit count to the PMF."""
         skill_data = loader.get_skill(skill.id)
 
         if skill_data and skill_data.get("ratio_per_level"):
@@ -70,20 +71,20 @@ class SkillRatio:
 
         # Two sequential scale() calls — keep separate to preserve Hercules integer rounding
         # battle.c: wd.damage = (int64)wd.damage * ratio / 100;  (then * hit_count separately)
-        dmg = dmg.scale(ratio, 100)
-        dmg = dmg.scale(hit_count, 1)
+        pmf = _scale_floor(pmf, ratio, 100)
+        pmf = _scale_floor(pmf, hit_count, 1)
 
         if skill_data and skill_data.get("ratio_per_level"):
             src = f"ratio_per_level[lv{skill.level}]"
         else:
             src = "ratio_base"
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name=f"Skill Ratio (ID {skill.id} Lv {skill.level})",
-
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=ratio / 100.0,
             note=skill_data.get("note", "") if skill_data else "",
             formula=f"dmg * {ratio} // 100 * {hit_count}   (from skills.json {src})",
@@ -92,12 +93,12 @@ class SkillRatio:
                          "battle.c:2921-2922: if(sc->data[SC_OVERTHRUSTMAX]) skillratio += sc->data[SC_OVERTHRUSTMAX]->val2;\n"
                          "battle.c: wd.damage = (int64)wd.damage * ratio / 100;"
         )
-        return dmg
+        return pmf
 
     @staticmethod
-    def calculate_magic(skill: SkillInstance, dmg: DamageRange, build: PlayerBuild, target,
+    def calculate_magic(skill: SkillInstance, pmf: dict, build: PlayerBuild, target,
                         result: DamageResult) -> tuple:
-        """Applies BF_MAGIC skill ratio (per-hit only). Returns (dmg, hit_count).
+        """Applies BF_MAGIC skill ratio (per-hit only). Returns (pmf, hit_count).
 
         hit_count is returned separately so the caller can apply it AFTER defense and
         attr_fix, matching the exact Hercules source order:
@@ -122,15 +123,16 @@ class SkillRatio:
             if noh and skill.level <= len(noh):
                 hit_count_raw = noh[skill.level - 1]   # raw, NOT abs()
 
-        dmg = dmg.scale(ratio, 100)
+        pmf = _scale_floor(pmf, ratio, 100)
 
         display_hits = abs(hit_count_raw)
         cosmetic = hit_count_raw < 0
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name=f"Magic Skill Ratio (ID {skill.id} Lv {skill.level})",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=ratio / 100.0,
             note=skill_data.get("description", "") if skill_data else "",
             formula=(f"MATK × {ratio}%  ({display_hits} cosmetic hits — dmg not multiplied)"
@@ -139,4 +141,4 @@ class SkillRatio:
             hercules_ref="battle.c:1631-1785: battle_calc_skillratio BF_MAGIC switch (#else not RENEWAL)\n"
                          "battle.c:3823: damage_div_fix: div>1 → dmg*=div; div<0 → cosmetic (div negated, dmg unchanged)"
         )
-        return dmg, hit_count_raw
+        return pmf, hit_count_raw

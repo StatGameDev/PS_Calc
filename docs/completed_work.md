@@ -755,6 +755,57 @@ caused startup crash when magic element combo was introduced).
 
 ---
 
+## Session I — PMF Migration (DamageRange → dict[int, float])
+
+**Goal**: Complete the DamageRange → PMF migration started in Session H. Wire all
+modifiers and pipelines to use `dict[int, float]` probability mass functions.
+
+**I1 — Modifier conversions (9 files)**
+All modifiers converted from `dmg: DamageRange` → `pmf: dict`. Return type `DamageRange` → `dict`.
+Pattern applied uniformly:
+- `DamageRange` import removed; `from pmf.operations import ...` added
+- `dmg.scale(n, d)` → `_scale_floor(pmf, n, d)`
+- `dmg.add(n)` → `_add_flat(pmf, n)`
+- `dmg.subtract(lo, hi, _)` → `_subtract_uniform(pmf, lo, hi)`
+- `dmg.floor_at(1)` → `_floor_at(pmf, 1)`
+- `mn, mx, av = pmf_stats(pmf)` used before every `result.add_step()` call
+Files: `skill_ratio.py`, `crit_atk_rate.py`, `defense_fix.py`, `active_status_bonus.py`,
+`refine_fix.py`, `mastery_fix.py`, `attr_fix.py`, `card_fix.py`, `final_rate_bonus.py`.
+All 4 static methods in `card_fix.py` converted (including `calculate_incoming_physical`
+and `calculate_incoming_magic`).
+
+**I2 — Pipeline conversions (4 files)**
+`battle_pipeline.py`:
+- `DamageRange` import removed; `_scale_floor, pmf_stats` added
+- `dmg: DamageRange` → `pmf: dict` throughout `_run_branch`
+- bAtkRate inline block converted
+- All modifier call sites updated to pass `pmf`
+- Final: `mn, mx, av = pmf_stats(pmf)`, `result.pmf = pmf`, min/max/avg set from stats
+
+`magic_pipeline.py`:
+- MATK base roll: `DamageRange(min, max, avg)` → `_uniform_pmf(matk_min, matk_max)` or `{matk_max: 1.0}` for SC_MAXIMIZEPOWER
+- All modifier calls updated; `result.pmf = pmf` at end
+
+`incoming_physical_pipeline.py`:
+- Mob ATK roll: `DamageRange(eff_min, eff_max, eff_avg)` → `_uniform_pmf(eff_min, eff_max)`
+- DefenseFix and CardFix call signatures updated
+
+`incoming_magic_pipeline.py`:
+- Mob MATK roll: `DamageRange(matk_min, matk_max, avg)` → `_uniform_pmf(matk_min, matk_max)`
+- All modifier calls updated
+
+**I3 — Orphaned file note**
+`core/calculators/modifiers/size_fix.py` still references `DamageRange` but is not
+imported anywhere (SizeFix was absorbed into `base_damage.py` in Session A). Not
+converted — would only matter if imported, which nothing does.
+
+**Verification**
+Poring target, Agi BS: PSCalc 381/388/396 crit, 281/337/395 normal — matches reference
+381~396 / 281/338/395 (avg diff is rounding method difference, not a bug).
+Knight of Abyss: PSCalc 428/435/443 crit, 80/116/154 normal — matches reference 428~443 / 80/117/154.
+
+---
+
 ## Session G — Card Slots + Armor Refine DEF
 
 **G1 — Armor refine DEF scraper (G12)**

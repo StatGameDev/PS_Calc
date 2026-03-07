@@ -1,28 +1,30 @@
 from core.models.weapon import Weapon
 from core.models.target import Target
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
 from core.data_loader import loader
+from pmf.operations import _scale_floor, pmf_stats
 
 
 class AttrFix:
     """Element damage multiplier (after active status bonuses, verbatim position in battle_calc_weapon_attack)."""
 
     @staticmethod
-    def calculate(weapon: Weapon, target: Target, dmg: DamageRange, result: DamageResult) -> DamageRange:
+    def calculate(weapon: Weapon, target: Target, pmf: dict, result: DamageResult) -> dict:
         defending = loader.get_element_name(target.element)
         attacking = loader.get_element_name(weapon.element)
         multiplier = loader.get_attr_fix_multiplier(attacking, defending, target.element_level or 1)
 
-        dmg = dmg.scale(multiplier, 100)
+        pmf = _scale_floor(pmf, multiplier, 100)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Attr Fix",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=multiplier / 100.0,
             note=f"{attacking} vs {defending} Lv{target.element_level or 1} ({multiplier}%)",
             formula=f"dmg * {multiplier} // 100 (from attr_fix table)",
             hercules_ref="battle.c: if (tstatus->ele) wd.damage = battle_calc_elem_damage(...);"
         )
-        return dmg
+        return pmf

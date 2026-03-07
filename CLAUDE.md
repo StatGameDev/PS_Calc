@@ -37,6 +37,13 @@ step-by-step breakdown, formula display, and Hercules source citation.
 
 ---
 
+## Development Stage
+
+**Pre-alpha. No users yet.** Correctness and clean architecture take priority over keeping
+the app usable short-term. Do not compromise on architecture to avoid touching working code.
+
+---
+
 ## Non-Negotiable Rules
 
 - Pre-renewal only.

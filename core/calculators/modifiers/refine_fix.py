@@ -1,7 +1,8 @@
 from core.models.weapon import Weapon
 from core.models.skill import SkillInstance
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
 from core.data_loader import loader
+from pmf.operations import _add_flat, pmf_stats
 
 # Skills that suppress the refine bonus entirely (battle.c:5797-5799, #ifndef RENEWAL)
 _REFINE_SKIP_SKILLS = frozenset({
@@ -39,7 +40,7 @@ class RefineFix:
     """
 
     @staticmethod
-    def calculate(weapon: Weapon, skill: SkillInstance, dmg: DamageRange, result: DamageResult) -> DamageRange:
+    def calculate(weapon: Weapon, skill: SkillInstance, pmf: dict, result: DamageResult) -> dict:
         if skill.id in _REFINE_SKIP_SKILLS:
             result.add_step(
                 name="Refine Bonus",
@@ -48,7 +49,7 @@ class RefineFix:
                 formula="0",
                 hercules_ref="battle.c lines 5797-5799: #ifndef RENEWAL refine bonus skip for MO_INVESTIGATE/MO_EXTREMITYFIST",
             )
-            return dmg
+            return pmf
 
         refine_bonus = loader.get_refine_bonus(weapon.level, weapon.refine)
 
@@ -60,14 +61,15 @@ class RefineFix:
                 formula="atk2 = 0",
                 hercules_ref="battle.c lines 5803-5805: ATK_ADD2(sstatus->rhw.atk2, ...) — value is 0",
             )
-            return dmg
+            return pmf
 
-        dmg = dmg.add(refine_bonus)
+        pmf = _add_flat(pmf, refine_bonus)
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Refine Bonus",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=1.0,
             note=(f"+{weapon.refine} refine on Lv {weapon.level} weapon → flat +{refine_bonus}"
                   " (post-defense, not multiplied by SkillRatio or reduced by DEF)"),
@@ -77,4 +79,4 @@ class RefineFix:
                          "    ATK_ADD2(sstatus->rhw.atk2, sstatus->lhw.atk2);\n"
                          "status.c: if (r) wa->atk2 = refine->get_bonus(wlv, r) / 100;",
         )
-        return dmg
+        return pmf

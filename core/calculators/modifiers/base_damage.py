@@ -3,8 +3,9 @@ from core.models.weapon import Weapon
 from core.models.build import PlayerBuild
 from core.models.target import Target
 from core.models.skill import SkillInstance
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
 from core.data_loader import loader
+from pmf.operations import _uniform_pmf, _scale_floor, _add_flat, _convolve, pmf_stats
 
 
 class BaseDamage:
@@ -20,7 +21,7 @@ class BaseDamage:
     #      atkmax = wa->atk; atkmin = st->dex*(80+wlv*20)/100, capped to atkmax
     #   2. SizeFix:            damage * atkmods[t_size] / 100  (weapon ATK only)
     #   3. batk:               damage += st->batk
-    #   4. Refine bonus:       damage += sd->right_weapon.atk2   (deterministic)
+    #   4. Refine bonus:       damage += sd->right_weapon.atk2   (deterministic, handled by RefineFix)
     #   5. Overrefine:         damage += rnd()%sd->right_weapon.overrefine+1  (if overrefine > 0)
 
     @staticmethod
@@ -30,8 +31,8 @@ class BaseDamage:
                   target: Target,
                   skill: SkillInstance,
                   result: DamageResult,
-                  is_crit: bool = False) -> DamageRange:
-        """Computes the initial DamageRange, applies SizeFix internally before batk,
+                  is_crit: bool = False) -> dict:
+        """Computes the initial PMF, applies SizeFix internally before batk,
         and logs Weapon ATK Range, Size Fix, and Base Damage steps.
 
         is_crit=True forces damage = atkmax (battle.c:648-651, flag&1 path):
@@ -87,19 +88,18 @@ class BaseDamage:
         if maximize_active:
             atkmin = atkmax
 
-        # Main weapon ATK range
-        # Normal: rnd()%(atkmax-atkmin) + atkmin → [atkmin, atkmax-1]
+        # Main weapon ATK roll → initial PMF
+        # Normal: rnd()%(atkmax-atkmin) + atkmin → uniform [atkmin, atkmax-1]
         # Crit (flag&1): damage = atkmax  (no roll, always max)
         if is_crit:
-            w_min = w_max = w_avg = atkmax
+            pmf: dict = {atkmax: 1.0}
         elif atkmax > atkmin:
-            w_min = atkmin
-            w_max = atkmax - 1          # ← atkmax-1, NOT atkmax
-            w_avg = atkmin + (atkmax - atkmin - 1) // 2
+            pmf = _uniform_pmf(atkmin, atkmax - 1)
         else:
-            w_min = w_max = w_avg = atkmin
+            pmf = {atkmin: 1.0}
 
-        # Step: Weapon ATK Range — value immediately before SizeFix is applied
+        w_min, w_max, w_avg = pmf_stats(pmf)
+
         crit_note = "  (CRIT: forced to atkmax — no roll)" if is_crit else ""
         maximize_note = "  (SC_MAXIMIZEPOWER: collapsed to atkmax)" if maximize_active else ""
         result.add_step(
@@ -116,23 +116,22 @@ class BaseDamage:
                           "damage = (atkmax>atkmin ? rnd()%(atkmax-atkmin) : 0) + atkmin;")
         )
 
-        dmg = DamageRange(w_min, w_max, w_avg)
-
         # Size Fix — applied inside battle_calc_base_damage2 for PC, BEFORE batk is added.
         # battle.c lines 659-664:
         #   if (!(sd->special_state.no_sizefix || (flag&8)))
         #       damage = damage * sd->right_weapon.atkmods[t_size] / 100;
         if not build.no_sizefix and not skill.ignore_size_fix:
             size_mult = loader.get_size_fix_multiplier(weapon.weapon_type, target.size)
-            dmg = dmg.scale(size_mult, 100)
+            pmf = _scale_floor(pmf, size_mult, 100)
         else:
             size_mult = 100
 
+        s_min, s_max, s_avg = pmf_stats(pmf)
         result.add_step(
             name="Size Fix",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=s_avg,
+            min_value=s_min,
+            max_value=s_max,
             multiplier=size_mult / 100.0,
             note=f"{weapon.weapon_type} vs {target.size} target → {size_mult}% (applied before BATK)",
             formula=f"weapon_atk * {size_mult} // 100   (size_fix table[{target.size}][{weapon.weapon_type}])",
@@ -142,9 +141,9 @@ class BaseDamage:
         )
 
         # batk is deterministic — added AFTER sizefix in Hercules
-        dmg = dmg.add(status.batk)
+        pmf = _add_flat(pmf, status.batk)
 
-        # Overrefine bonus: rnd()%overrefine+1 → range [1, overrefine]
+        # Overrefine bonus: rnd()%overrefine+1 → uniform [1, overrefine]
         # Added LAST in battle_calc_base_damage2 — after sizefix and batk.
         # NOTE: atk2 (deterministic refine bonus) is NOT part of battle_calc_base_damage2.
         # It is added in battle_calc_weapon_attack AFTER defense (lines 5803-5805).
@@ -155,8 +154,8 @@ class BaseDamage:
         if weapon.refineable:
             overrefine = loader.get_overrefine(weapon.level, weapon.refine)
             if overrefine > 0:
-                or_avg = (overrefine + 1) // 2
-                dmg = dmg.add_range(1, overrefine, or_avg)
+                or_avg = (overrefine + 1) // 2   # avg of uniform [1, overrefine]
+                pmf = _convolve(pmf, _uniform_pmf(1, overrefine))
                 result.add_step(
                     name="Overrefine Bonus",
                     value=or_avg,
@@ -187,11 +186,12 @@ class BaseDamage:
                 hercules_ref="battle.c: overrefine block skipped (weapon not refineable)",
             )
 
+        bd_min, bd_max, bd_avg = pmf_stats(pmf)
         result.add_step(
             name="Base Damage",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=bd_avg,
+            min_value=bd_min,
+            max_value=bd_max,
             multiplier=1.0,
             note=(f"Weapon ATK [{w_min},{w_max}] ×{size_mult}%"
                   f" + BATK {status.batk}"
@@ -205,4 +205,4 @@ class BaseDamage:
                          "battle.c: damage += st->batk;\n"
                          "battle.c: if (sd->right_weapon.overrefine) damage += rnd()%sd->right_weapon.overrefine+1;"
         )
-        return dmg
+        return pmf

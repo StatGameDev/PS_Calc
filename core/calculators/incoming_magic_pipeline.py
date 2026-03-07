@@ -1,6 +1,7 @@
 from typing import Optional
 
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
+from pmf.operations import _uniform_pmf, _scale_floor, pmf_stats
 from core.models.target import Target
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
@@ -74,13 +75,14 @@ class IncomingMagicPipeline:
         matk_avg = (matk_min + matk_max) // 2
 
         modifier_note = f" ×{100 + mob_matk_bonus_rate}%" if mob_matk_bonus_rate else ""
-        dmg = DamageRange(matk_min, matk_max, matk_avg)
+        pmf: dict = _uniform_pmf(matk_min, matk_max)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Mob MATK Roll",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             note=(f"{mob_name}: int_ {mob_int_}{modifier_note}"
                   f" → MATK [{matk_min}, {matk_max}]"),
             formula="int_ + (int_//7)^2  to  int_ + (int_//5)^2",
@@ -89,22 +91,23 @@ class IncomingMagicPipeline:
 
         # --- Skill Ratio (BF_MAGIC) — optional ---
         # ratio_override takes priority over skill lookup.
-        # SkillRatio.calculate_magic returns (dmg, hit_count); build=None is safe (unused).
+        # SkillRatio.calculate_magic returns (pmf, hit_count); build=None is safe (unused).
         hit_count = 1
         if ratio_override is not None and ratio_override > 0:
-            dmg = dmg.scale(ratio_override, 100)
+            pmf = _scale_floor(pmf, ratio_override, 100)
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name=f"Ratio Override ({ratio_override}%)",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=ratio_override / 100.0,
                 note=f"Manual ratio override: {ratio_override}%",
                 formula=f"dmg × {ratio_override} // 100",
                 hercules_ref="(manual override)",
             )
         elif skill is not None and skill.id != 0:
-            dmg, hit_count = SkillRatio.calculate_magic(skill, dmg, None, player_target, result)
+            pmf, hit_count = SkillRatio.calculate_magic(skill, pmf, None, player_target, result)
 
         # --- Attr Fix: mob/skill element vs player armor element ---
         # ele_override takes priority; otherwise skill element, then mob natural element.
@@ -129,12 +132,13 @@ class IncomingMagicPipeline:
             magic_ele_name, player_ele_name, player_target.element_level or 1
         )
         if multiplier != 100:
-            dmg = dmg.scale(multiplier, 100)
+            pmf = _scale_floor(pmf, multiplier, 100)
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Attr Fix (Magic)",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=multiplier / 100.0,
             note=f"{magic_ele_name} vs {player_ele_name} Lv{player_target.element_level or 1} ({multiplier}%)",
             formula=f"dmg * {multiplier} // 100",
@@ -143,23 +147,25 @@ class IncomingMagicPipeline:
 
         # --- Hit count — applied after defense+attr_fix (per source order) ---
         if hit_count > 1:
-            dmg = dmg.scale(hit_count, 1)
+            pmf = _scale_floor(pmf, hit_count, 1)
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name=f"Hit Count ×{hit_count}",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=float(hit_count),
                 note=f"{hit_count} actual hits × per-hit damage",
                 formula=f"per_hit_dmg × {hit_count}",
                 hercules_ref="battle.c:3823: damage_div_fix: div>1 → dmg*=div",
             )
         elif hit_count < 0:
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name=f"Hit Count ×{abs(hit_count)} (cosmetic)",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=1.0,
                 note=f"{abs(hit_count)} cosmetic hits — damage not multiplied",
                 formula="no change (cosmetic multi-hit)",
@@ -168,30 +174,32 @@ class IncomingMagicPipeline:
 
         # --- Defense Fix (magic): player MDEF ---
         # Mob has no ignore_mdef gear → empty GearBonuses (ignore_mdef_rate all zero).
-        dmg = DefenseFix.calculate_magic(player_target, GearBonuses(), dmg, result)
+        pmf = DefenseFix.calculate_magic(player_target, GearBonuses(), pmf, result)
 
         # --- Card Fix (magic, target-side): player's magic resist cards vs mob attacker ---
         magic_ele_key = f"Ele_{magic_ele_name}"
-        dmg = CardFix.calculate_incoming_magic(
+        pmf = CardFix.calculate_incoming_magic(
             mob_race=mob_race,
             magic_ele_name=magic_ele_key,
             player_target=player_target,
-            dmg=dmg,
+            pmf=pmf,
             result=result,
         )
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             "Final Incoming Magic Damage",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             note="mob → player, pre-renewal BF_MAGIC",
             formula="",
             hercules_ref="",
         )
 
-        result.min_damage = dmg.min
-        result.max_damage = dmg.max
-        result.avg_damage = dmg.avg
+        result.min_damage = mn
+        result.max_damage = mx
+        result.avg_damage = av
+        result.pmf = pmf
 
         return result

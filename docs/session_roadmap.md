@@ -32,6 +32,9 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | D | armor_element field, mob ATK architecture investigation | G27 |
 | E | Incoming physical + magic pipelines, player_build_to_target | G7, G26–G29, G31–G32 |
 | F | Incoming config controls (ranged/ele/ratio) + unified target selector (Mob↔Player) | G43, G30 |
+| G | Card slot UI + armor refine DEF | G12, G13 |
+| H | PMF foundation: pmf/ package + damage.py + base_damage.py | — |
+| I | PMF migration: all 9 modifiers + 4 pipelines; DamageRange removed | — |
 
 ---
 
@@ -60,7 +63,35 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
-## Session H — Job filters (four filter UIs)
+## Session H — PMF foundation + damage.py ✓ DONE (completed in C1 planning session)
+
+All Session H work was completed during the C1 variance planning session:
+- `pmf/__init__.py`, `pmf/operations.py`, `pmf/statistics.py`, `pmf/single_hit.py` — created
+- `core/models/damage.py` — `DamageRange` removed; `pmf: dict` field added to `DamageResult`
+- `core/calculators/modifiers/base_damage.py` — fully converted to PMF ops (returns `dict[int,float]`)
+- `requirements.txt` — `scipy>=1.13` added; `CLAUDE.md` — pre-alpha notice added
+
+App is intentionally broken until Session I completes (pipeline still wired for DamageRange).
+
+---
+
+## Session I — All remaining modifiers + pipelines ✓ DONE
+
+**Goal**: Convert all remaining modifiers from DamageRange to PMF ops. Wire pipelines.
+**Actual context**: 79%
+
+### What was done:
+
+All 9 modifiers converted (`skill_ratio`, `crit_atk_rate`, `defense_fix`, `active_status_bonus`,
+`refine_fix`, `mastery_fix`, `attr_fix`, `card_fix`, `final_rate_bonus`).
+Both outgoing pipelines (`battle_pipeline`, `magic_pipeline`) and both incoming pipelines
+(`incoming_physical_pipeline`, `incoming_magic_pipeline`) updated to pass `pmf: dict`.
+`result.pmf` populated in all 4 pipelines. `DamageRange` fully removed from active code paths.
+Verified: Poring + Knight of Abyss numbers match reference (avg diff is rounding method only).
+
+---
+
+## Session J — Job filters (four filter UIs)
 
 **Goal**: Filter skill combo, equipment browser, monster browser, and passives by job.
 **Gap IDs**: G34, G35, G36, G37
@@ -93,7 +124,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
-## Session I — Polish + pipeline completions
+## Session K — Polish + pipeline completions
 
 **Goal**: Gear bonus visibility, Katar second hit, forged weapon Verys, minor polish.
 **Gap IDs**: G15, G16, G17, G39, G40
@@ -179,10 +210,9 @@ Tradeoff: caster stat inputs are accurate and educational; manual sliders are fa
 
 ---
 
-## Deferred (requires design session before implementation)
+## Deferred
 
 | Item | Reason deferred |
 |---|---|
-| **C1 — Full variance distribution** | Requires Monte Carlo/convolution design session. Do NOT change `DamageRange` structure until settled. See `docs/gui_plan.md` Session 2 handover. |
 | **G41 — PC VIT DEF discrepancy** | LOW PRIORITY. Hercules comment vs C code disagree. Investigate vs official server data before any fix. Currently following C implementation. |
 | **Phases 5–8** | Stat Planner, Comparison, Histogram, Config/Scale tabs. |

@@ -1,4 +1,5 @@
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
+from pmf.operations import _uniform_pmf, _scale_floor, pmf_stats
 from core.models.target import Target
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
@@ -71,13 +72,14 @@ class IncomingPhysicalPipeline:
         eff_avg = (eff_min + eff_max) // 2
 
         modifier_note = f" ×{100 + mob_atk_bonus_rate}% weapon component" if mob_atk_bonus_rate else ""
-        dmg = DamageRange(eff_min, eff_max, eff_avg)
+        pmf: dict = _uniform_pmf(eff_min, eff_max)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Mob Base ATK",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             note=(f"{mob_name}: weapon [{db_atk_min}, {db_atk_max - 1}]"
                   f" + batk {batk} (str {mob_str}){modifier_note}"
                   f" → [{eff_min}, {eff_max}] (fixed at spawn)"),
@@ -93,12 +95,13 @@ class IncomingPhysicalPipeline:
             mob_ele_name, player_ele_name, player_target.element_level or 1
         )
         if multiplier != 100:
-            dmg = dmg.scale(multiplier, 100)
+            pmf = _scale_floor(pmf, multiplier, 100)
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Attr Fix",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=multiplier / 100.0,
             note=f"{mob_ele_name} vs {player_ele_name} Lv{player_target.element_level or 1} ({multiplier}%)",
             formula=f"dmg * {multiplier} // 100",
@@ -109,11 +112,11 @@ class IncomingPhysicalPipeline:
         # Mob is the attacker — no gear, so no ignore_def bonuses (empty GearBonuses).
         # build=None: getattr(None, "ignore_hard_def", False) → False, which is correct
         # (mob attacks cannot ignore player hard DEF via gear cards).
-        dmg = DefenseFix.calculate(
+        pmf = DefenseFix.calculate(
             target=player_target,
             build=None,
             gear_bonuses=GearBonuses(),
-            dmg=dmg,
+            pmf=pmf,
             config=self.config,
             result=result,
             is_crit=False,
@@ -122,28 +125,30 @@ class IncomingPhysicalPipeline:
         # --- Card Fix: target-side only (player resistance cards vs mob attacker) ---
         # Mob has no attacker-side gear. Player's sub_ele/sub_race/sub_size and
         # near/long_attack_def_rate are keyed against mob's actual element/race/size.
-        dmg = CardFix.calculate_incoming_physical(
+        pmf = CardFix.calculate_incoming_physical(
             mob_race=mob_race,
             mob_element=mob_element,
             mob_size=mob_size,
             is_ranged=is_ranged,
             player_target=player_target,
-            dmg=dmg,
+            pmf=pmf,
             result=result,
         )
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             "Final Incoming Physical Damage",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             note="mob → player, pre-renewal BF_WEAPON",
             formula="",
             hercules_ref="",
         )
 
-        result.min_damage = dmg.min
-        result.max_damage = dmg.max
-        result.avg_damage = dmg.avg
+        result.min_damage = mn
+        result.max_damage = mx
+        result.avg_damage = av
+        result.pmf = pmf
 
         return result

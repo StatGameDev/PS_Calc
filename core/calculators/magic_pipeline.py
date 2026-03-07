@@ -1,4 +1,5 @@
-from core.models.damage import DamageRange, DamageResult, BattleResult
+from core.models.damage import DamageResult
+from pmf.operations import _uniform_pmf, _scale_floor, pmf_stats
 from core.models.build import PlayerBuild
 from core.models.status import StatusData
 from core.models.skill import SkillInstance
@@ -46,23 +47,18 @@ class MagicPipeline:
         # status.c:3783/3790 #else not RENEWAL (already computed in StatusData)
         maximize = "SC_MAXIMIZEPOWER" in active
         if maximize:
-            matk = status.matk_max
-            matk_note = f"MATK {matk} (SC_MAXIMIZEPOWER: use max)"
+            pmf: dict = {status.matk_max: 1.0}
+            matk_note = f"MATK {status.matk_max} (SC_MAXIMIZEPOWER: use max)"
         else:
-            matk = (status.matk_min + status.matk_max) // 2  # avg for display
+            pmf = _uniform_pmf(status.matk_min, status.matk_max)
             matk_note = f"MATK roll [{status.matk_min}–{status.matk_max}]"
 
-        dmg = DamageRange(
-            status.matk_min if not maximize else status.matk_max,
-            status.matk_max,
-            matk,
-        )
-
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="MATK Base",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             note=matk_note,
             formula="int_ + (int_//7)^2 to int_ + (int_//5)^2",
             hercules_ref="status.c:3783-3792 status_base_matk_min/max (#else not RENEWAL)\n"
@@ -72,11 +68,11 @@ class MagicPipeline:
         # --- Skill Ratio (BF_MAGIC): ratio only (per-hit). hit_count returned separately. ---
         # battle_calc_magic_attack: MATK_RATE(skillratio) on per-hit ad.damage,
         # then calc_defense and attr_fix on per-hit, THEN × ad.div_ at damage dealing.
-        dmg, hit_count = SkillRatio.calculate_magic(skill, dmg, build, target, result)
+        pmf, hit_count = SkillRatio.calculate_magic(skill, pmf, build, target, result)
 
         # --- Defense Fix (BF_MAGIC) — per-hit ---
         # damage = damage * (100 - mdef) / 100 - mdef2   (magic_defense_type=0)
-        dmg = DefenseFix.calculate_magic(target, gear_bonuses, dmg, result)
+        pmf = DefenseFix.calculate_magic(target, gear_bonuses, pmf, result)
 
         # --- Attr Fix (magic element from skills.json) — per-hit ---
         skill_data = loader.get_skill(skill.id)
@@ -95,12 +91,13 @@ class MagicPipeline:
         defending = loader.get_element_name(target.element)
         multiplier = loader.get_attr_fix_multiplier(magic_ele_name, defending, target.element_level or 1)
         if multiplier != 100:
-            dmg = dmg.scale(multiplier, 100)
+            pmf = _scale_floor(pmf, multiplier, 100)
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Attr Fix (Magic)",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=multiplier / 100.0,
             note=f"{magic_ele_name} vs {defending} Lv{target.element_level or 1} ({multiplier}%)",
             formula=f"dmg * {multiplier} // 100",
@@ -112,12 +109,13 @@ class MagicPipeline:
         #                            negative div    → div = abs(div), dmg unchanged (cosmetic)
         # Source: battle.c:3823 #define damage_div_fix
         if hit_count > 1:
-            dmg = dmg.scale(hit_count, 1)
+            pmf = _scale_floor(pmf, hit_count, 1)
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name=f"Hit Count ×{hit_count}",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=float(hit_count),
                 note=f"{hit_count} actual hits × per-hit damage",
                 formula=f"per_hit_dmg × {hit_count}",
@@ -125,11 +123,12 @@ class MagicPipeline:
             )
         elif hit_count < 0:
             # Cosmetic multi-hit: animation only, damage is per single hit (not multiplied)
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name=f"Hit Count ×{abs(hit_count)} (cosmetic)",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=1.0,
                 note=f"{abs(hit_count)} cosmetic hits — damage not multiplied",
                 formula="no change (cosmetic multi-hit)",
@@ -137,24 +136,26 @@ class MagicPipeline:
             )
 
         # --- Card Fix (magic, target-side only) ---
-        dmg = CardFix.calculate_magic(target, "Ele_" + magic_ele_name, dmg, result)
+        pmf = CardFix.calculate_magic(target, "Ele_" + magic_ele_name, pmf, result)
 
         # --- Final Rate Bonus ---
         # weapon_damage_rate also applies to magic in the source (same final multiplier)
-        dmg = FinalRateBonus.calculate(is_ranged=False, dmg=dmg, config=self.config, result=result)
+        pmf = FinalRateBonus.calculate(is_ranged=False, pmf=pmf, config=self.config, result=result)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             "Final Magic Damage",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             note="BF_MAGIC branch",
             formula="",
             hercules_ref="",
         )
 
-        result.min_damage = dmg.min
-        result.max_damage = dmg.max
-        result.avg_damage = dmg.avg
+        result.min_damage = mn
+        result.max_damage = mx
+        result.avg_damage = av
+        result.pmf = pmf
 
         return result

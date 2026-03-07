@@ -1,8 +1,9 @@
 from core.models.target import Target
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
 from core.config import BattleConfig
+from pmf.operations import _scale_floor, _subtract_uniform, _floor_at, pmf_stats
 
 _RACE_TO_RC = {
     "Formless":  "RC_Formless",
@@ -30,8 +31,8 @@ class DefenseFix:
 
     @staticmethod
     def calculate(target: Target, build: PlayerBuild, gear_bonuses: GearBonuses,
-                  dmg: DamageRange, config: BattleConfig, result: DamageResult,
-                  is_crit: bool = False) -> DamageRange:
+                  pmf: dict, config: BattleConfig, result: DamageResult,
+                  is_crit: bool = False) -> dict:
         """VIT penalty applied to def1/def2 before reduction (exact source position).
 
         On crit, flag.idef = flag.idef2 = 1 (battle.c:4988-4989, #ifndef RENEWAL),
@@ -40,11 +41,12 @@ class DefenseFix:
         but neither percentage nor VIT reduction is applied.
         """
         if is_crit:
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name="Defense Fix",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=1.0,
                 note=f"BYPASSED — crit sets flag.idef=flag.idef2=1 (DEF {target.def_}, VIT {target.vit} readable but not applied)",
                 formula="no change (defense skipped on crit)",
@@ -52,7 +54,7 @@ class DefenseFix:
                              "flag.idef = flag.idef2 = flag.hit = 1;\n"
                              "Then: if((!flag.idef || !flag.idef2)) → false → calc_defense not called.",
             )
-            return dmg
+            return pmf
 
         def1 = max(0, min(100, target.def_))
 
@@ -85,14 +87,12 @@ class DefenseFix:
                         def1 -= penalty
                         def2 -= penalty
 
-        # Hard DEF: deterministic percentage — applies uniformly to min/max/avg
+        # Hard DEF: deterministic percentage — applies uniformly to the PMF
         # battle.c: damage = damage * (100-def1) / 100;
-        dmg = dmg.scale(100 - def1, 100)
+        pmf = _scale_floor(pmf, 100 - def1, 100)
 
-        # Soft VIT DEF: random range — crossed subtraction with weapon ATK variance
-        # Weapon ATK variance and VIT DEF variance are independent, so:
-        #   worst case (min output) = min weapon damage − max VIT DEF roll
-        #   best case  (max output) = max weapon damage − min VIT DEF roll
+        # Soft VIT DEF: random range — independent of weapon ATK variance
+        # _subtract_uniform convolves the PMF with the negated uniform for exact crossing
         if target.is_pc:
             # battle.c: vit_def = def2*(def2-15)/150;
             # battle.c: vit_def = def2/2 + (vit_def>0 ? rnd()%vit_def : 0);
@@ -114,17 +114,15 @@ class DefenseFix:
             vd_avg = def2 + (variance_max // 2 if variance_max > 0 else 0)
             note_type = "monster"
 
-        # DamageRange.subtract() applies the crossing:
-        #   result.min = self.min - vd_max   (worst case for attacker)
-        #   result.max = self.max - vd_min   (best case for attacker)
-        dmg = dmg.subtract(vd_min, vd_max, vd_avg)
-        dmg = dmg.floor_at(1)
+        pmf = _subtract_uniform(pmf, vd_min, vd_max)
+        pmf = _floor_at(pmf, 1)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Defense Fix",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=1.0,
             note=f"{note_def} → ×{(100-def1)/100:.0%} + Soft DEF [{vd_min},{vd_max}] avg {vd_avg} ({note_type})",
             formula=f"max(1, dmg * (100 - def1) // 100 - vit_def_range [{vd_min},{vd_max}])",
@@ -135,11 +133,11 @@ class DefenseFix:
                          "battle.c: if (tsd) { vit_def = def2*(def2-15)/150; vit_def = def2/2 + (vit_def>0 ? rnd()%vit_def : 0); }\n"
                          "battle.c: else { vit_def = (def2/20)*(def2/20); vit_def = def2 + (vit_def>0 ? rnd()%vit_def : 0); }"
         )
-        return dmg
+        return pmf
 
     @staticmethod
     def calculate_magic(target: Target, gear_bonuses: GearBonuses,
-                        dmg: DamageRange, result: DamageResult) -> DamageRange:
+                        pmf: dict, result: DamageResult) -> dict:
         """BF_MAGIC defense reduction (pre-renewal, magic_defense_type=0).
 
         Formula: damage = damage * (100 - mdef) / 100 - mdef2
@@ -165,19 +163,20 @@ class DefenseFix:
 
         # battle.c:1585 #else not RENEWAL, magic_defense_type=0:
         # damage = damage * (100 - mdef) / 100 - mdef2
-        dmg = dmg.scale(100 - mdef, 100)
-        dmg = dmg.subtract(mdef2, mdef2, mdef2)
-        dmg = dmg.floor_at(1)
+        pmf = _scale_floor(pmf, 100 - mdef, 100)
+        pmf = _subtract_uniform(pmf, mdef2, mdef2)
+        pmf = _floor_at(pmf, 1)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Magic Defense Fix",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=1.0,
             note=f"MDEF {target.mdef_}{note_ignore} → ×{(100-mdef)/100:.0%} − mdef2 {mdef2}",
             formula=f"max(1, dmg * (100 - mdef) // 100 - mdef2)",
             hercules_ref="battle.c:1585 (#else not RENEWAL, magic_defense_type=0):\n"
                          "damage = damage * (100-mdef)/100 - mdef2;"
         )
-        return dmg
+        return pmf

@@ -1,5 +1,6 @@
 from core.build_manager import effective_is_ranged
-from core.models.damage import DamageRange, DamageResult, BattleResult
+from core.models.damage import DamageResult, BattleResult
+from pmf.operations import _scale_floor, pmf_stats
 from core.calculators.magic_pipeline import MagicPipeline
 from core.models.build import PlayerBuild
 from core.models.status import StatusData
@@ -127,18 +128,19 @@ class BattlePipeline:
         # === BASE DAMAGE — mirrors battle_calc_base_damage2 exactly ===
         # SizeFix is applied inside this step before batk (A4 fix).
         # Crit branch: damage = atkmax (no roll). Overrefine still randomizes.
-        dmg: DamageRange = BaseDamage.calculate(status, weapon, build, target, skill, result,
-                                                 is_crit=is_crit)
+        pmf: dict = BaseDamage.calculate(status, weapon, build, target, skill, result,
+                                         is_crit=is_crit)
 
         # === bAtkRate — #ifndef RENEWAL, battle.c:5330 (pre-skill-ratio) ===
         # ATK_ADDRATE(sd->bonus.atk_rate) applied before SkillRatio in the default case.
         if gear_bonuses.atk_rate:
-            dmg = dmg.scale(100 + gear_bonuses.atk_rate, 100)
+            pmf = _scale_floor(pmf, 100 + gear_bonuses.atk_rate, 100)
+            mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 "bAtkRate",
-                value=dmg.avg,
-                min_value=dmg.min,
-                max_value=dmg.max,
+                value=av,
+                min_value=mn,
+                max_value=mx,
                 multiplier=(100 + gear_bonuses.atk_rate) / 100,
                 note=f"bAtkRate +{gear_bonuses.atk_rate}% (from gear — applied before Skill Ratio)",
                 formula=f"dmg * (100 + {gear_bonuses.atk_rate}) // 100",
@@ -146,48 +148,50 @@ class BattlePipeline:
             )
 
         # === SKILL RATIO ===
-        dmg = SkillRatio.calculate(skill, dmg, build, result)
+        pmf = SkillRatio.calculate(skill, pmf, build, result)
 
         # === CRIT ATK RATE — pre-defense, crit branch only (battle.c:5333) ===
         if is_crit:
-            dmg = CritAtkRate.calculate(build, dmg, result)
+            pmf = CritAtkRate.calculate(build, pmf, result)
 
         # === DEFENSE FIX — skipped entirely on crit (flag.idef=flag.idef2=1) ===
-        dmg = DefenseFix.calculate(target, build, gear_bonuses, dmg, self.config, result, is_crit=is_crit)
+        pmf = DefenseFix.calculate(target, build, gear_bonuses, pmf, self.config, result, is_crit=is_crit)
 
         # === ACTIVE STATUS BONUSES — POST-defense (lines 5770-5795) ===
-        dmg = ActiveStatusBonus.calculate(weapon, build, skill, dmg, result)
+        pmf = ActiveStatusBonus.calculate(weapon, build, skill, pmf, result)
 
         # === REFINE BONUS (atk2) — POST-defense, PRE-mastery (lines 5803-5805) ===
         # A6 fix: moved out of BaseDamage to its correct Hercules position.
         # Applies to BOTH branches.
-        dmg = RefineFix.calculate(weapon, skill, dmg, result)
+        pmf = RefineFix.calculate(weapon, skill, pmf, result)
 
         # === MASTERY FIX — #ifndef RENEWAL, lines 5812-5818 ===
-        dmg = MasteryFix.calculate(weapon, build, target, dmg, result)
+        pmf = MasteryFix.calculate(weapon, build, target, pmf, result)
 
         # === ATTR FIX ===
-        dmg = AttrFix.calculate(weapon, target, dmg, result)
+        pmf = AttrFix.calculate(weapon, target, pmf, result)
 
         # === CARD FIX — race/ele/size/long_atk bonuses; target resist (PvP) ===
-        dmg = CardFix.calculate(build, gear_bonuses, weapon, target, is_ranged, dmg, result)
+        pmf = CardFix.calculate(build, gear_bonuses, weapon, target, is_ranged, pmf, result)
 
         # === FINAL RATE BONUS ===
-        dmg = FinalRateBonus.calculate(is_ranged, dmg, self.config, result)
+        pmf = FinalRateBonus.calculate(is_ranged, pmf, self.config, result)
 
         # Final summary step
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             "Final Damage",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             note=("CRIT branch" if is_crit else "Normal branch"),
             formula="",
             hercules_ref="",
         )
 
-        result.min_damage = dmg.min
-        result.max_damage = dmg.max
-        result.avg_damage = dmg.avg
+        result.min_damage = mn
+        result.max_damage = mx
+        result.avg_damage = av
+        result.pmf = pmf
 
         return result

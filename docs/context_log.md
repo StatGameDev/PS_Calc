@@ -525,6 +525,73 @@ per level from in-game testing. Context check pause at 69% (after G12 done) conf
 
 ---
 
+## Session I  2026-03-07  claude-sonnet-4-6
+ctx_used: 79% (implementation complete); 100% (hit limit during doc maintenance)
+
+Work items completed:
+- I1: Converted 9 modifiers from DamageRange to PMF ops (pipeline order):
+  skill_ratio.py, crit_atk_rate.py, defense_fix.py, active_status_bonus.py,
+  refine_fix.py, mastery_fix.py, attr_fix.py, card_fix.py, final_rate_bonus.py
+- I2: Updated 4 pipelines to pass pmf: dict through full chains; result.pmf populated:
+  battle_pipeline.py, magic_pipeline.py, incoming_physical_pipeline.py (discovered via grep),
+  incoming_magic_pipeline.py (discovered via grep)
+- I3: size_fix.py confirmed orphaned (DamageRange refs remain; not imported anywhere — no fix needed)
+- Docs: completed_work.md Session I; session_roadmap.md I done + K renamed; MEMORY.md updated
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| core/calculators/battle_pipeline.py | ~194 | ~1,358 |
+| core/calculators/modifiers/skill_ratio.py | ~130 | ~910 |
+| core/calculators/modifiers/crit_atk_rate.py | ~30 | ~210 |
+| core/calculators/modifiers/defense_fix.py | ~184 | ~1,288 |
+| core/calculators/modifiers/active_status_bonus.py | ~40 | ~280 |
+| core/calculators/modifiers/refine_fix.py | ~30 | ~210 |
+| core/calculators/modifiers/mastery_fix.py | ~50 | ~350 |
+| core/calculators/modifiers/attr_fix.py | ~30 | ~210 |
+| core/calculators/modifiers/card_fix.py | ~155 | ~1,085 |
+| core/calculators/modifiers/final_rate_bonus.py (brief) | ~5 | ~35 |
+| core/calculators/magic_pipeline.py (brief) | ~5 | ~35 |
+| core/calculators/incoming_physical_pipeline.py | ~153 | ~1,071 |
+| core/calculators/incoming_magic_pipeline.py | ~205 | ~1,435 |
+| core/calculators/modifiers/size_fix.py | ~43 | ~301 |
+| pmf/operations.py | ~100 | ~700 |
+| docs/session_roadmap.md (partial) | ~50 | ~200 |
+| docs/completed_work.md (tail) | ~30 | ~120 |
+| **subtotal reads** | **~1,634** | **~9,798** |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| core/calculators/modifiers/skill_ratio.py | ~155 | ~1,085 |
+| core/calculators/modifiers/crit_atk_rate.py | ~35 | ~245 |
+| core/calculators/modifiers/defense_fix.py | ~200 | ~1,400 |
+| core/calculators/modifiers/active_status_bonus.py | ~45 | ~315 |
+| core/calculators/modifiers/refine_fix.py | ~35 | ~245 |
+| core/calculators/modifiers/mastery_fix.py | ~60 | ~420 |
+| core/calculators/modifiers/attr_fix.py | ~35 | ~245 |
+| core/calculators/modifiers/card_fix.py | ~170 | ~1,190 |
+| core/calculators/modifiers/final_rate_bonus.py | ~51 | ~357 |
+| core/calculators/battle_pipeline.py | ~200 | ~1,400 |
+| core/calculators/magic_pipeline.py | ~165 | ~1,155 |
+| core/calculators/incoming_physical_pipeline.py | ~153 | ~1,071 |
+| core/calculators/incoming_magic_pipeline.py | ~205 | ~1,435 |
+| docs/completed_work.md | +70 | ~280 |
+| docs/session_roadmap.md | +15 net | ~60 |
+| memory/MEMORY.md | +8 net | ~32 |
+
+Files created: none
+
+Total est_tokens: ~9,798 reads + ~10,935 edits + 6,000 fixed + ~25,000 conv ≈ 52,000
+Notes: Compaction occurred mid-conversation (continued from prior context). Two pipelines discovered
+via grep after planned 9 modifiers were done — incoming_physical and incoming_magic not in original
+plan but needed for app to work. Edit tool "File has not been read yet" errors on final_rate_bonus.py,
+battle_pipeline.py, magic_pipeline.py required brief reads before editing. Numbers verified against
+reference: Poring + Knight of Abyss match (avg diff is rounding method only, expected). Context hit
+100% during doc maintenance (completed_work.md + roadmap + MEMORY.md updates).
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6

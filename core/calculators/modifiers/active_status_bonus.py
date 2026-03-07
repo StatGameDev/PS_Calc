@@ -1,8 +1,9 @@
 from core.models.weapon import Weapon
 from core.models.build import PlayerBuild
-from core.models.damage import DamageRange, DamageResult
+from core.models.damage import DamageResult
 from core.models.skill import SkillInstance
 from core.data_loader import loader
+from pmf.operations import _add_flat, pmf_stats
 
 
 class ActiveStatusBonus:
@@ -17,8 +18,8 @@ class ActiveStatusBonus:
     Source: battle.c battle_calc_weapon_attack, after battle_addmastery call."""
 
     @staticmethod
-    def calculate(weapon: Weapon, build: PlayerBuild, skill: SkillInstance, dmg: DamageRange, result: DamageResult) -> DamageRange:
-        """Applies flat SC_* bonuses to the full DamageRange."""
+    def calculate(weapon: Weapon, build: PlayerBuild, skill: SkillInstance, pmf: dict, result: DamageResult) -> dict:
+        """Applies flat SC_* bonuses to the PMF."""
         active_status_levels = getattr(build, 'active_status_levels', {})
         total_bonus: int = 0
         applied_bonuses: list[str] = []
@@ -66,13 +67,14 @@ class ActiveStatusBonus:
             note = f"Applied: {', '.join(applied_bonuses) or 'none'}"
             formula = "dmg + sum(SC bonuses from active_status_bonus.json)"
 
-        dmg = dmg.add(total_bonus)
+        pmf = _add_flat(pmf, total_bonus)
 
+        mn, mx, av = pmf_stats(pmf)
         result.add_step(
             name="Active Status Bonuses",
-            value=dmg.avg,
-            min_value=dmg.min,
-            max_value=dmg.max,
+            value=av,
+            min_value=mn,
+            max_value=mx,
             multiplier=1.0,
             note=note,
             formula=formula,
@@ -80,4 +82,4 @@ class ActiveStatusBonus:
                          "battle.c: if (sc && sc->data[SC_ENCHANTBLADE] && skill_id == 0) { ... ATK_ADD(i); }\n"
                          "battle.c: (and every other if (sc && sc->data[SC_XXX]) ATK_ADD / ATK_ADDRATE block after battle_addmastery)"
         )
-        return dmg
+        return pmf
