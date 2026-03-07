@@ -1,5 +1,15 @@
 # PS_Calc — Claude Code Instructions
 
+## IDs Over Name Strings
+
+Always use integer IDs instead of name strings for internal data:
+- Job filtering: `job_id in item["job"]` — `item["job"]` is `list[int]` (scraper converts Hercules names to IDs)
+- Skill lookup: use skill name keys (e.g. `"KN_ONEHAND"`) only as they appear in skill_tree.json
+- Never map job_id → display name → compare string; always compare IDs directly
+- When adding new data fields that reference jobs/elements/races, store as int, not string
+
+---
+
 ## Ask First, Search Later
 
 If a task requires locating files, external data, or unfamiliar formats — ask the

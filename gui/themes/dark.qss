@@ -379,6 +379,12 @@ QLabel#passive_placeholder {
     font-size: 11px;
 }
 
+QLabel#passive_sub_separator {
+    color: #4a5060;
+    font-size: 10px;
+    font-style: italic;
+}
+
 QLabel#passive_mastery_label {
     color: #b8bfcc;
     font-size: 11px;

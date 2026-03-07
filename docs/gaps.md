@@ -78,9 +78,9 @@ _Status: [ ] open, [x] done, [~] partial_
 | ID | Status | Description |
 |---|---|---|
 | G34 | [x] | 4.4 — Skill combo job filter. skill_tree.json scraper + DataLoader.get_skills_for_job + CombatControlsSection.update_job + "All" toggle. Rogue/Stalker include AllowPlagiarism skills. |
-| G35 | [ ] | 4.5 — Equipment Browser job filter. Session H. |
-| G36 | [ ] | 4.6 — Monster Browser race/element/size dropdowns. Session H. |
-| G37 | [ ] | 4.7 — Passives/Masteries job filter. Extend existing _MASTERY_JOB_FILTER pattern. Session H. |
+| G35 | [x] | 4.5 — Equipment Browser job filter. item_db.job now list[int] IDs; filter = job_id in item["job"]. "All Jobs" checkbox. |
+| G36 | [x] | 4.6 — Monster Browser Race/Element/Size QComboBox dropdowns; AND filter with name search. |
+| G37 | [x] | 4.7 — Passives job filter. Data-driven via get_skills_for_job + source_skill field. buff_type: self/passive/party. BS_HILTBINDING added. "Show All" checkbox. |
 | G39 | [ ] | F7 — Inline equipment dropdown (low priority). Session I if context allows. |
 | G40 | [ ] | P1 — StepsBar expanded state persists across focus changes. Session I. |
 | G42 | [x] | ASPD display shows integer (e.g. 185) — should show one decimal place (e.g. 185.3). | Fixed Session C: StatusData.aspd→float; /10 not //10; derived_section {:.1f} |

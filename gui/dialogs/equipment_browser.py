@@ -4,6 +4,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
@@ -114,6 +115,9 @@ class EquipmentBrowserDialog(QDialog):
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         self._result: Optional[int] = current_item_id
+        self._job_id: int = job_id
+        # Cards have no meaningful job restrictions — always show all.
+        self._job_filter_applies: bool = item_type_override != "IT_CARD"
 
         # Load and filter items for this slot.
         # item_type_override="IT_CARD" restricts the list to cards valid for this slot.
@@ -125,10 +129,10 @@ class EquipmentBrowserDialog(QDialog):
             if set(it.get("loc", [])) & valid_eqp
         ]
 
-        # F6: Assassin/Assassin Cross (job 10/22) can also equip 1H weapons in left hand.
+        # F6: Assassin/Assassin Cross (job 12/24) can also equip 1H weapons in left hand.
         # Merge in IT_WEAPON items with EQP_WEAPON (1H only — EQP_ARMS/2H excluded).
         # Not applicable when browsing cards.
-        if slot_key == "left_hand" and job_id in (12, 24) and not item_type_override:  # Assassin, Assassin Cross
+        if slot_key == "left_hand" and job_id in (12, 24) and not item_type_override:
             weapons_1h = [
                 it for it in loader.get_items_by_type("IT_WEAPON")
                 if "EQP_WEAPON" in it.get("loc", [])
@@ -144,6 +148,10 @@ class EquipmentBrowserDialog(QDialog):
         self._search = QLineEdit()
         self._search.setPlaceholderText("Item name…")
         search_row.addWidget(self._search, stretch=1)
+        self._all_jobs_chk = QCheckBox("All Jobs")
+        self._all_jobs_chk.setChecked(not self._job_filter_applies)
+        self._all_jobs_chk.setVisible(self._job_filter_applies)
+        search_row.addWidget(self._all_jobs_chk)
         layout.addLayout(search_row)
 
         self._table = QTableWidget()
@@ -163,14 +171,15 @@ class EquipmentBrowserDialog(QDialog):
         self._ok_btn.setEnabled(False)
         layout.addWidget(btn_box)
 
-        self._search.textChanged.connect(self._on_filter)
+        self._search.textChanged.connect(self._apply_filters)
+        self._all_jobs_chk.toggled.connect(self._apply_filters)
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         self._table.cellDoubleClicked.connect(lambda r, c: self._accept_selected())
         self._ok_btn.clicked.connect(self._accept_selected)
         self._clear_btn.clicked.connect(self._clear)
         btn_box.rejected.connect(self.reject)
 
-        self._populate(self._items)
+        self._apply_filters()
 
         if current_item_id is not None:
             self._select_row(current_item_id)
@@ -209,11 +218,17 @@ class EquipmentBrowserDialog(QDialog):
 
     # ── Slots ──────────────────────────────────────────────────────────────
 
-    def _on_filter(self, text: str) -> None:
-        query = text.strip().lower()
-        filtered = self._items if not query else [
+    def _apply_filters(self, *_) -> None:
+        query = self._search.text().strip().lower()
+        use_job_filter = (
+            self._job_filter_applies
+            and not self._all_jobs_chk.isChecked()
+            and self._job_id != 0
+        )
+        filtered = [
             it for it in self._items
-            if query in (it.get("name") or it.get("aegis_name", "")).lower()
+            if (not query or query in (it.get("name") or it.get("aegis_name", "")).lower())
+            and (not use_job_filter or not it.get("job") or self._job_id in it["job"])
         ]
         self._populate(filtered)
 

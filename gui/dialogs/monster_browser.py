@@ -4,6 +4,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
@@ -56,6 +57,28 @@ class MonsterBrowserDialog(QDialog):
         search_row.addWidget(self._search, stretch=1)
         layout.addLayout(search_row)
 
+        filter_row = QHBoxLayout()
+        self._race_combo = self._make_combo(
+            ["All Races"] + sorted({m.get("race", "") for m in self._mobs} - {""}),
+        )
+        self._elem_combo = self._make_combo(
+            ["All Elements"] + [
+                n for n in _ELEMENT_NAMES
+                if any(m.get("element", -1) == _ELEMENT_NAMES.index(n) for m in self._mobs)
+            ],
+        )
+        self._size_combo = self._make_combo(
+            ["All Sizes"] + sorted({m.get("size", "") for m in self._mobs} - {""}),
+        )
+        filter_row.addWidget(QLabel("Race:"))
+        filter_row.addWidget(self._race_combo)
+        filter_row.addWidget(QLabel("Element:"))
+        filter_row.addWidget(self._elem_combo)
+        filter_row.addWidget(QLabel("Size:"))
+        filter_row.addWidget(self._size_combo)
+        filter_row.addStretch()
+        layout.addLayout(filter_row)
+
         self._table = QTableWidget()
         self._table.setColumnCount(len(_COLUMNS))
         self._table.setHorizontalHeaderLabels(_COLUMNS)
@@ -73,19 +96,28 @@ class MonsterBrowserDialog(QDialog):
         self._ok_btn.setEnabled(False)
         layout.addWidget(btn_box)
 
-        self._search.textChanged.connect(self._on_filter)
+        self._search.textChanged.connect(self._apply_filters)
+        self._race_combo.currentIndexChanged.connect(self._apply_filters)
+        self._elem_combo.currentIndexChanged.connect(self._apply_filters)
+        self._size_combo.currentIndexChanged.connect(self._apply_filters)
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         self._table.cellDoubleClicked.connect(lambda r, c: self._accept_selected())
         self._ok_btn.clicked.connect(self._accept_selected)
         self._clear_btn.clicked.connect(self._clear)
         btn_box.rejected.connect(self.reject)
 
-        self._populate(self._mobs)
+        self._apply_filters()
 
         if current_mob_id is not None:
             self._select_row(current_mob_id)
 
     # ── Internal helpers ───────────────────────────────────────────────────
+
+    @staticmethod
+    def _make_combo(options: list[str]) -> QComboBox:
+        cb = QComboBox()
+        cb.addItems(options)
+        return cb
 
     def _make_item(self, text: str, numeric: bool = False) -> QTableWidgetItem:
         item = _NumericItem(text) if numeric else QTableWidgetItem(text)
@@ -126,10 +158,17 @@ class MonsterBrowserDialog(QDialog):
 
     # ── Slots ──────────────────────────────────────────────────────────────
 
-    def _on_filter(self, text: str) -> None:
-        query = text.strip().lower()
-        filtered = self._mobs if not query else [
-            m for m in self._mobs if query in m.get("name", "").lower()
+    def _apply_filters(self, *_) -> None:
+        query = self._search.text().strip().lower()
+        race = self._race_combo.currentText()
+        elem = self._elem_combo.currentText()
+        size = self._size_combo.currentText()
+        filtered = [
+            m for m in self._mobs
+            if (not query or query in m.get("name", "").lower())
+            and (race == "All Races"    or m.get("race", "") == race)
+            and (elem == "All Elements" or _ELEMENT_NAMES[m.get("element", 0)] == elem)
+            and (size == "All Sizes"    or m.get("size", "") == size)
         ]
         self._populate(filtered)
 

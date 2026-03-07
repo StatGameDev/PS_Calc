@@ -872,3 +872,35 @@ Loads `skill_tree.json`, returns frozenset of skill names for the given job_id.
   - `update_job(job_id)` public method: stores job_id, calls `_repopulate_skill_combo`.
   - Wired in `main_window.py`: `build_header.job_changed → combat_controls.update_job`.
   - Normal Attack (id=0) always shown at top regardless of filter.
+
+---
+
+## Session J2 — Remaining job filters (G35, G36, G37)
+
+**Scraper fix (prerequisite for G35)**
+- `tools/import_item_db.py`: `parse_job_list()` now outputs `list[int]` job IDs using
+  `_HERCULES_JOB_TO_IDS` inheritance map. Hercules base-class names expand to all promoted
+  descendants (e.g. `"Knight": true` → `[7, 23]`). `item_db.json` re-scraped (2760 items).
+- `CLAUDE.md`: Added "IDs Over Name Strings" rule — always store/compare job IDs, not strings.
+
+**G35 — Equipment Browser job filter (`dialogs/equipment_browser.py`)**
+- Filter: `job_id in item["job"]` (trivial with new int IDs). IT_CARD always unfiltered.
+- "All Jobs" QCheckBox in search row (hidden for cards, unchecked = job-filtered by default).
+- Novice (job 0) is also unfiltered (job 0 appears in no item["job"] lists — treated as all-jobs).
+
+**G36 — Monster Browser filter dropdowns (`dialogs/monster_browser.py`)**
+- Race, Element, Size QComboBox added above table. Options derived from live mob data.
+- `_apply_filters()` ANDs all four controls (name search + 3 dropdowns).
+
+**G37 — Passives job filter (`sections/passive_section.py`)**
+- `_SELF_BUFFS` entries extended with `(source_skill, buff_type)` fields.
+- `_MASTERIES` renamed `_PASSIVES`; entries extended with `(max_lv, source_skill)`.
+  Sub-header renamed "Passives". `BS_HILTBINDING` added.
+- `buff_type`: `"self"` = job-filtered via skill tree; `"party"` = always visible;
+  all passives = job-filtered.
+- `update_job(job_id)`: calls `loader.get_skills_for_job(job_id)`, checks
+  `source_skill in job_skills` per entry. Drops hardcoded `_MASTERY_JOB_FILTER`.
+- "Show All" QCheckBox in section header bypasses all job filters.
+- Corrections: SC_MAXIMIZEPOWER/OVERTHRUST → BS family; SC_SPEARQUICKEN → Crusader/Paladin;
+  SC_ONEHANDQUICKEN → Knight/LK (KN_ONEHAND, Soul Link note in code).
+- `dark.qss`: added `passive_sub_separator` style.

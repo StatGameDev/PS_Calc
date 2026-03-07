@@ -200,12 +200,65 @@ def parse_buy_sell(entry: str) -> tuple[int | None, int | None]:
     return buy, sell
 
 
-def parse_job_list(entry: str) -> list[str]:
-    """Parse Job: { Name: true ... } block into a list of class names."""
+# ---------------------------------------------------------------------------
+# Hercules job name → set of job IDs in PS_Calc (build_header.py _JOB_NAMES).
+# Base-class names include all promoted descendants (Hercules inheritance).
+# Source: Hercules PC class hierarchy; confirmed against build_header.py.
+# ---------------------------------------------------------------------------
+_HERCULES_JOB_TO_IDS: dict[str, frozenset] = {
+    "Novice":         frozenset({0}),
+    "Swordsman":      frozenset({1, 7, 14, 23, 29}),
+    "Magician":       frozenset({2, 9, 16, 25, 32}),
+    "Archer":         frozenset({3, 11, 19, 20, 26, 30, 35}),
+    "Acolyte":        frozenset({4, 8, 15, 28, 31}),
+    "Merchant":       frozenset({5, 10, 18, 27, 33}),
+    "Thief":          frozenset({6, 12, 17, 24, 34}),
+    "Knight":         frozenset({7, 23}),
+    "Priest":         frozenset({8, 28}),
+    "Wizard":         frozenset({9, 25}),
+    "Blacksmith":     frozenset({10, 27}),
+    "Hunter":         frozenset({11, 26}),
+    "Assassin":       frozenset({12, 24}),
+    "Crusader":       frozenset({14, 29}),
+    "Monk":           frozenset({15, 31}),
+    "Sage":           frozenset({16, 32}),
+    "Rogue":          frozenset({17, 34}),
+    "Alchemist":      frozenset({18, 33}),
+    "Bard":           frozenset({19, 30}),
+    "Dancer":         frozenset({20, 35}),
+    # Names outside our supported job list — map to empty set (filtered out)
+    "Gunslinger":     frozenset(),
+    "Ninja":          frozenset(),
+    "Star_Gladiator": frozenset(),
+    "Soul_Linker":    frozenset(),
+    "Taekwon":        frozenset(),
+    "Gangsi":         frozenset(),
+    "Death_Knight":   frozenset(),
+    "Dark_Collector": frozenset(),
+    "Kagerou":        frozenset(),
+    "Rebellion":      frozenset(),
+    "Summoner":       frozenset(),
+}
+
+
+def parse_job_list(entry: str) -> list[int]:
+    """
+    Parse Job: { Name: true ... } block into a sorted list of job IDs.
+
+    Returns [] when the item is equippable by all jobs (no Job block, or All: true).
+    Returns a sorted list of job IDs when the item has specific job restrictions.
+    Promoted classes are included via _HERCULES_JOB_TO_IDS inheritance mapping.
+    """
     block_match = re.search(r'Job:\s*\{([^}]+)\}', entry, re.DOTALL)
     if not block_match:
         return []
-    return re.findall(r'(\w+):\s*true', block_match.group(1))
+    names = re.findall(r'(\w+):\s*true', block_match.group(1))
+    if not names or "All" in names:
+        return []
+    ids: set[int] = set()
+    for name in names:
+        ids |= _HERCULES_JOB_TO_IDS.get(name, frozenset())
+    return sorted(ids)
 
 
 def parse_refineable(entry: str) -> bool:
@@ -436,7 +489,9 @@ def main(dry_run: bool = False) -> None:
             "element derived from 'bonus bAtkEle,Ele_*' in Script (IT_WEAPON, IT_AMMO only). "
             "buy null when absent; sell = explicit Sell field, or buy//2, or null. "
             "Refine: absent → refineable=true (Hercules default). "
-            "equip_level 0 when absent. upper null = ITEMUPPER_ALL. job [] = all classes. "
+            "equip_level 0 when absent. upper null = ITEMUPPER_ALL. "
+            "job = sorted list of job IDs (int); [] = equippable by all classes. "
+            "Promoted classes included via Hercules base-class inheritance (e.g. Knight: true → [7,23]). "
             "gender null = any. on_equip_script/on_unequip_script null when absent (IT_ARMOR). "
             "IT_WEAPON.range = Range field (0 if absent). "
             "IT_ARMOR.view_sprite = ViewSprite field (0 if absent). "
