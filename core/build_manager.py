@@ -85,6 +85,21 @@ class BuildManager:
             },
             "server": build.server,
         }
+
+        # cached_display — read by PlayerTargetBrowserDialog to show build stats
+        # without a full load. Computed at save time from the raw (pre-gear-bonus) build.
+        from core.data_loader import loader  # local import — avoids circular dependency
+        job_entry = loader.get_job_entry(build.job_id)
+        job_name = job_entry["name"] if job_entry else ""
+        effective_vit = build.base_vit + build.bonus_vit
+        hp_base = loader.get_hp_at_level(build.job_id, build.base_level)
+        data["cached_display"] = {
+            "job_name": job_name,
+            "hp": hp_base * (100 + effective_vit) // 100 + build.bonus_maxhp,
+            "def_": build.equip_def,
+            "mdef": build.equip_mdef,
+        }
+
         out_path = Path(path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "w", encoding="utf-8") as f:

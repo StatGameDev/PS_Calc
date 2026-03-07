@@ -673,3 +673,82 @@ Old `refresh_mob` + `refresh_status` calls removed.
 G43 [ ]: Incoming pipeline attack type not skill-driven. GUI has no mob skill picker.
 Physical pipeline always assumes auto-attack; magic pipeline defaults to mob natural element.
 Needs design decision on UI surface before implementation.
+
+---
+
+## Session F — Incoming Config Controls + Unified Target Selector (G43, G30)
+
+_Two sub-sessions (F1 = incoming config; F2 = target selector redesign). Documented together._
+
+**F1-1 — Incoming config controls (G43)**
+`gui/sections/incoming_damage.py`: config row added to IncomingDamageSection header.
+- Ranged QCheckBox (passes `is_ranged=True` to IncomingPhysicalPipeline → activates
+  BF_LONG in CardFix, enabling bLongAtkDef resistance cards).
+- Magic element override QComboBox (10 elements + "Mob natural" default).
+- Ratio QSpinBox 0–1000% (synthetic skill ratio for IncomingMagicPipeline).
+- `get_incoming_config() -> tuple[bool, Optional[int], Optional[int]]` public API.
+- `config_changed = Signal()` wired to `_run_battle_pipeline` in main_window.
+
+`core/calculators/incoming_magic_pipeline.py`:
+- `ele_override: Optional[int] = None` — substitutes mob natural element when set.
+- `ratio_override: Optional[int] = None` — substitutes skill ratio when set.
+Both default to None = original behavior preserved.
+
+**F1-2 — dark.qss target label style**
+`gui/themes/dark.qss`: `QLabel#combat_target_display` prominent style (13px bold,
+dark background). `QPushButton#target_mode_btn:checked` red (#e05555) for Player mode.
+
+**F2-1 — save_build cached_display (G0)**
+`core/build_manager.py`: `save_build()` now writes `cached_display: {job_name, hp, def_, mdef}`
+alongside the existing schema. Computed at save time from raw (pre-gear-bonus) build.
+- `job_name`: `loader.get_job_entry(build.job_id)["name"]` (or "" if missing).
+- `hp`: `get_hp_at_level(job_id, base_level) * (100 + base_vit + bonus_vit) // 100 + bonus_maxhp`.
+- `def_`: `build.equip_def`.
+- `mdef`: `build.equip_mdef`.
+Older saves without `cached_display` degrade gracefully ("?" in the browser).
+
+**F2-2 — MonsterBrowserDialog MDef column (G1)**
+`gui/dialogs/monster_browser.py`: MDef column inserted at index 5 (after DEF).
+Element/Race/Size/Boss shifted to indices 6–9. `_NUMERIC_COLS` updated to include 5.
+
+**F2-3 — PlayerTargetBrowserDialog (G2)**
+`gui/dialogs/player_target_browser.py`: new file.
+Same QDialog structure as MonsterBrowserDialog.
+Columns: Name / Job / Lv / HP / DEF / MDEF. Numeric sort on Lv/HP/DEF/MDEF.
+Reads `cached_display` from each `{stem}.json` in saves_dir — no full load.
+`selected_build_stem() -> Optional[str]` public API.
+Filter search by display name (≥0 chars — immediate, no threshold).
+Older saves (missing cached_display) show "?" for stats — graceful.
+
+**F2-4 — CombatControlsSection redesign (G3)**
+`gui/sections/combat_controls.py`: full rewrite of the target area.
+State added: `_target_type: str = "mob"`, `_target_pvp_stem: Optional[str] = None`,
+`_player_build_pairs: list[tuple[str, str]]`.
+Mode toggle QPushButton (objectName="target_mode_btn", checkable):
+- Unchecked = "Mob" mode: search filters mob list, Browse opens MonsterBrowserDialog.
+- Checked = "Player" mode: search filters build display names, Browse opens PlayerTargetBrowserDialog.
+Same QListWidget used for both modes. Label renamed to objectName="combat_target_display".
+New public methods: `get_target_pvp_stem() -> Optional[str]`, `refresh_target_builds(pairs)`.
+`get_target_mob_id()` returns None in Player mode (mob_id meaningful only in Mob mode).
+`load_build()`: always resets to Mob mode (pvp target is session-only, not saved).
+`collect_into()`: sets `build.target_mob_id = None` in Player mode.
+`refresh_target_builds()`: if current pvp_stem absent from new pairs, clears it.
+
+**F2-5 — main_window.py wiring (G4)**
+`gui/main_window.py`:
+- Added `from core.models.skill import SkillInstance`.
+- `_refresh_builds()`: TODO stub replaced; calls `refresh_target_builds(pairs)` after combo refresh.
+- `_run_battle_pipeline()`: TODO stub replaced; full pvp path:
+  - If `pvp_stem` set: loads pvp build → applies gear bonuses → resolves weapon →
+    runs StatusCalculator → calls `player_build_to_target` → sets `target` for outgoing pipeline.
+  - Incoming: runs `_pipeline.calculate(pvp_status, pvp_weapon, SkillInstance(), player_target, pvp_eff)`
+    and uses `pvp_battle.normal` as `phys_result`. Magic incoming suppressed in PvP mode.
+  - Mob path unchanged (fallback when pvp_stem is None).
+
+**Layout change**
+`gui/layout_config.json`: target_section moved above summary_section in combat panel.
+New order: Combat Controls → Target Info → Summary → Step Breakdown → Incoming Damage.
+
+**Pre-existing bug fixed (opportunistic)**
+`gui/sections/incoming_damage.py`: `QComboBox` added to PySide6 imports (was missing since F1,
+caused startup crash when magic element combo was introduced).

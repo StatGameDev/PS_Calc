@@ -1,5 +1,5 @@
 # PS_Calc — Gap Tracker
-_Last updated: Session B. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
+_Last updated: Post-Session F. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
 _Status: [ ] open, [x] done, [~] partial_
 
 ---
@@ -17,19 +17,19 @@ _Status: [ ] open, [x] done, [~] partial_
 | G7 | [x] | VIT DEF PC branch dead code — `target.is_pc` never True. Formula in defense_fix.py IS correct per C source (battle.c:1487-1488). Branch becomes live in Session D when player_build_to_target() is implemented. | battle.c:1487-1488 #ifndef RENEWAL | Fixed Session E: player_build_to_target() sets is_pc=True; PC VIT DEF formula now active for all incoming physical hits. |
 | G41 | [ ] | [LOW PRIORITY] PC VIT DEF: Hercules comment (line 1486) disagrees with C implementation. Comment: `[VIT*0.5]+rnd([VIT*0.3],max([VIT*0.3],[VIT^2/150]-1))` → [64,81] for VIT=80. Code: `def2/2+rnd()%(def2*(def2-15)/150)` → [40,73] for VIT=80. Player testing matches comment, not code. | battle.c:1486-1488 | Do NOT change code based on comment. Investigate against official server data before any fix. Currently follow C implementation. |
 | G8 | [x] | Target-side CardFix not implemented. Multiplies: sub_ele, sub_size, sub_race, boss, near/long_def_rate. Only fires when target.is_pc. | battle.c battle_calc_cardfix cflag=0 BF_WEAPON | Fixed in Session A: card_fix.py fires target side when is_pc=True (activates in Session D) |
-| G9 | [~] | ASPD skill buffs not in StatusCalculator. SC_TWOHANDQUICKEN, SC_ADRENALINE, SC_SPEARQUICKEN, SC_ONEHAND modify amotion in status.c. | status.c SC_TWOHANDQUICKEN etc. | Fixed Session C: status_calc_aspd_rate 1000-scale approach; SC_ASSNCROS deferred (Bard AGI dependency — needs party buff input). See docs/aspd.md. |
+| G9 | [~] | ASPD skill buffs not in StatusCalculator. SC_TWOHANDQUICKEN, SC_ADRENALINE, SC_SPEARQUICKEN, SC_ONEHAND modify amotion in status.c. | status.c SC_TWOHANDQUICKEN etc. | Fixed Session C: status_calc_aspd_rate 1000-scale approach; SC_ASSNCROS deferred — val2 formula confirmed in docs/BARD_DANCER_SONGS.md, needs party buff UI (Session J). |
 | G10 | [x] | bAtkRate bonus not in system. `sd->bonus.atk_rate` applied before SkillRatio (#ifndef RENEWAL line 5330). | battle.c:5330 | Fixed Session C: bAtkRate step added in battle_pipeline.py between BaseDamage and SkillRatio; removed from CardFix where it was incorrectly placed. |
 | G11 | [x] | bLongAtkRate (GearBonuses.long_atk_rate) accumulated but never applied. Belongs inside CardFix for BF_LONG. | battle.c cardfix #ifndef RENEWAL line ~1262 | Fixed in Session A: CardFix applies long_atk_rate when is_ranged=True |
-| G12 | [ ] | F3 — Armor refine DEF not calculated. No scraper, no table, no pipeline step. | Hercules refine_db.conf | Refine slider exists in GUI; value goes nowhere |
-| G13 | [ ] | F1 — Card slot UI absent. No sub-slot buttons per item. | — | GearBonusAggregator handles any key in build.equipped — data side is ready |
+| G12 | [ ] | F3 — Armor refine DEF not calculated. No scraper, no table, no pipeline step. | Hercules/db/pre-re/refine_db.conf | Scraper (import_refine_db.py) + output core/data/pre-re/tables/refine_armor.json + GearBonusAggregator step using build.refine_levels[slot] for armor-class slots. Refine slider exists in GUI; value goes nowhere. Session G. |
+| G13 | [ ] | F1 — Card slot UI absent. No sub-slot buttons per item. | — | GearBonusAggregator handles any key in build.equipped — data side is ready. Key scheme: `{slot}_card_0` … `{slot}_card_{N-1}`. Session G. |
 | G14 | [ ] | bWeaponAtk (weapon-type ATK%) not in system. `sd->weapon_atk_rate[weapontype]` applied in base damage. | battle.c:679-685 | Rare in pre-re DB; low priority |
-| G15 | [ ] | F4 — Gear bonuses invisible in Stats section. No "from gear" indicator. | — | UX only |
-| G16 | [ ] | E4 — Katar second hit fraction unverified. | battle.c katar dual-hit section | Grep before implementing |
-| G17 | [ ] | E6 — Forged weapon Verys: flat +5 ATK per Very gemstone after AttrFix. | battle.c forged weapon section | Low priority |
+| G15 | [ ] | F4 — Gear bonuses invisible in Stats section. No "from gear" indicator. | — | UX only. Session I. |
+| G16 | [ ] | E4 — Katar second hit fraction unverified. | battle.c katar dual-hit section | Grep before implementing. Session I. |
+| G17 | [ ] | E6 — Forged weapon Verys: flat +5 ATK per Very gemstone after AttrFix. | battle.c forged weapon section | Low priority. Session I. |
 
 ---
 
-## BF_MAGIC Outgoing (Player → Any Target) — ENTIRELY ABSENT
+## BF_MAGIC Outgoing (Player → Any Target)
 
 | ID | Status | Description | Hercules ref | Notes |
 |---|---|---|---|---|
@@ -55,11 +55,11 @@ _Status: [ ] open, [x] done, [~] partial_
 
 ---
 
-## Incoming Physical (Player → Player) — ENTIRELY ABSENT
+## Incoming Physical (Player → Player)
 
 | ID | Status | Description | Notes |
 |---|---|---|---|
-| G30 | [ ] | PvP incoming physical pipeline absent. | Architecturally: run full BF_WEAPON outgoing pipeline with second PlayerBuild as attacker, first player's Target (is_pc=True) as defender. Attacker-side CardFix is active (they have gear). Defender-side CardFix is active (they have gear). Reuses entire existing pipeline — no new steps. |
+| G30 | [x] | PvP incoming physical pipeline absent. | Fixed Session F: CombatControlsSection Mob↔Player toggle; PlayerTargetBrowserDialog; _run_battle_pipeline wires pvp_stem to outgoing target and incoming result. |
 
 ---
 
@@ -77,15 +77,14 @@ _Status: [ ] open, [x] done, [~] partial_
 
 | ID | Status | Description |
 |---|---|---|
-| G34 | [ ] | 4.4 — Skill combo job filter |
-| G35 | [ ] | 4.5 — Equipment Browser job filter |
-| G36 | [ ] | 4.6 — Monster Browser race/element/size dropdowns |
-| G37 | [ ] | 4.7 — Passives/Masteries job filter |
-| G38 | [ ] | F3 — Armor refine DEF (needs import_refine_db.py scraper) |
-| G39 | [ ] | F7 — Inline equipment dropdown (low priority) |
-| G40 | [ ] | P1 — StepsBar expanded state persists across focus changes |
-| G42 | [x] | ASPD display shows integer (e.g. 185) — should show one decimal place (e.g. 185.3). StatusCalculator uses `(2000-amotion)//10`; needs `/10` (float) and derived_section format string updated. | Fixed Session C (cont): StatusData.aspd→float; /10 not //10; derived_section {:.1f} |
-| G43 | [ ] | Incoming pipeline attack type not skill-driven. IncomingPhysicalPipeline always assumes mob auto-attack. IncomingMagicPipeline accepts an optional skill but the GUI has no way to select it — defaults to mob natural element, no ratio. Need: mob skill selector in combat controls (or separate incoming controls), and the GUI should gate which pipeline result is shown based on the selected attack type. | — | Design first: what UI surface makes sense for "mob skill picker"? Separate section? Reuse combat_controls? |
+| G34 | [ ] | 4.4 — Skill combo job filter. Rogue/Stalker: include AllowPlagiarism skills from other jobs. Session H. |
+| G35 | [ ] | 4.5 — Equipment Browser job filter. Session H. |
+| G36 | [ ] | 4.6 — Monster Browser race/element/size dropdowns. Session H. |
+| G37 | [ ] | 4.7 — Passives/Masteries job filter. Extend existing _MASTERY_JOB_FILTER pattern. Session H. |
+| G39 | [ ] | F7 — Inline equipment dropdown (low priority). Session I if context allows. |
+| G40 | [ ] | P1 — StepsBar expanded state persists across focus changes. Session I. |
+| G42 | [x] | ASPD display shows integer (e.g. 185) — should show one decimal place (e.g. 185.3). | Fixed Session C: StatusData.aspd→float; /10 not //10; derived_section {:.1f} |
+| G43 | [x] | Incoming pipeline attack type not skill-driven. Physical always assumes auto-attack; magic defaults to mob natural element, no ratio. Add Ranged checkbox to physical row; add element override + ratio spinbox to magic row in IncomingDamageSection. | Fixed Session F: Ranged checkbox, magic element combo, ratio spinbox added to IncomingDamageSection; IncomingMagicPipeline accepts ele_override/ratio_override; all wired in main_window. |
 
 ---
 
@@ -118,4 +117,17 @@ _Status: [ ] open, [x] done, [~] partial_
 | G22 | Magic skill ratios (_BF_MAGIC_RATIOS, cosmetic vs actual hits) | B |
 | G23 | CardFix.calculate_magic (target-side only) | B |
 | G24 | ignore_mdef_rate in GearBonuses + aggregator + DefenseFix | B |
-| G25 | mdef/mdef2 in StatusData; equip_mdef in PlayerBuild; bMdef bIngoreMdefRate routes | B |
+| G25 | mdef/mdef2 in StatusData; equip_mdef in PlayerBuild; bMdef bIgnoreMdefRate routes | B |
+| G4 | ASC_KATAR mastery % (mastery_fix.py) | C |
+| G10 | bAtkRate moved to pre-SkillRatio position | C |
+| G42 | ASPD decimal display | C |
+| G27 | armor_element field in PlayerBuild | D |
+| G7 | VIT DEF PC branch activated via player_build_to_target() | E |
+| G26 | IncomingPhysicalPipeline | E |
+| G28 | Mob stats.str/int read in incoming pipelines | E |
+| G29 | CardFix.calculate_incoming_physical | E |
+| G31 | Mob MATK derivation in IncomingMagicPipeline | E |
+| G32 | IncomingMagicPipeline | E |
+| G33 | Player MDEF in StatusData (done Session B) | B |
+| G43 | Ranged checkbox + magic element override + ratio spinbox in IncomingDamageSection | F |
+| G30 | PvP target selector: Mob↔Player toggle in CombatControls; PlayerTargetBrowserDialog; main_window pvp wiring | F |

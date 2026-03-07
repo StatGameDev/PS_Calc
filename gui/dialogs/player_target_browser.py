@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 from typing import Optional
 
 from PySide6.QtCore import Qt
@@ -14,19 +16,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.data_loader import loader
-
-_ELEMENT_NAMES = [
-    "Neutral", "Water", "Earth", "Fire", "Wind",
-    "Poison", "Holy", "Dark", "Ghost", "Undead",
-]
-
-_COLUMNS = ["Name", "ID", "Lv", "HP", "DEF", "MDef", "Element", "Race", "Size", "Boss"]
-_NUMERIC_COLS = {1, 2, 3, 4, 5}  # ID, Lv, HP, DEF, MDef — sort as numbers
+_COLUMNS = ["Name", "Job", "Lv", "HP", "DEF", "MDEF"]
+_NUMERIC_COLS = {2, 3, 4, 5}  # Lv, HP, DEF, MDEF
 
 
 class _NumericItem(QTableWidgetItem):
-    """QTableWidgetItem that sorts numerically when the text is a plain integer."""
     def __lt__(self, other: QTableWidgetItem) -> bool:
         try:
             return int(self.text()) < int(other.text())
@@ -34,17 +28,17 @@ class _NumericItem(QTableWidgetItem):
             return super().__lt__(other)
 
 
-class MonsterBrowserDialog(QDialog):
-    """Filterable monster list. Returns the selected mob_id or None (cleared)."""
+class PlayerTargetBrowserDialog(QDialog):
+    """Select a saved player build as the PvP target. Returns the build stem or None."""
 
-    def __init__(self, current_mob_id: Optional[int] = None, parent=None) -> None:
+    def __init__(self, saves_dir: str, current_stem: Optional[str] = None, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Select Target")
-        self.setMinimumSize(760, 520)
+        self.setWindowTitle("Select Player Target")
+        self.setMinimumSize(560, 420)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
-        self._result: Optional[int] = current_mob_id
-        self._mobs: list = loader.get_all_monsters()
+        self._result: Optional[str] = current_stem
+        self._rows: list[tuple[str, str, str, str, str, str, str]] = []  # (stem, name, job, lv, hp, def_, mdef)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
@@ -52,7 +46,7 @@ class MonsterBrowserDialog(QDialog):
         search_row = QHBoxLayout()
         search_row.addWidget(QLabel("Filter:"))
         self._search = QLineEdit()
-        self._search.setPlaceholderText("Monster name…")
+        self._search.setPlaceholderText("Build name…")
         search_row.addWidget(self._search, stretch=1)
         layout.addLayout(search_row)
 
@@ -68,7 +62,6 @@ class MonsterBrowserDialog(QDialog):
 
         btn_box = QDialogButtonBox()
         self._ok_btn = btn_box.addButton(QDialogButtonBox.StandardButton.Ok)
-        self._clear_btn = btn_box.addButton("Clear", QDialogButtonBox.ButtonRole.ResetRole)
         btn_box.addButton(QDialogButtonBox.StandardButton.Cancel)
         self._ok_btn.setEnabled(False)
         layout.addWidget(btn_box)
@@ -77,49 +70,62 @@ class MonsterBrowserDialog(QDialog):
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         self._table.cellDoubleClicked.connect(lambda r, c: self._accept_selected())
         self._ok_btn.clicked.connect(self._accept_selected)
-        self._clear_btn.clicked.connect(self._clear)
         btn_box.rejected.connect(self.reject)
 
-        self._populate(self._mobs)
+        self._load_builds(saves_dir)
+        self._populate(self._rows)
 
-        if current_mob_id is not None:
-            self._select_row(current_mob_id)
+        if current_stem is not None:
+            self._select_stem(current_stem)
 
     # ── Internal helpers ───────────────────────────────────────────────────
+
+    def _load_builds(self, saves_dir: str) -> None:
+        if not os.path.isdir(saves_dir):
+            return
+        for fname in sorted(os.listdir(saves_dir)):
+            if not fname.endswith(".json"):
+                continue
+            stem = fname[:-5]
+            path = os.path.join(saves_dir, fname)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            cd = data.get("cached_display", {})
+            name = data.get("name", stem) or stem
+            job_name = cd.get("job_name", "?")
+            level = str(data.get("base_level", "?"))
+            hp = str(cd.get("hp", "?"))
+            def_ = str(cd.get("def_", "?"))
+            mdef = str(cd.get("mdef", "?"))
+            self._rows.append((stem, name, job_name, level, hp, def_, mdef))
 
     def _make_item(self, text: str, numeric: bool = False) -> QTableWidgetItem:
         item = _NumericItem(text) if numeric else QTableWidgetItem(text)
         item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
         return item
 
-    def _populate(self, mobs: list) -> None:
+    def _populate(self, rows: list) -> None:
         self._table.setSortingEnabled(False)
-        self._table.setRowCount(len(mobs))
-        for row, m in enumerate(mobs):
-            elem_int = m.get("element", 0)
-            elem_lv = m.get("element_level", 1)
-            elem_name = _ELEMENT_NAMES[elem_int] if 0 <= elem_int <= 9 else str(elem_int)
-
-            name_item = self._make_item(m.get("name", ""))
-            name_item.setData(Qt.ItemDataRole.UserRole, m.get("id"))
+        self._table.setRowCount(len(rows))
+        for row, (stem, name, job_name, level, hp, def_, mdef) in enumerate(rows):
+            name_item = self._make_item(name)
+            name_item.setData(Qt.ItemDataRole.UserRole, stem)
             self._table.setItem(row, 0, name_item)
-            self._table.setItem(row, 1, self._make_item(str(m.get("id", "")),    numeric=True))
-            self._table.setItem(row, 2, self._make_item(str(m.get("level", "")), numeric=True))
-            self._table.setItem(row, 3, self._make_item(str(m.get("hp", "")),    numeric=True))
-            self._table.setItem(row, 4, self._make_item(str(m.get("def_", "")),  numeric=True))
-            self._table.setItem(row, 5, self._make_item(str(m.get("mdef", "")),  numeric=True))
-            self._table.setItem(row, 6, self._make_item(f"{elem_name}/{elem_lv}"))
-            self._table.setItem(row, 7, self._make_item(m.get("race", "")))
-            self._table.setItem(row, 8, self._make_item(m.get("size", "")))
-            self._table.setItem(row, 9, self._make_item("✓" if m.get("is_boss") else ""))
-
+            self._table.setItem(row, 1, self._make_item(job_name))
+            self._table.setItem(row, 2, self._make_item(level, numeric=True))
+            self._table.setItem(row, 3, self._make_item(hp,    numeric=True))
+            self._table.setItem(row, 4, self._make_item(def_,  numeric=True))
+            self._table.setItem(row, 5, self._make_item(mdef,  numeric=True))
         self._table.resizeColumnsToContents()
         self._table.setSortingEnabled(True)
 
-    def _select_row(self, mob_id: int) -> None:
+    def _select_stem(self, stem: str) -> None:
         for row in range(self._table.rowCount()):
             item = self._table.item(row, 0)
-            if item and item.data(Qt.ItemDataRole.UserRole) == mob_id:
+            if item and item.data(Qt.ItemDataRole.UserRole) == stem:
                 self._table.selectRow(row)
                 self._table.scrollToItem(item)
                 break
@@ -128,8 +134,8 @@ class MonsterBrowserDialog(QDialog):
 
     def _on_filter(self, text: str) -> None:
         query = text.strip().lower()
-        filtered = self._mobs if not query else [
-            m for m in self._mobs if query in m.get("name", "").lower()
+        filtered = self._rows if not query else [
+            r for r in self._rows if query in r[1].lower()  # r[1] = display name
         ]
         self._populate(filtered)
 
@@ -144,11 +150,7 @@ class MonsterBrowserDialog(QDialog):
         self._result = item.data(Qt.ItemDataRole.UserRole)
         self.accept()
 
-    def _clear(self) -> None:
-        self._result = None
-        self.accept()
-
     # ── Public API ─────────────────────────────────────────────────────────
 
-    def selected_mob_id(self) -> Optional[int]:
+    def selected_build_stem(self) -> Optional[str]:
         return self._result

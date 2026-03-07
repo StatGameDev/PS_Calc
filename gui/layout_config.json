@@ -49,6 +49,13 @@
       "compact_mode": "none"
     },
     {
+      "key": "target_section",
+      "panel": "combat",
+      "display_name": "Target Info",
+      "default_collapsed": false,
+      "compact_mode": "compact_view"
+    },
+    {
       "key": "summary_section",
       "panel": "combat",
       "display_name": "Summary",
@@ -61,13 +68,6 @@
       "display_name": "Step Breakdown",
       "default_collapsed": false,
       "compact_mode": "hidden"
-    },
-    {
-      "key": "target_section",
-      "panel": "combat",
-      "display_name": "Target Info",
-      "default_collapsed": false,
-      "compact_mode": "compact_view"
     },
     {
       "key": "incoming_damage",

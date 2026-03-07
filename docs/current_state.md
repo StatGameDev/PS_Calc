@@ -1,11 +1,11 @@
 # PS_Calc — Current State
-# Updated end of Session F (partial — target selector redesign deferred to Session F1).
+# Updated end of Session F1 (partial — target selector redesign deferred to Session F2).
 # Any Claude instance taking over should read this before starting work.
 
 ---
 
 ## Last Completed Session
-**Session F — Incoming damage controls (partial).**
+**Session F1 — Incoming damage controls (partial).**
 
 ### Code changes this session:
 
@@ -23,7 +23,7 @@
    - `config_changed` wired to `_run_battle_pipeline`
    - `is_ranged` passed to IncomingPhysicalPipeline
    - `ele_override` / `ratio_override` passed to IncomingMagicPipeline
-   - `# TODO(Session F1)` stubs left for pvp_stem wiring (combat_controls not yet restructured)
+   - `# TODO(Session F2)` stubs left for pvp_stem wiring (combat_controls not yet restructured)
 
 4. `gui/themes/dark.qss`
    - `QLabel#combat_target_display` — prominent style (background, 13px bold) replacing old `combat_mob_selected`
@@ -33,7 +33,7 @@
 F2 (G30) was initially implemented with a PvP combo in IncomingDamageSection.
 After user feedback: PvP target selection belongs in CombatControls as the **unified target**
 (one target per panel drives both outgoing and incoming). The PvP combo was backed out.
-The full target selector redesign is Session F1's primary task.
+The full target selector redesign is Session F2's primary task.
 
 ---
 
@@ -49,11 +49,11 @@ The full target selector redesign is Session F1's primary task.
 Both default to None = original behavior preserved.
 
 **dark.qss target label** — objectName `"combat_target_display"` (not `"combat_mob_selected"`).
-`combat_controls.py` still uses `"combat_mob_selected"` — must be renamed to `"combat_target_display"` in Session F1 when the section is restructured.
+`combat_controls.py` still uses `"combat_mob_selected"` — must be renamed to `"combat_target_display"` in Session F2 when the section is restructured.
 
 ---
 
-## Session F1 — Unified Target Selector
+## Session F2 — Unified Target Selector
 
 **Primary task: Restructure CombatControlsSection target area.**
 No Hercules greps needed. Pure GUI + wiring + one new dialog + save format extension.
@@ -150,7 +150,7 @@ File: `gui/sections/combat_controls.py`
 
 ### G4 — main_window.py wiring
 
-Replace `# TODO(Session F1)` stubs:
+Replace `# TODO(Session F2)` stubs:
 
 In `_refresh_builds`:
 ```python
@@ -199,7 +199,7 @@ Add `from core.models.skill import SkillInstance` import.
 | Gap | Status | Session | Description |
 |---|---|---|---|
 | G43 | [x] | F | Ranged checkbox + magic ele/ratio override — DONE |
-| G30 | [~] | G | PvP target — pipeline code ready; UI redesign deferred to Session F1 |
+| G30 | [~] | G | PvP target — pipeline code ready; UI redesign deferred to Session F2 |
 | G12 | [ ] | G | Armor refine DEF |
 | G13 | [ ] | G | Card slot UI |
 | G34–G37 | [ ] | H | Job/race/element filters |

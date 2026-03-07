@@ -28,10 +28,19 @@
       "Bash(grep -h \"active_buffs\" -A 20 c:/Projects/PS_Calc/saves/*.json)",
       "Bash(python tools/import_skill_db.py --dry-run)",
       "Bash(python tools/import_skill_db.py)",
-      "Bash(python tools/import_job_db.py)"
+      "Bash(python tools/import_job_db.py)",
+      "Bash(python -c \"import gui.main_window; print\\(''OK''\\)\")",
+      "WebFetch(domain:irowiki.org)",
+      "Bash(c:/Projects/PS_Calc/docs/completed_work.md:*)",
+      "Bash(grep -A 20 '\"\"Poring\"\"' Hercules/db/pre-re/mob_db.conf)",
+      "Bash(git add CLAUDE.md docs/aspd.md docs/current_state.md docs/BARD_DANCER_SONGS.md)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git add docs/context_log.md)"
     ],
     "additionalDirectories": [
-      "c:\\Projects\\PS_Calc\\core\\data\\pre-re"
+      "c:\\Projects\\PS_Calc\\core\\data\\pre-re",
+      "c:\\Users\\Felix\\.claude\\projects\\c--Projects-PS-Calc\\memory"
     ]
   }
 }

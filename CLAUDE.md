@@ -217,13 +217,14 @@ requires a web-Claude design session before any implementation. Do not touch
 For web Claude receiving a handoff: user pastes `docs/current_state.md` + the relevant
 sections of this file (rules, file structure, pipeline order).
 
-`docs/current_state.md` is the only file updated at handoff. Do not duplicate into MEMORY.md or gaps.md.
+`docs/current_state.md` is the only file updated at handoff and should only be updated when user requests a handoff for switching instances. Do not duplicate into MEMORY.md or gaps.md.
 
 **End-of-session docs maintenance (before commit):**
 - `docs/gaps.md` — mark completed gaps [x], update [~] partials
 - `docs/completed_work.md` — append new session section with what was done
 - `docs/data_models.md` — for each field implemented: move it from its [NEW] block into the [EXISTS] block of the same section, keeping the comment
 - `CLAUDE.md` — update Pipeline Step Order and modifiers list if steps added/reordered
+- **DO NOT touch `docs/current_state.md`** — only written on explicit user command `handoff`. Do not read or write it as part of routine session start or end.
 
 **After commit and push:** Remind the user to consider updating `docs/context_log.md`
 (files read/edited/created with line counts and token estimates) if they want the session

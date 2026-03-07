@@ -30,6 +30,7 @@ from core.gear_bonus_aggregator import GearBonusAggregator
 from core.models.build import PlayerBuild
 from core.models.damage import BattleResult
 from core.models.gear_bonuses import GearBonuses
+from core.models.skill import SkillInstance
 from core.models.target import Target
 from gui import app_config
 from gui.panel_container import PanelContainer
@@ -230,7 +231,9 @@ class MainWindow(QMainWindow):
         elif self._build_combo.count() > 0:
             self._build_combo.setCurrentIndex(0)
         self._build_combo.blockSignals(False)
-        # TODO(Session F1): self._combat_controls.refresh_target_builds(pairs)
+        pairs = [(stem, self._read_build_display_name(os.path.join(app_config.SAVES_DIR, f"{stem}.json")) or stem)
+                 for stem in stems]
+        self._combat_controls.refresh_target_builds(pairs)
         # Load whichever build is now selected
         stem = self._build_combo.currentData()
         if stem:
@@ -380,8 +383,34 @@ class MainWindow(QMainWindow):
         )
         status = StatusCalculator(self._config).calculate(eff_build, weapon)
         skill = self._combat_controls.get_skill_instance()
-        mob_id = self._combat_controls.get_target_mob_id() or eff_build.target_mob_id
-        target = loader.get_monster(mob_id) if mob_id is not None else Target()
+        pvp_stem = self._combat_controls.get_target_pvp_stem()
+        mob_id = None if pvp_stem else (
+            self._combat_controls.get_target_mob_id() or eff_build.target_mob_id
+        )
+
+        # Resolve outgoing target
+        if pvp_stem:
+            pvp_path = os.path.join(app_config.SAVES_DIR, f"{pvp_stem}.json")
+            try:
+                pvp_build = BuildManager.load_build(pvp_path)
+            except Exception as exc:
+                print(f"WARNING: Failed to load PvP target build '{pvp_stem}': {exc}")
+                pvp_build = None
+            if pvp_build is not None:
+                pvp_eff = self._apply_gear_bonuses(pvp_build)
+                pvp_weapon = BuildManager.resolve_weapon(
+                    pvp_eff.equipped.get("right_hand"),
+                    pvp_eff.refine_levels.get("right_hand", 0),
+                    pvp_eff.weapon_element,
+                )
+                pvp_status = StatusCalculator(self._config).calculate(pvp_eff, pvp_weapon)
+                pvp_gear_bonuses = GearBonusAggregator.compute(pvp_eff.equipped)
+                target = BuildManager.player_build_to_target(pvp_eff, pvp_status, pvp_gear_bonuses)
+            else:
+                pvp_stem = None
+                target = Target()
+        else:
+            target = loader.get_monster(mob_id) if mob_id is not None else Target()
 
         # Always refresh target section — independent of pipeline success (B5).
         self._target_section.refresh_mob(mob_id)
@@ -394,8 +423,14 @@ class MainWindow(QMainWindow):
         is_ranged, ele_override, ratio_override = (
             self._incoming_damage.get_incoming_config()
         )
-        # TODO(Session F1): pvp_stem = self._combat_controls.get_target_pvp_stem()
-        if mob_id is not None:
+        if pvp_stem and pvp_build is not None:
+            # PvP incoming: run the attacker's (pvp) pipeline against the current player as target
+            try:
+                pvp_battle = self._pipeline.calculate(pvp_status, pvp_weapon, SkillInstance(), player_target, pvp_eff)
+                phys_result = pvp_battle.normal
+            except Exception as exc:
+                print(f"WARNING: PvP incoming pipeline error: {exc}")
+        elif mob_id is not None:
             try:
                 phys_result = self._incoming_phys_pipeline.calculate(
                     mob_id=mob_id,
