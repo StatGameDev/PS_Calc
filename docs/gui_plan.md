@@ -119,6 +119,8 @@ Low priority — the browser dialog is functional. Consider for Session 5 polish
 
 **4.4 — Skill list real names + job filter**
 Filter skill combo to current build's job_id. Use skills.json job data; "Show All" toggle.
+Special handling for Rogue and Stalker, they can copy some skills with Plagiarism.
+The flag should be under "skill_info": ["AllowPlagiarism"] in data\pre-re\db\skills.json
 
 **4.5 — Equipment Browser job filter**
 Filter by `item["job"]` list. "All Jobs" toggle in dialog toolbar.
