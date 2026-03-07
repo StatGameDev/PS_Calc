@@ -402,6 +402,63 @@ SC_ASSNCROS formula fully confirmed and documented; all aspd.md unknowns cleared
 
 ---
 
+## Session F2  2026-03-07  claude-sonnet-4-6
+ctx_used: 73%
+
+Work items completed:
+- G0: save_build() + cached_display {job_name, hp, def_, mdef}
+- G1: MDef column in MonsterBrowserDialog (index 5; Element/Race/Size/Boss shifted to 6–9)
+- G2: new PlayerTargetBrowserDialog (columns Name/Job/Lv/HP/DEF/MDEF; reads cached_display from JSON)
+- G3: CombatControlsSection full rewrite — Mob↔Player toggle, unified search/list, get_target_pvp_stem(), refresh_target_builds(), objectName renamed to combat_target_display
+- G4: main_window.py pvp wiring — refresh_target_builds() in _refresh_builds; outgoing + incoming pvp target resolution replacing TODO stubs
+- Fix: QComboBox missing import in incoming_damage.py (pre-existing F1 bug, startup crash)
+- Layout: Target Info moved above Summary in layout_config.json
+- Docs: gaps.md G30+G43 done; completed_work.md Session F; session_roadmap.md F1+F2 merged → completed table; CLAUDE.md + MEMORY.md current_state.md prohibition strengthened
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/current_state.md | 216 | ~864 |
+| docs/session_roadmap.md (partial) | ~90 | ~360 |
+| gui/sections/combat_controls.py | 215 | ~1,505 |
+| gui/dialogs/monster_browser.py | 154 | ~1,078 |
+| core/build_manager.py | 245 | ~1,715 |
+| gui/main_window.py (3 partial reads) | ~120 | ~840 |
+| core/models/build.py | 75 | ~525 |
+| greps (5× quick: get_hp_at_level, SAVES_DIR, StatusCalculator, TODO stubs, imports) | ~60 | ~300 |
+| docs/gaps.md | 133 | ~532 |
+| docs/completed_work.md (3 chunks) | ~670 | ~2,680 |
+| docs/context_log.md | 431 | ~1,724 |
+| **subtotal reads** | **~2,409** | **~12,123** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| core/build_manager.py | +15 | ~105 |
+| gui/dialogs/monster_browser.py | +2 | ~14 |
+| gui/sections/combat_controls.py | rewrite ~260 | ~1,820 |
+| gui/main_window.py | +45 | ~315 |
+| gui/sections/incoming_damage.py | +1 | ~7 |
+| docs/gaps.md | +6 | ~24 |
+| docs/completed_work.md | +80 | ~320 |
+| docs/session_roadmap.md | -78 net | ~312 |
+| CLAUDE.md | +2 | ~14 |
+| memory/MEMORY.md | +3 | ~12 |
+| docs/context_log.md | +this entry | ~250 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| gui/dialogs/player_target_browser.py | 120 | ~840 |
+
+Total est_tokens: ~12,123 reads + ~3,993 edits + 840 create + 6,000 fixed + ~22,000 conv ≈ 45,000
+Notes: Pure GUI session, no Hercules greps. CombatControlsSection rewrite (~260 lines) was the
+largest single edit. system-reminder overhead from 4 linter-flagged files added ~2k conv tokens.
+end-of-session doc work (gaps/completed_work/roadmap/CLAUDE.md/MEMORY.md + commit) consumed
+roughly the last 10% of context.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
