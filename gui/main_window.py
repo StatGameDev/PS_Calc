@@ -191,6 +191,7 @@ class MainWindow(QMainWindow):
         self._stats_section.stats_changed.connect(self._on_build_changed)
         self._equip_section.equipment_changed.connect(self._on_build_changed)
         self._passive_section.passives_changed.connect(self._on_build_changed)
+        self._incoming_damage.config_changed.connect(self._run_battle_pipeline)
 
     def _connect_combat_signals(self) -> None:
         """Wire combat section change signals to _on_build_changed."""
@@ -229,6 +230,7 @@ class MainWindow(QMainWindow):
         elif self._build_combo.count() > 0:
             self._build_combo.setCurrentIndex(0)
         self._build_combo.blockSignals(False)
+        # TODO(Session F1): self._combat_controls.refresh_target_builds(pairs)
         # Load whichever build is now selected
         stem = self._build_combo.currentData()
         if stem:
@@ -389,6 +391,10 @@ class MainWindow(QMainWindow):
         player_target = BuildManager.player_build_to_target(eff_build, status, gear_bonuses)
         phys_result = None
         magic_result = None
+        is_ranged, ele_override, ratio_override = (
+            self._incoming_damage.get_incoming_config()
+        )
+        # TODO(Session F1): pvp_stem = self._combat_controls.get_target_pvp_stem()
         if mob_id is not None:
             try:
                 phys_result = self._incoming_phys_pipeline.calculate(
@@ -396,6 +402,7 @@ class MainWindow(QMainWindow):
                     player_target=player_target,
                     gear_bonuses=gear_bonuses,
                     build=eff_build,
+                    is_ranged=is_ranged,
                 )
             except Exception as exc:
                 print(f"WARNING: IncomingPhysicalPipeline error: {exc}")
@@ -405,6 +412,8 @@ class MainWindow(QMainWindow):
                     player_target=player_target,
                     gear_bonuses=gear_bonuses,
                     build=eff_build,
+                    ele_override=ele_override,
+                    ratio_override=ratio_override,
                 )
             except Exception as exc:
                 print(f"WARNING: IncomingMagicPipeline error: {exc}")

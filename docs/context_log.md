@@ -35,6 +35,54 @@ Notes: retroactive entry, no size data recorded. Use Session A onward for calibr
 
 ---
 
+## Session F  2026-03-07  claude-sonnet-4-6
+ctx_used: 87%
+
+Work items completed:
+- G43: incoming_magic_pipeline.py ele_override + ratio_override params
+- G43: incoming_damage.py Ranged checkbox + magic element combo + ratio spinbox + config_changed signal
+- G43: main_window.py wiring for is_ranged/ele_override/ratio_override
+- G30 (partial): PvP combo added then backed out after design revision; deferred to Session F1
+- dark.qss: combat_target_display prominent style + target_mode_btn:checked red
+- docs: current_state.md, session_roadmap.md (F1/F2 added), context_log.md updated
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/current_state.md | ~110 | ~440 |
+| docs/session_roadmap.md (partial) | ~50 | ~200 |
+| gui/sections/incoming_damage.py | ~204 | ~1430 |
+| core/calculators/incoming_magic_pipeline.py | ~179 | ~1250 |
+| gui/main_window.py (partial, 3×) | ~110 | ~770 |
+| core/calculators/incoming_physical_pipeline.py (partial) | ~10 | ~70 |
+| core/calculators/battle_pipeline.py (partial) | ~10 | ~70 |
+| core/data_loader.py (partial) | ~20 | ~140 |
+| core/models/skill.py | ~9 | ~63 |
+| gui/sections/combat_controls.py | ~215 | ~1505 |
+| gui/dialogs/monster_browser.py | ~154 | ~1078 |
+| core/build_manager.py (partial) | ~50 | ~350 |
+| gui/themes/dark.qss (partial) | ~20 | ~80 |
+| docs/context_log.md (partial) | ~10 | ~40 |
+| docs/session_roadmap.md (partial) | ~55 | ~220 |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| core/calculators/incoming_magic_pipeline.py | ~179 | ~1250 |
+| gui/sections/incoming_damage.py | ~190 | ~1330 |
+| gui/main_window.py | ~450 | ~3150 |
+| gui/themes/dark.qss | ~470 | ~1880 |
+| docs/current_state.md | ~130 | ~520 |
+| docs/session_roadmap.md | ~140 | ~560 |
+| docs/context_log.md | — | — |
+
+Files created: none
+
+Total est_tokens: ~17k read + ~10k edited + ~6k overhead ≈ 33k
+Notes: Design iteration on PvP target selector consumed ~30% context. G30 fully deferred to F1.
+
+---
+
 ## Session A  2026-03-06  claude-sonnet-4-6
 ctx_used: 93% Session 1 (planning), 63% Session 2 (implementation)
 

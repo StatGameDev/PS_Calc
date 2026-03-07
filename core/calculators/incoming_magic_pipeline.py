@@ -41,6 +41,8 @@ class IncomingMagicPipeline:
         build: PlayerBuild,
         skill: Optional[SkillInstance] = None,
         mob_matk_bonus_rate: int = 0,   # % modifier to mob MATK (buffs/debuffs)
+        ele_override: Optional[int] = None,    # element ID 0-9; None = use skill/mob natural
+        ratio_override: Optional[int] = None,  # % ratio (e.g. 300); None = use skill ratio
     ) -> DamageResult:
         result = DamageResult()
 
@@ -86,25 +88,41 @@ class IncomingMagicPipeline:
         )
 
         # --- Skill Ratio (BF_MAGIC) — optional ---
+        # ratio_override takes priority over skill lookup.
         # SkillRatio.calculate_magic returns (dmg, hit_count); build=None is safe (unused).
         hit_count = 1
-        if skill is not None and skill.id != 0:
+        if ratio_override is not None and ratio_override > 0:
+            dmg = dmg.scale(ratio_override, 100)
+            result.add_step(
+                name=f"Ratio Override ({ratio_override}%)",
+                value=dmg.avg,
+                min_value=dmg.min,
+                max_value=dmg.max,
+                multiplier=ratio_override / 100.0,
+                note=f"Manual ratio override: {ratio_override}%",
+                formula=f"dmg × {ratio_override} // 100",
+                hercules_ref="(manual override)",
+            )
+        elif skill is not None and skill.id != 0:
             dmg, hit_count = SkillRatio.calculate_magic(skill, dmg, None, player_target, result)
 
         # --- Attr Fix: mob/skill element vs player armor element ---
-        # Resolve element: skill element takes priority over mob natural element.
-        magic_ele_name = "Neutral"
-        if skill is not None and skill.id != 0:
-            skill_data = loader.get_skill(skill.id)
-            if skill_data:
-                ele_list = skill_data.get("element")
-                if ele_list and skill.level <= len(ele_list):
-                    raw = ele_list[skill.level - 1]   # e.g. "Ele_Fire"
-                    if raw and raw.startswith("Ele_"):
-                        magic_ele_name = raw[4:]       # strip "Ele_" → "Fire"
-        if magic_ele_name == "Neutral":
-            # Fall back to mob's natural element
-            magic_ele_name = loader.get_element_name(mob_element)
+        # ele_override takes priority; otherwise skill element, then mob natural element.
+        if ele_override is not None:
+            magic_ele_name = loader.get_element_name(ele_override)
+        else:
+            magic_ele_name = "Neutral"
+            if skill is not None and skill.id != 0:
+                skill_data = loader.get_skill(skill.id)
+                if skill_data:
+                    ele_list = skill_data.get("element")
+                    if ele_list and skill.level <= len(ele_list):
+                        raw = ele_list[skill.level - 1]   # e.g. "Ele_Fire"
+                        if raw and raw.startswith("Ele_"):
+                            magic_ele_name = raw[4:]       # strip "Ele_" → "Fire"
+            if magic_ele_name == "Neutral":
+                # Fall back to mob's natural element
+                magic_ele_name = loader.get_element_name(mob_element)
 
         player_ele_name = loader.get_element_name(player_target.armor_element)
         multiplier = loader.get_attr_fix_multiplier(

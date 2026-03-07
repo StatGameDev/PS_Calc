@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
+    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QWidget,
@@ -17,6 +19,19 @@ from PySide6.QtWidgets import (
 
 from core.models.damage import DamageResult, DamageStep
 from gui.section import Section
+
+_ELEMENTS = [
+    (0, "Neutral"),
+    (1, "Water"),
+    (2, "Earth"),
+    (3, "Fire"),
+    (4, "Wind"),
+    (5, "Poison"),
+    (6, "Holy"),
+    (7, "Dark"),
+    (8, "Ghost"),
+    (9, "Undead"),
+]
 
 _DASH = "—"
 _COL_STEP   = 0
@@ -32,12 +47,14 @@ def _fmt_step(step: DamageStep) -> str:
 
 class IncomingDamageSection(Section):
     """
-    Incoming damage step breakdown (mob → player).
+    Incoming damage step breakdown (mob → player, or PvP attacker → player).
 
     Physical / Magic toggle switches which pipeline's steps are shown.
     No crit column — mob attacks have no crit pipeline.
     compact_mode="hidden" — hidden when the panel is compact.
     """
+
+    config_changed = Signal()
 
     def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_mode, parent)
@@ -94,6 +111,44 @@ class IncomingDamageSection(Section):
         ctrl_row.addWidget(self._source_btn)
         self.add_content_widget(ctrl_widget)
 
+        # ── Incoming config row ────────────────────────────────────────────
+        cfg_widget = QWidget()
+        cfg_row = QHBoxLayout(cfg_widget)
+        cfg_row.setContentsMargins(0, 0, 0, 4)
+        cfg_row.setSpacing(8)
+
+        self._ranged_chk = QCheckBox("Ranged")
+        self._ranged_chk.toggled.connect(self.config_changed)
+
+        cfg_row.addWidget(self._ranged_chk)
+        cfg_row.addSpacing(16)
+
+        magic_ele_lbl = QLabel("Ele:")
+        magic_ele_lbl.setObjectName("incoming_label")
+        self._magic_ele_combo = QComboBox()
+        self._magic_ele_combo.addItem("Mob natural", None)
+        for ele_id, ele_name in _ELEMENTS:
+            self._magic_ele_combo.addItem(ele_name, ele_id)
+        self._magic_ele_combo.currentIndexChanged.connect(self.config_changed)
+
+        ratio_lbl = QLabel("Ratio:")
+        ratio_lbl.setObjectName("incoming_label")
+        self._ratio_spin = QSpinBox()
+        self._ratio_spin.setRange(0, 1000)
+        self._ratio_spin.setSingleStep(5)
+        self._ratio_spin.setValue(0)
+        self._ratio_spin.setSuffix("%")
+        self._ratio_spin.setFixedWidth(72)
+        self._ratio_spin.valueChanged.connect(self.config_changed)
+
+        cfg_row.addWidget(magic_ele_lbl)
+        cfg_row.addWidget(self._magic_ele_combo)
+        cfg_row.addSpacing(8)
+        cfg_row.addWidget(ratio_lbl)
+        cfg_row.addWidget(self._ratio_spin)
+        cfg_row.addStretch()
+        self.add_content_widget(cfg_widget)
+
         # ── Step table ────────────────────────────────────────────────────
         self._table = QTableWidget(0, 3)
         self._table.setHorizontalHeaderLabels(["Step", "Damage", "Source"])
@@ -114,6 +169,22 @@ class IncomingDamageSection(Section):
         self._showing_magic = False
 
         self._set_placeholder()
+
+    # ── Public API ────────────────────────────────────────────────────────
+
+    def get_incoming_config(
+        self,
+    ) -> tuple[bool, Optional[int], Optional[int]]:
+        """Return (is_ranged, ele_override, ratio_override).
+
+        ele_override: None = use mob natural; int 0-9 = element ID override.
+        ratio_override: None = use skill ratio; int > 0 = manual % override.
+        """
+        is_ranged = self._ranged_chk.isChecked()
+        ele_override: Optional[int] = self._magic_ele_combo.currentData()
+        ratio_val = self._ratio_spin.value()
+        ratio_override: Optional[int] = ratio_val if ratio_val > 0 else None
+        return is_ranged, ele_override, ratio_override
 
     # ── Mode / source toggles ──────────────────────────────────────────────
 

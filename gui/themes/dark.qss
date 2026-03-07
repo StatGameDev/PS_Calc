@@ -447,9 +447,23 @@ QLabel#combat_field_label {
     min-width: 52px;
 }
 
-QLabel#combat_mob_selected {
-    color: #4d8fff;
-    font-size: 11px;
+QLabel#combat_target_display {
+    background-color: #1a2035;
+    border: 1px solid #2d3a52;
+    border-radius: 4px;
+    padding: 5px 8px;
+    color: #cfd8e8;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QPushButton#target_mode_btn {
+    min-width: 56px;
+}
+
+QPushButton#target_mode_btn:checked {
+    color: #e05555;
+    border-color: #993333;
 }
 
 QLabel#combat_env_placeholder {
