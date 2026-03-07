@@ -78,6 +78,7 @@ class BuildManager:
                 "is_ranged_override": build.is_ranged_override,  # null = derive from weapon_type
                 "is_riding_peco": build.is_riding_peco,
                 "no_sizefix": build.no_sizefix,
+                "armor_element": build.armor_element,
             },
             "server": build.server,
         }
@@ -150,6 +151,7 @@ class BuildManager:
             is_ranged_override=flags.get("is_ranged_override", None),
             is_riding_peco=flags.get("is_riding_peco", False),
             no_sizefix=flags.get("no_sizefix", False),
+            armor_element=flags.get("armor_element", 0),
             server=data.get("server", "standard"),
         )
 

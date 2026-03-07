@@ -67,6 +67,9 @@ class PlayerBuild:
     weapon_element: Optional[int] = None
     # Element override for right_hand weapon (int 0-9). None = use item_db element.
     # Used for elemental imbues until a proper SC/item imbue system is implemented.
+    armor_element: int = 0
+    # Element of worn armor (int 0-9). Default 0 = Neutral (no armor element card).
+    # Used for incoming damage pipeline: attr_fix(attacker.element, player.armor_element).
     target_mob_id: Optional[int] = None
     # When set, pipeline resolves target via loader.get_monster(target_mob_id).
     # None = caller supplies Target manually (used by GUI inputs once built).

@@ -49,7 +49,7 @@ _Status: [ ] open, [x] done, [~] partial_
 | ID | Status | Description | Hercules ref | Notes |
 |---|---|---|---|---|
 | G26 | [ ] | No incoming physical pipeline. IncomingDamageSection shows mob ATK range as display text only. | — | Need IncomingPhysicalPipeline class |
-| G27 | [ ] | Player armor element not tracked. Determines how player defends against elemental attacks. | attr_fix table | PlayerBuild has no armor element field; needed to look up attr_fix for incoming |
+| G27 | [x] | Player armor element not tracked. Determines how player defends against elemental attacks. | attr_fix table | Session D: armor_element: int = 0 added to PlayerBuild; saved/loaded under flags.armor_element |
 | G28 | [~] | mob_db int_, str, dex not loaded into Target. Mob MATK derived from int_. | mob_db stats.int | Session A: int_ now loaded (stats.get("int",0)); str/dex not yet loaded |
 | G29 | [ ] | Target-side player cards not modelled for incoming. sub_race[mob.race], sub_ele[mob.element], near/long_def_rate from player cards. | battle.c cardfix target side | Same G6/G8 infrastructure; these fields just need populating from player gear |
 
@@ -67,9 +67,9 @@ _Status: [ ] open, [x] done, [~] partial_
 
 | ID | Status | Description | Hercules ref | Notes |
 |---|---|---|---|---|
-| G31 | [ ] | No mob MATK derivation. Mob MATK = mob.int_ + (int_/7)^2 to int_ + (int_/5)^2. | status.c same formula | mob_db has stats.int, not currently loaded |
+| G31 | [ ] | No mob MATK derivation. Mob MATK = mob.int_ + (int_/7)^2 to int_ + (int_/5)^2. | status.c same formula | Session A: int_ loaded into Target; pipeline reads it directly. No extra loading needed. |
 | G32 | [ ] | No incoming magic pipeline. Player as target of magic. | — | Needs MagicPipeline run with mob/player as src, player Target (is_pc=True) as target |
-| G33 | [ ] | Player MDEF not calculated. Hard MDEF from equip, soft MDEF from INT. | status.c calc_mdef | Needs StatusCalculator extension and StatusData fields |
+| G33 | [x] | Player MDEF not calculated. Hard MDEF from equip, soft MDEF from INT. | status.c calc_mdef | Done in Session B: StatusData.mdef + mdef2; StatusCalculator computes both |
 
 ---
 

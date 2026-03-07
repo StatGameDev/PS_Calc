@@ -254,6 +254,60 @@ discovering level-dependent val2. bAtkRate position fix was a clean correction w
 
 ---
 
+## Session D  2026-03-07  claude-sonnet-4-6
+ctx_used: 73%
+
+Work items completed:
+- D0: armor_element: int = 0 added to PlayerBuild; saved/loaded under flags.armor_element in BuildManager (G27)
+- D-inv: Extensive Hercules investigation of mob ATK/MATK lifecycle (battle.c, status.c, mob.c)
+  Key findings: (1) mob batk = str+(str//10)^2 only — no dex/luk (PC-only); (2) all mob ATK values
+  frozen at db load time via status_calc_misc; (3) most mobs str=0 or str=1 (batk negligible);
+  (4) scaffold mob Porcellio has str=0 → batk=0 → explains "no stats connection" observation.
+- D-clean: Scaffold build files deleted (knight_bash, spear_peco, agi_bs); MEMORY.md section removed.
+- D-arch: Architectural decision — mob ATK is two-part (spawn-time frozen + per-attack roll);
+  implementation reads atk_min/atk_max from mob_db.json and adds batk from stats.str separately.
+
+Files read (investigation-heavy session):
+| file | lines | est_tok |
+|---|---|---|
+| core/models/build.py | 72 | ~504 |
+| core/models/target.py | 28 | ~196 |
+| core/build_manager.py | 202 | ~1,414 |
+| core/data_loader.py | 280 | ~1,960 |
+| core/calculators/battle_pipeline.py | 194 | ~1,358 |
+| core/calculators/magic_pipeline.py | 161 | ~1,127 |
+| core/calculators/modifiers/defense_fix.py | 184 | ~1,288 |
+| core/calculators/modifiers/card_fix.py | 155 | ~1,085 |
+| gui/sections/incoming_damage.py | 65 | ~455 |
+| tools/import_mob_db.py (partial) | ~80 | ~560 |
+| Hercules/src/map/battle.c (greps + sed) | ~200 | ~1,400 |
+| Hercules/src/map/status.c (greps + sed) | ~150 | ~1,050 |
+| Hercules/src/map/mob.c (greps + sed) | ~180 | ~1,260 |
+| Hercules/db/pre-re/mob_db.conf (Poring, Porcellio) | ~60 | ~420 |
+| docs/context_log.md | 283 | ~1,132 |
+| docs/current_state.md | 52 | ~208 |
+| memory/MEMORY.md | 133 | ~532 |
+| **subtotal reads** | **~2,479** | **~15,949** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| core/models/build.py | +3 | ~21 |
+| core/build_manager.py | +2 | ~14 |
+| docs/current_state.md | rewrite | ~600 |
+| docs/context_log.md | +this entry | ~300 |
+| docs/gaps.md | +3 | ~12 |
+| memory/MEMORY.md | -4 (section removed) | ~16 |
+
+Files created: none
+
+Total est_tokens: ~15,949 reads + ~963 edits + 6,000 fixed + ~22,000 conv ≈ 45,000 (~23% of 200k)
+Notes: Investigation-heavy session. All context spent on Hercules source tracing for mob ATK/MATK.
+Only G27 (armor_element) implemented; all pipeline work deferred to Session E.
+Two-part mob ATK architecture decision is the primary deliverable beyond the armor_element field.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
