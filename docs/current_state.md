@@ -16,20 +16,20 @@ saves/ — scaffold builds (knight_bash, spear_peco, agi_bs) deleted. Do not rec
 
 ## Key Architectural Decision (from Session D investigation)
 
-**Mob ATK is two-part and frozen at server db load time:**
+**Mob ATK is two-part:**
 
-Part 1 — **Spawn-time calculation** (what Hercules computes once at db load, `mob.c:4937`):
+Part 1 — **Baseline calculation** (what Hercules computes at db load, `mob.c:4937`):
 - Weapon range: `rhw.atk = Attack[0]`, `rhw.atk2 = Attack[1]` from mob_db.conf → stored as `atk_min`/`atk_max` in mob_db.json
-- BATK: `status_calc_misc` computes `batk = str + (str//10)^2` (pre-renewal BL_MOB path — NO dex or luk terms; those are PC-only). Stored in `mob->db->status.batk`.
+- BATK: `status_calc_misc` computes `batk = str + (str//10)^2` (pre-renewal BL_MOB path — NO dex or luk terms; those are PC-only).
 - MATK: `matk_min = int_ + (int_//7)^2`, `matk_max = int_ + (int_//5)^2` — computed from stats.int, no separate mob_db field.
-- On mob spawn: normal mobs copy `db->status` → `status` unchanged. **Values are frozen.**
+- On mob spawn: normal mobs copy `db->status` → `status`. This is the **default/unmodified state**.
 
-Part 2 — **Pipeline implementation** (what players see post-spawn):
-- Read `atk_min`/`atk_max` from `loader.get_monster_data(mob_id)` — these are the weapon component.
+Part 2 — **Pipeline implementation** (what players see in encounters):
+- Read `atk_min`/`atk_max` from `loader.get_monster_data(mob_id)` — weapon component baseline.
 - Compute `batk = str + (str//10)^2` from `mob_db.json stats.str`.
 - Effective mob base ATK range = `[atk_min + batk, atk_max - 1 + batk]` (rnd()%(atk2-atk1)+atk1 rolls [atk_min, atk_max-1]).
-- Buffs/debuffs applied to mob post-spawn do NOT affect these values for this calculator.
-- Important: many pre-renewal mobs have str=0 (batk=0, e.g. Porcellio) or str=1 (batk=1); batk is only significant for high-str MVPs (Boitata: batk=336 = 21% of avg ATK).
+- **IMPORTANT**: Some buffs/debuffs (e.g. Provoke, certain SC effects) modify mob ATK post-spawn by directly changing `rhw.atk`/`rhw.atk2`. The pipeline must NOT hard-exclude this. Design: provide user-adjustable mob ATK override fields (or a %-modifier) on the incoming pipeline so users can model buffed/debuffed mob states. mob_db values are the default baseline only.
+- Important: many pre-renewal mobs have str=0 (batk=0) or str=1 (batk=1); batk is only significant for high-str MVPs (Boitata: batk=336 = 21% of avg ATK).
 
 Source refs: `battle_calc_base_damage2` (battle.c, #else RENEWAL); `status_base_atk` (status.c:3749–3774); `mob_read_db_sub` (mob.c:4937).
 
