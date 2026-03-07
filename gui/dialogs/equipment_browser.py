@@ -40,8 +40,8 @@ _SLOT_EQP: dict[str, set[str]] = {
     "armor":      {"EQP_ARMOR"},
     "garment":    {"EQP_GARMENT"},
     "footwear":   {"EQP_SHOES"},
-    "acc_l":      {"EQP_ACC_L", "EQP_ACC_R"},
-    "acc_r":      {"EQP_ACC_L", "EQP_ACC_R"},
+    "acc_l":      {"EQP_ACC"},
+    "acc_r":      {"EQP_ACC"},
     "head_top":   {"EQP_HEAD_TOP"},
     "head_mid":   {"EQP_HEAD_MID"},
     "head_low":   {"EQP_HEAD_LOW"},
@@ -100,18 +100,24 @@ class EquipmentBrowserDialog(QDialog):
         slot_key: str,
         current_item_id: Optional[int] = None,
         job_id: int = 0,
+        item_type_override: Optional[str] = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
         slot_label = _SLOT_LABELS.get(slot_key, slot_key)
-        self.setWindowTitle(f"Select Item — {slot_label}")
+        if item_type_override == "IT_CARD":
+            title_suffix = f"{slot_label} — Cards"
+        else:
+            title_suffix = slot_label
+        self.setWindowTitle(f"Select Item — {title_suffix}")
         self.setMinimumSize(680, 520)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         self._result: Optional[int] = current_item_id
 
         # Load and filter items for this slot.
-        item_type = _SLOT_ITEM_TYPE.get(slot_key, "IT_ARMOR")
+        # item_type_override="IT_CARD" restricts the list to cards valid for this slot.
+        item_type = item_type_override if item_type_override else _SLOT_ITEM_TYPE.get(slot_key, "IT_ARMOR")
         valid_eqp = _SLOT_EQP.get(slot_key, set())
         all_items = loader.get_items_by_type(item_type)
         self._items: list = [
@@ -121,7 +127,8 @@ class EquipmentBrowserDialog(QDialog):
 
         # F6: Assassin/Assassin Cross (job 10/22) can also equip 1H weapons in left hand.
         # Merge in IT_WEAPON items with EQP_WEAPON (1H only — EQP_ARMS/2H excluded).
-        if slot_key == "left_hand" and job_id in (12, 24):  # Assassin, Assassin Cross
+        # Not applicable when browsing cards.
+        if slot_key == "left_hand" and job_id in (12, 24) and not item_type_override:  # Assassin, Assassin Cross
             weapons_1h = [
                 it for it in loader.get_items_by_type("IT_WEAPON")
                 if "EQP_WEAPON" in it.get("loc", [])

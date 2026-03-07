@@ -335,7 +335,7 @@ class MainWindow(QMainWindow):
 
         The original build is unchanged so save_build always writes clean values.
         """
-        gb = GearBonusAggregator.compute(build.equipped)
+        gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
         return dataclasses.replace(
             build,
             bonus_str=build.bonus_str + gb.str_,
@@ -404,7 +404,7 @@ class MainWindow(QMainWindow):
                     pvp_eff.weapon_element,
                 )
                 pvp_status = StatusCalculator(self._config).calculate(pvp_eff, pvp_weapon)
-                pvp_gear_bonuses = GearBonusAggregator.compute(pvp_eff.equipped)
+                pvp_gear_bonuses = GearBonusAggregator.compute(pvp_eff.equipped, pvp_eff.refine_levels)
                 target = BuildManager.player_build_to_target(pvp_eff, pvp_status, pvp_gear_bonuses)
             else:
                 pvp_stem = None
@@ -416,7 +416,7 @@ class MainWindow(QMainWindow):
         self._target_section.refresh_mob(mob_id)
 
         # Incoming damage pipelines — player as defender.
-        gear_bonuses = GearBonusAggregator.compute(eff_build.equipped)
+        gear_bonuses = GearBonusAggregator.compute(eff_build.equipped, eff_build.refine_levels)
         player_target = BuildManager.player_build_to_target(eff_build, status, gear_bonuses)
         phys_result = None
         magic_result = None

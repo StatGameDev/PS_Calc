@@ -752,3 +752,41 @@ New order: Combat Controls → Target Info → Summary → Step Breakdown → In
 **Pre-existing bug fixed (opportunistic)**
 `gui/sections/incoming_damage.py`: `QComboBox` added to PySide6 imports (was missing since F1,
 caused startup crash when magic element combo was introduced).
+
+---
+
+## Session G — Card Slots + Armor Refine DEF
+
+**G1 — Armor refine DEF scraper (G12)**
+`tools/import_refine_db.py`: parses `Hercules/db/pre-re/refine_db.conf` Armors block,
+extracts `StatsPerLevel: 66`. Output: `core/data/pre-re/tables/refine_armor.json`.
+
+**G2 — Armor refine DEF in pipeline (G12)**
+`core/data_loader.py`: `get_armor_refine_units(refine)` → `refine × 66`.
+`core/gear_bonus_aggregator.py`: signature changed to `compute(equipped, refine_levels=None)`.
+  - For each IT_ARMOR slot, accumulates raw units: `refine_level × 66`.
+  - After loop: `bonuses.def_ += (refinedef_units + 50) // 100` (aggregate rounding).
+  - Source: status.c ~1655,1713. Verified: +10 armor → 7 DEF (≈ 2/3 per level, matches in-game).
+All 5 call sites updated to pass `build.refine_levels`:
+  `battle_pipeline.py`, `magic_pipeline.py`, `main_window.py` (×3).
+
+**G3 — Card slot UI (G13)**
+`gui/sections/equipment_section.py`:
+  - Added `QVBoxLayout` container in grid col 1: item name on top, card button row below.
+  - `_card_ids: dict[str, list[Optional[int]]]` — tracks card IDs per slot.
+  - `_card_btns: dict[str, list[QPushButton]]` — card buttons per slot (objectName="card_slot_btn").
+  - `_refresh_card_slots(slot_key)`: rebuilds card buttons from item's `slots` count; hides row if 0.
+  - `_open_card_browser(slot_key, card_index)`: opens EquipmentBrowserDialog with `item_type_override="IT_CARD"`.
+  - `_resolve_card_label()`: strips " Card" suffix, truncates to 10 chars.
+  - `collect_into()`: writes `{slot}_card_0` … `{slot}_card_{N-1}` into `build.equipped` after base slots.
+  - `load_build()`: reads card keys from `build.equipped`, calls `_refresh_card_slots()` per slot.
+  - Card keys are additional entries in `build.equipped` — no `build_manager.py` structural change needed.
+
+**G4 — Equipment browser fixes (G13 + opportunistic)**
+`gui/dialogs/equipment_browser.py`:
+  - Bug fix: `EQP_ACC_L`/`EQP_ACC_R` → `EQP_ACC` for both accessory slots.
+    All IT_ARMOR accessories and IT_CARD accessory cards use `EQP_ACC`; the old filter
+    produced an empty intersection (zero items in the browser).
+  - Added `item_type_override: Optional[str] = None` parameter. When `"IT_CARD"`, filters
+    IT_CARD items using the same `_SLOT_EQP` loc intersection as regular items.
+    Window title updated to include "— Cards" suffix. F6 dual-wield merge skipped for cards.

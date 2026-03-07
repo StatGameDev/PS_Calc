@@ -1,5 +1,5 @@
 # PS_Calc — Gap Tracker
-_Last updated: Post-Session F. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
+_Last updated: Post-Session G. All gaps confirmed from Hercules source unless marked (wiki) or (inferred)._
 _Status: [ ] open, [x] done, [~] partial_
 
 ---
@@ -20,8 +20,8 @@ _Status: [ ] open, [x] done, [~] partial_
 | G9 | [~] | ASPD skill buffs not in StatusCalculator. SC_TWOHANDQUICKEN, SC_ADRENALINE, SC_SPEARQUICKEN, SC_ONEHAND modify amotion in status.c. | status.c SC_TWOHANDQUICKEN etc. | Fixed Session C: status_calc_aspd_rate 1000-scale approach; SC_ASSNCROS deferred — val2 formula confirmed in docs/BARD_DANCER_SONGS.md, needs party buff UI (Session J). |
 | G10 | [x] | bAtkRate bonus not in system. `sd->bonus.atk_rate` applied before SkillRatio (#ifndef RENEWAL line 5330). | battle.c:5330 | Fixed Session C: bAtkRate step added in battle_pipeline.py between BaseDamage and SkillRatio; removed from CardFix where it was incorrectly placed. |
 | G11 | [x] | bLongAtkRate (GearBonuses.long_atk_rate) accumulated but never applied. Belongs inside CardFix for BF_LONG. | battle.c cardfix #ifndef RENEWAL line ~1262 | Fixed in Session A: CardFix applies long_atk_rate when is_ranged=True |
-| G12 | [ ] | F3 — Armor refine DEF not calculated. No scraper, no table, no pipeline step. | Hercules/db/pre-re/refine_db.conf | Scraper (import_refine_db.py) + output core/data/pre-re/tables/refine_armor.json + GearBonusAggregator step using build.refine_levels[slot] for armor-class slots. Refine slider exists in GUI; value goes nowhere. Session G. |
-| G13 | [ ] | F1 — Card slot UI absent. No sub-slot buttons per item. | — | GearBonusAggregator handles any key in build.equipped — data side is ready. Key scheme: `{slot}_card_0` … `{slot}_card_{N-1}`. Session G. |
+| G12 | [x] | F3 — Armor refine DEF not calculated. No scraper, no table, no pipeline step. | Hercules/db/pre-re/refine_db.conf | Fixed Session G: import_refine_db.py + refine_armor.json (stats_per_level=66). GearBonusAggregator.compute() accumulates raw units per IT_ARMOR slot, applies (total+50)//100 once. 5 call sites updated. |
+| G13 | [x] | F1 — Card slot UI absent. No sub-slot buttons per item. | — | Fixed Session G: equipment_section.py card sub-slot buttons per item (dynamic count from item.slots). EquipmentBrowserDialog item_type_override="IT_CARD" + EQP_ACC bug fix. collect_into/load_build round-trip via {slot}_card_{n} keys in build.equipped. |
 | G14 | [ ] | bWeaponAtk (weapon-type ATK%) not in system. `sd->weapon_atk_rate[weapontype]` applied in base damage. | battle.c:679-685 | Rare in pre-re DB; low priority |
 | G15 | [ ] | F4 — Gear bonuses invisible in Stats section. No "from gear" indicator. | — | UX only. Session I. |
 | G16 | [ ] | E4 — Katar second hit fraction unverified. | battle.c katar dual-hit section | Grep before implementing. Session I. |
@@ -131,3 +131,5 @@ _Status: [ ] open, [x] done, [~] partial_
 | G33 | Player MDEF in StatusData (done Session B) | B |
 | G43 | Ranged checkbox + magic element override + ratio spinbox in IncomingDamageSection | F |
 | G30 | PvP target selector: Mob↔Player toggle in CombatControls; PlayerTargetBrowserDialog; main_window pvp wiring | F |
+| G12 | Armor refine DEF: import_refine_db.py scraper + refine_armor.json + GearBonusAggregator aggregate rounding | G |
+| G13 | Card slot UI: dynamic sub-slot buttons in equipment_section, IT_CARD browser filter, EQP_ACC fix | G |

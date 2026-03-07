@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSpinBox,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -62,6 +63,20 @@ def _resolve_item_name(item_id: Optional[int]) -> str:
     return item.get("name", item.get("aegis_name", f"ID {item_id}"))
 
 
+def _resolve_card_label(card_id: Optional[int]) -> str:
+    """Return short label for a card button (truncated name or dash)."""
+    if card_id is None:
+        return "—"
+    item = loader.get_item(card_id)
+    if item is None:
+        return f"#{card_id}"
+    name = item.get("name", item.get("aegis_name", f"#{card_id}"))
+    # Strip trailing " Card" suffix to save button space
+    if name.endswith(" Card"):
+        name = name[:-5]
+    return name[:10] if len(name) > 10 else name
+
+
 class EquipmentSection(Section):
     """Phase 1.4 — Equipment slots with item name, refine spinners, Edit button."""
 
@@ -81,6 +96,13 @@ class EquipmentSection(Section):
         self._edit_btns:    dict[str, QPushButton]   = {}
         self._current_job_id: int = 0
 
+        # G13: card sub-slot storage — list of card item IDs per slot (length = item's slots count)
+        self._card_ids:  dict[str, list[Optional[int]]] = {s: [] for s, *_ in _SLOTS}
+        self._card_btns: dict[str, list[QPushButton]]   = {s: [] for s, *_ in _SLOTS}
+        # Container widgets for name+card area (col 1 of grid)
+        self._name_containers: dict[str, QWidget] = {}
+        self._card_rows:       dict[str, QWidget] = {}
+
         # ── Slot grid ──────────────────────────────────────────────────────
         grid_widget = QWidget()
         grid = QGridLayout(grid_widget)
@@ -94,10 +116,28 @@ class EquipmentSection(Section):
             slot_lbl.setFixedWidth(68)
             grid.addWidget(slot_lbl, row_i, 0)
 
+            # Col 1: container with item name on top, card row below
+            name_container = QWidget()
+            name_col_layout = QVBoxLayout(name_container)
+            name_col_layout.setContentsMargins(0, 0, 0, 0)
+            name_col_layout.setSpacing(2)
+
             name_lbl = QLabel("— Empty —")
             name_lbl.setObjectName("equip_item_label")
             self._name_labels[slot_key] = name_lbl
-            grid.addWidget(name_lbl, row_i, 1)
+            name_col_layout.addWidget(name_lbl)
+
+            card_row = QWidget()
+            card_row_layout = QHBoxLayout(card_row)
+            card_row_layout.setContentsMargins(0, 0, 0, 0)
+            card_row_layout.setSpacing(3)
+            card_row_layout.addStretch()
+            card_row.setVisible(False)
+            self._card_rows[slot_key] = card_row
+            self._name_containers[slot_key] = name_container
+            name_col_layout.addWidget(card_row)
+
+            grid.addWidget(name_container, row_i, 1)
 
             if has_refine:
                 refine_spin = QSpinBox()
@@ -152,6 +192,68 @@ class EquipmentSection(Section):
         armor_elem_layout.addStretch()
         self.add_content_widget(armor_elem_row)
 
+    # ── Card slot helpers ───────────────────────────────────────────────────
+
+    def _refresh_card_slots(self, slot_key: str) -> None:
+        """Rebuild card sub-slot buttons for slot_key based on equipped item's slots count."""
+        from gui.dialogs.equipment_browser import EquipmentBrowserDialog  # noqa: F401 (lazy)
+        card_row = self._card_rows[slot_key]
+        layout = card_row.layout()
+
+        # Remove existing card buttons
+        for btn in self._card_btns[slot_key]:
+            layout.removeWidget(btn)
+            btn.deleteLater()
+        self._card_btns[slot_key] = []
+
+        item_id = self._item_ids.get(slot_key)
+        num_slots = 0
+        if item_id is not None:
+            item = loader.get_item(item_id)
+            if item is not None:
+                num_slots = item.get("slots", 0)
+
+        # Resize card_ids list to match new slot count, preserving existing values
+        old_ids = self._card_ids[slot_key]
+        self._card_ids[slot_key] = [
+            (old_ids[i] if i < len(old_ids) else None) for i in range(num_slots)
+        ]
+
+        if num_slots == 0:
+            card_row.setVisible(False)
+            return
+
+        # Rebuild buttons (insert before the trailing stretch)
+        stretch_idx = layout.count() - 1  # stretch is last item
+        for i in range(num_slots):
+            card_id = self._card_ids[slot_key][i]
+            label = _resolve_card_label(card_id)
+            btn = QPushButton(label)
+            btn.setObjectName("card_slot_btn")
+            btn.setFixedWidth(72)
+            btn.clicked.connect(
+                lambda checked=False, k=slot_key, idx=i: self._open_card_browser(k, idx)
+            )
+            layout.insertWidget(stretch_idx + i, btn)
+            self._card_btns[slot_key].append(btn)
+
+        card_row.setVisible(True)
+
+    def _open_card_browser(self, slot_key: str, card_index: int) -> None:
+        from gui.dialogs.equipment_browser import EquipmentBrowserDialog
+        current = self._card_ids[slot_key][card_index] if card_index < len(self._card_ids[slot_key]) else None
+        dlg = EquipmentBrowserDialog(
+            slot_key, current,
+            job_id=self._current_job_id,
+            item_type_override="IT_CARD",
+            parent=self,
+        )
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            new_id = dlg.selected_item_id()
+            self._card_ids[slot_key][card_index] = new_id
+            self._card_btns[slot_key][card_index].setText(_resolve_card_label(new_id))
+            self.equipment_changed.emit()
+
     # ── Browser ────────────────────────────────────────────────────────────
 
     def _open_browser(self, slot_key: str) -> None:
@@ -166,6 +268,7 @@ class EquipmentSection(Section):
             self._name_labels[slot_key].setText(_resolve_item_name(new_id))
             if new_id is None and slot_key in self._refine_spins:
                 self._refine_spins[slot_key].setValue(0)
+            self._refresh_card_slots(slot_key)
             if slot_key == "right_hand":
                 self._update_left_hand_state()
             if self._compact_widget is not None:
@@ -279,6 +382,15 @@ class EquipmentSection(Section):
                     build.refine_levels.get(slot_key, 0)
                 )
 
+            # G13: restore card IDs from build.equipped before refreshing buttons
+            item = loader.get_item(item_id) if item_id is not None else None
+            num_slots = item.get("slots", 0) if item is not None else 0
+            self._card_ids[slot_key] = [
+                build.equipped.get(f"{slot_key}_card_{i}")
+                for i in range(num_slots)
+            ]
+            self._refresh_card_slots(slot_key)
+
         # Weapon element combo: None → "From Item" (index 0), else match by data
         we = build.weapon_element
         if we is None:
@@ -311,7 +423,13 @@ class EquipmentSection(Section):
 
     def collect_into(self, build: PlayerBuild) -> None:
         """Write section state into an existing PlayerBuild in-place."""
-        build.equipped = {slot_key: self._item_ids[slot_key] for slot_key, *_ in _SLOTS}
+        # Base slot keys first (order matters for acc_l/acc_r round-trip stability)
+        equipped: dict[str, Optional[int]] = {slot_key: self._item_ids[slot_key] for slot_key, *_ in _SLOTS}
+        # G13: append card keys in slot order: {slot}_card_0 … {slot}_card_{N-1}
+        for slot_key, *_ in _SLOTS:
+            for i, card_id in enumerate(self._card_ids.get(slot_key, [])):
+                equipped[f"{slot_key}_card_{i}"] = card_id
+        build.equipped = equipped
         build.refine_levels = {
             slot_key: self._refine_spins[slot_key].value()
             for slot_key, _, has_refine in _SLOTS

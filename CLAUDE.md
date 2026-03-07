@@ -110,12 +110,12 @@ Always grep first. Never load entire files.
     db/item_db.json    — 2760 items (IT_WEAPON, IT_ARMOR, IT_CARD, IT_AMMO)
     db/mob_db.json     — 1007 mobs
     db/skills.json     — 1168 skills
-    tables/            — size_fix, attr_fix, refine_weapon, mastery_fix, active_status_bonus
+    tables/            — size_fix, attr_fix, refine_weapon, refine_armor, mastery_fix, active_status_bonus
 
 ### Planning docs (`docs/`)
 
     gaps.md            — all open gaps: ID, status, Hercules ref, one-line description
-    session_roadmap.md — Session A–F scope, work items in order, test cases
+    session_roadmap.md — Session A–G scope, work items in order, test cases
     pipeline_specs.md  — full pipeline step specs for BF_WEAPON, BF_MAGIC, incoming
     data_models.md     — Target/StatusData/GearBonuses/PlayerBuild field specs (current vs needed)
     context_log.md     — historical context % used per session; used to calibrate future scope

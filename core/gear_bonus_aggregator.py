@@ -7,7 +7,7 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from core.data_loader import loader
 from core.item_script_parser import parse_script
@@ -18,12 +18,19 @@ from core.models.item_effect import ItemEffect
 class GearBonusAggregator:
 
     @staticmethod
-    def compute(equipped: Dict[str, Optional[int]]) -> GearBonuses:
+    def compute(
+        equipped: Dict[str, Optional[int]],
+        refine_levels: Optional[Dict[str, int]] = None,
+    ) -> GearBonuses:
         """
         Parse scripts for all equipped item IDs and aggregate into GearBonuses.
         Slots with None or unknown IDs are silently skipped.
+
+        refine_levels: build.refine_levels — used to compute armor refine DEF (G12).
+          If None, armor refine DEF is skipped (backward-compatible).
         """
         bonuses = GearBonuses()
+        refinedef_units = 0  # G12: accumulated raw units; rounding applied once after loop
 
         for slot, item_id in equipped.items():
             if item_id is None:
@@ -32,9 +39,15 @@ class GearBonusAggregator:
             if item is None:
                 continue
 
-            # F2: sum base DEF from IT_ARMOR items (item["def"] field)
             if item.get("type") == "IT_ARMOR":
+                # F2: sum base DEF from IT_ARMOR items (item["def"] field)
                 bonuses.def_ += item.get("def", 0)
+                # G12: armor refine DEF — accumulate raw units, round aggregate at end
+                # status.c ~1655: refinedef += refine->get_bonus(REFINE_TYPE_ARMOR, r)
+                if refine_levels is not None:
+                    r = refine_levels.get(slot, 0)
+                    if r > 0:
+                        refinedef_units += loader.get_armor_refine_units(r)
 
             script = item.get("script") or ""
             if not script:
@@ -45,6 +58,10 @@ class GearBonusAggregator:
 
             for eff in effects:
                 GearBonusAggregator._apply(bonuses, eff)
+
+        # G12: status.c ~1713: bstatus->def += (refinedef + 50) / 100
+        if refinedef_units > 0:
+            bonuses.def_ += (refinedef_units + 50) // 100
 
         return bonuses
 

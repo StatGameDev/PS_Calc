@@ -35,49 +35,28 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
-## Session G — Card slots + Armor refine DEF
+## Session G — Card slots + Armor refine DEF ✓ DONE
 
 **Goal**: Complete the equipment system: card sub-slots, armor refine DEF table.
-**Gap IDs**: G13, G12 (these two are the same F3 feature — see note in gaps.md)
-**Estimated tokens**: ~35–45k (G13 is UI-heavy; G12 needs one config file read + scraper)
-**Risk**: If `equipment_section.py` is large, card slot UI alone may fill the session.
-  Split plan: if context is tight after G12, defer G13 UI to Session G-part-2.
+**Gap IDs**: G12, G13 — both completed.
 
-**Files to load at start**: `docs/gaps.md`, `docs/gui_plan.md` (Equipment System Gaps section)
+### What was done:
 
-### Work items (in order):
+- **G12**: `tools/import_refine_db.py` scraper + `refine_armor.json` (stats_per_level=66).
+  `DataLoader.get_armor_refine_units(r)`. `GearBonusAggregator.compute(equipped, refine_levels)`
+  accumulates raw units per IT_ARMOR slot, applies `(total+50)//100` aggregate rounding.
+  Source: status.c ~1655,1713. Verified: +10 → 7 DEF (≈ 2/3 per level, matches in-game).
+  5 call sites updated in battle_pipeline.py, magic_pipeline.py, main_window.py.
 
-1. **G12 — Armor refine scraper + pipeline step**
-   a. Read `Hercules/db/pre-re/refine_db.conf` — grep for armor refine section
-   b. Write `tools/import_refine_db.py`:
-      - Parse armor refine DEF table (per refine level, by item grade/type)
-      - Output: `core/data/pre-re/tables/refine_armor.json`
-   c. Extend `GearBonusAggregator.compute()`:
-      - For each armor-class slot (armor, garment, footgear, accessory_l, accessory_r):
-        load `refine_armor[grade][refine_level]` and add to `GearBonuses.def_`
-      - Use `build.refine_levels[slot]` (already saved/loaded)
-   d. Confirm pipeline picks it up via existing `_apply_gear_bonuses()` path in `main_window.py`
+- **G13**: Card sub-slot buttons in `equipment_section.py`. Dynamic count from `item["slots"]`.
+  `_refresh_card_slots()` inserts QPushButton (objectName="card_slot_btn", width=72) per slot.
+  `_open_card_browser()` opens `EquipmentBrowserDialog(item_type_override="IT_CARD")`.
+  `collect_into` / `load_build` round-trip via `{slot}_card_{n}` keys in `build.equipped`.
+  Card labels: strip " Card" suffix, truncate to 10 chars.
 
-2. **G13 — Card slot UI**
-   a. In `equipment_section.py`, after each item row, dynamically add 0–N card sub-buttons:
-      - `num_slots = loader.get_item(item_id).get("slots", 0)`
-      - Each button: small label showing card name (or "—"), opens `EquipmentBrowserDialog`
-        filtered to `item_type == IT_CARD`
-      - Key scheme: `{slot}_card_0` … `{slot}_card_{N-1}` in `build.equipped`
-   b. `GearBonusAggregator.compute()`: already handles any key in `build.equipped` — no change needed
-   c. `load_build()` in `equipment_section.py`: read card keys from `build.equipped`; call `_refresh_card_slots()` after item loads
-   d. Save schema: card keys are just additional entries in `build.equipped` dict — no `build_manager.py` structural change
-
-### Tests:
-
-**G12**
-- User: Equip Full Plate (+0) → note hard DEF. Set refine slider to +10 → DEF increases by correct amount per armor refine table. Cross-check vs irowiki.
-
-**G13**
-- User: Equip 4-slot Composite Bow → 4 card sub-slot buttons appear under weapon row.
-  Equip Hydra Card (slot 0) → step breakdown shows ×1.20 vs DemiHuman.
-  Save → reload → cards persist in correct slots.
-  Equip 0-slot item → no card buttons appear.
+- **Opportunistic bug fix**: `equipment_browser.py` `EQP_ACC_L`/`EQP_ACC_R` → `EQP_ACC`.
+  Both regular accessories and accessory cards use `EQP_ACC` in item_db; old filter produced
+  zero results (broken since Phase 1). Also added `item_type_override` param to dialog.
 
 ---
 

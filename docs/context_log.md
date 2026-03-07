@@ -459,6 +459,72 @@ roughly the last 10% of context.
 
 ---
 
+## Session G  2026-03-07  claude-sonnet-4-6
+ctx_used: 69%
+
+Work items completed:
+- G12: tools/import_refine_db.py scraper + core/data/pre-re/tables/refine_armor.json (stats_per_level=66)
+- G12: DataLoader.get_armor_refine_units(r); GearBonusAggregator.compute(equipped, refine_levels)
+        aggregate rounding (total+50)//100; 5 call sites updated
+- G13: equipment_section.py card sub-slot buttons (_refresh_card_slots, _open_card_browser)
+        collect_into/load_build round-trip via {slot}_card_{n} keys
+- G13+fix: equipment_browser.py item_type_override="IT_CARD" param + EQP_ACC_L/R → EQP_ACC bug fix
+- Docs: gaps.md G12+G13 done; completed_work.md Session G; session_roadmap.md G done; CLAUDE.md; MEMORY.md
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md (partial) | ~32 | ~128 |
+| docs/gaps.md | 133 | ~532 |
+| docs/gui_plan.md (partial) | ~80 | ~320 |
+| gui/sections/equipment_section.py | 322 | ~2,254 |
+| gui/dialogs/equipment_browser.py | 232 | ~1,624 |
+| core/data/pre-re/db/item_db.json (3 partial reads) | ~90 | ~450 |
+| Hercules/db/pre-re/refine_db.conf | 417 | ~1,668 |
+| core/data/pre-re/tables/refine_weapon.json | 6 | ~30 |
+| core/models/gear_bonuses.py | 65 | ~455 |
+| core/gear_bonus_aggregator.py | 125 | ~875 |
+| core/data_loader.py (partial) | ~30 | ~210 |
+| core/calculators/battle_pipeline.py (partial) | ~6 | ~42 |
+| core/calculators/magic_pipeline.py (partial) | ~6 | ~42 |
+| gui/main_window.py (3 partial reads) | ~30 | ~210 |
+| core/data/pre-re/tables/refine_armor.json (verify) | 6 | ~30 |
+| docs/completed_work.md (tail) | ~17 | ~68 |
+| docs/context_log.md | ~488 | ~1,952 |
+| memory/MEMORY.md (partial) | ~20 | ~80 |
+| **subtotal reads** | **~2,105** | **~10,970** |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| gui/dialogs/equipment_browser.py | ~240 | ~1,680 |
+| gui/sections/equipment_section.py | ~400 | ~2,800 |
+| core/gear_bonus_aggregator.py | ~125 | ~875 |
+| core/data_loader.py | +12 | ~84 |
+| core/calculators/battle_pipeline.py | +1 | ~7 |
+| core/calculators/magic_pipeline.py | +1 | ~7 |
+| gui/main_window.py | +3 | ~21 |
+| docs/gaps.md | +6 | ~24 |
+| docs/completed_work.md | +45 | ~180 |
+| docs/session_roadmap.md | -40 net | ~160 |
+| CLAUDE.md | +2 | ~14 |
+| memory/MEMORY.md | +3 | ~12 |
+| docs/context_log.md | +this entry | ~250 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| tools/import_refine_db.py | 49 | ~343 |
+| core/data/pre-re/tables/refine_armor.json | 6 | ~30 |
+
+Total est_tokens: ~10,970 reads + ~6,114 edits + 373 create + 6,000 fixed + ~15,000 conv ≈ 38,000
+Notes: Clean session, no investigation detours. EQP_ACC bug (pre-existing since Phase 1) discovered
+during card filter design — trivial fix, no scope impact. Aggregate rounding for armor refine DEF
+(per Hercules status.c ~1713) required understanding before implementation; user confirmed ~2/3 DEF
+per level from in-game testing. Context check pause at 69% (after G12 done) confirmed scope fit.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6

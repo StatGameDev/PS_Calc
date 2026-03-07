@@ -189,6 +189,18 @@ class DataLoader:
         randombonus_max = rnd_bonus_v * (refine - safe_start + 1)
         return randombonus_max // 100
 
+    @lru_cache(maxsize=None)
+    def get_armor_refine_units(self, refine: int) -> int:
+        """Raw refinedef units contributed by one armor piece at the given refine level.
+        Caller must sum across all armor slots, then apply (total + 50) // 100 for DEF.
+        Source: status.c ~1655  refine->get_bonus(REFINE_TYPE_ARMOR, r)
+                refine_db.conf  Armors.StatsPerLevel
+        """
+        if refine <= 0:
+            return 0
+        data = self._load_json("tables/refine_armor.json")
+        return refine * data["stats_per_level"]
+
     # =============================================================
     # Mastery bonuses
     # =============================================================

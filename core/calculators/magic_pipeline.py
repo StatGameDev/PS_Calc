@@ -39,7 +39,7 @@ class MagicPipeline:
                   target: Target,
                   build: PlayerBuild) -> DamageResult:
         result = DamageResult()
-        gear_bonuses = GearBonusAggregator.compute(build.equipped)
+        gear_bonuses = GearBonusAggregator.compute(build.equipped, build.refine_levels)
         active = getattr(build, 'active_status_levels', {})
 
         # --- MATK base roll ---
