@@ -261,6 +261,17 @@ class DataLoader:
             return []
         return list(data.get("skills", {}).values())
 
+    def get_skills_for_job(self, job_id: int) -> frozenset:
+        """Return frozenset of skill names available to job_id (includes inherited skills).
+        Source: core/data/pre-re/tables/skill_tree.json (scraped from Hercules skill_tree.conf).
+        Returns frozenset() if file missing or job not found."""
+        try:
+            data = self._load_json("tables/skill_tree.json")
+        except FileNotFoundError:
+            return frozenset()
+        names = data.get("jobs", {}).get(str(job_id), [])
+        return frozenset(names)
+
     def get_all_monsters(self) -> list:
         """All mob entries from mob_db.json for search. Returns [] on missing file."""
         try:

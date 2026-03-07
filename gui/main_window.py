@@ -188,6 +188,7 @@ class MainWindow(QMainWindow):
         self._build_header.job_changed.connect(self._on_build_changed)
         self._build_header.job_changed.connect(self._equip_section.update_for_job)
         self._build_header.job_changed.connect(self._passive_section.update_job)
+        self._build_header.job_changed.connect(self._combat_controls.update_job)
         self._build_header.level_changed.connect(self._on_build_changed)
         self._stats_section.stats_changed.connect(self._on_build_changed)
         self._equip_section.equipment_changed.connect(self._on_build_changed)

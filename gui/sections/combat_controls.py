@@ -4,6 +4,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QGridLayout,
@@ -23,6 +24,9 @@ from core.models.build import PlayerBuild
 from core.models.skill import SkillInstance
 from gui.section import Section
 
+# Jobs that can use plagiarised skills from other jobs (Rogue=17, Stalker=34)
+_PLAGIARISM_JOBS: frozenset[int] = frozenset({17, 34})
+
 
 class CombatControlsSection(Section):
     """Phase 2.1 — Skill dropdown, unified target selector (mob or player), environment."""
@@ -38,6 +42,9 @@ class CombatControlsSection(Section):
         self._target_pvp_stem: Optional[str] = None
         self._player_build_pairs: list[tuple[str, str]] = []  # (stem, display_name)
         self._all_mobs: list = loader.get_all_monsters()
+        # ── Skill filter state ────────────────────────────────────────────
+        self._all_skills: list = loader.get_all_skills()
+        self._current_job_id: int = 0            # updated via update_job()
 
         grid = QGridLayout()
         grid.setColumnStretch(1, 1)
@@ -54,9 +61,6 @@ class CombatControlsSection(Section):
 
         self._skill_combo = QComboBox()
         self._skill_combo.setMinimumWidth(160)
-        self._skill_combo.addItem("Normal Attack  (id=0)", userData={"id": 0, "name": "Normal Attack"})
-        for s in loader.get_all_skills():
-            self._skill_combo.addItem(f"{s['name']}  (id={s['id']})", userData=s)
         skill_row.addWidget(self._skill_combo, stretch=1)
 
         self._level_spin = QSpinBox()
@@ -64,6 +68,10 @@ class CombatControlsSection(Section):
         self._level_spin.setPrefix("Lv ")
         self._level_spin.setFixedWidth(60)
         skill_row.addWidget(self._level_spin)
+
+        self._skill_show_all = QCheckBox("All")
+        self._skill_show_all.setToolTip("Show skills for all jobs")
+        skill_row.addWidget(self._skill_show_all)
 
         skill_browse_btn = QPushButton("…")
         skill_browse_btn.setFixedWidth(28)
@@ -129,13 +137,64 @@ class CombatControlsSection(Section):
         container.setLayout(grid)
         self.add_content_widget(container)
 
+        # ── Initial skill combo population ────────────────────────────────
+        self._repopulate_skill_combo(job_id=0, preserve_selection=False)
+
         # ── Connections ───────────────────────────────────────────────────
         self._skill_combo.currentIndexChanged.connect(self._emit_changed)
         self._level_spin.valueChanged.connect(self._emit_changed)
+        self._skill_show_all.stateChanged.connect(self._on_show_all_toggled)
         self._mode_btn.toggled.connect(self._on_mode_toggled)
         self._search_edit.textChanged.connect(self._on_search_changed)
         self._target_list.itemClicked.connect(self._on_target_selected)
         self._browse_btn.clicked.connect(self._open_browse)
+
+    # ── Skill filter ──────────────────────────────────────────────────────
+
+    def _repopulate_skill_combo(self, job_id: int, preserve_selection: bool = True) -> None:
+        """Rebuild skill combo filtered to job_id (or all skills if Show All is checked)."""
+        # Remember current selection
+        current_id = None
+        if preserve_selection:
+            idx = self._skill_combo.currentIndex()
+            if idx >= 0:
+                d = self._skill_combo.itemData(idx)
+                current_id = d["id"] if d else None
+
+        show_all = self._skill_show_all.isChecked()
+        if show_all:
+            allowed: frozenset | None = None   # None = no filter
+        else:
+            allowed = loader.get_skills_for_job(job_id)
+            if job_id in _PLAGIARISM_JOBS:
+                # Also include any skill with AllowPlagiarism in skill_info
+                plagiarisable = frozenset(
+                    s["name"] for s in self._all_skills
+                    if "AllowPlagiarism" in s.get("skill_info", [])
+                )
+                allowed = allowed | plagiarisable
+
+        self._skill_combo.blockSignals(True)
+        self._skill_combo.clear()
+        self._skill_combo.addItem("Normal Attack  (id=0)", userData={"id": 0, "name": "Normal Attack"})
+        restore_idx = 0
+        for s in self._all_skills:
+            if allowed is None or s["name"] in allowed:
+                self._skill_combo.addItem(f"{s['name']}  (id={s['id']})", userData=s)
+                if s["id"] == current_id:
+                    restore_idx = self._skill_combo.count() - 1
+        self._skill_combo.setCurrentIndex(restore_idx)
+        self._skill_combo.blockSignals(False)
+        # Only emit if the selected skill changed
+        if preserve_selection:
+            new_idx = self._skill_combo.currentIndex()
+            new_d = self._skill_combo.itemData(new_idx)
+            new_id = new_d["id"] if new_d else 0
+            if new_id != current_id:
+                self.combat_settings_changed.emit()
+
+    def _on_show_all_toggled(self) -> None:
+        self._repopulate_skill_combo(self._current_job_id)
 
     # ── Mode toggle ───────────────────────────────────────────────────────
 
@@ -309,6 +368,11 @@ class CombatControlsSection(Section):
         else:
             self._selected_mob_id = None
             self._target_display.setText("None selected")
+
+    def update_job(self, job_id: int) -> None:
+        """Called by main_window when the job changes. Repopulates the skill combo."""
+        self._current_job_id = job_id
+        self._repopulate_skill_combo(job_id)
 
     def collect_into(self, build: PlayerBuild) -> None:
         build.target_mob_id = self._selected_mob_id if self._target_type == "mob" else None

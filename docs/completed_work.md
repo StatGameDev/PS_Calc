@@ -841,3 +841,34 @@ All 5 call sites updated to pass `build.refine_levels`:
   - Added `item_type_override: Optional[str] = None` parameter. When `"IT_CARD"`, filters
     IT_CARD items using the same `_SLOT_EQP` loc intersection as regular items.
     Window title updated to include "— Cards" suffix. F6 dual-wield merge skipped for cards.
+
+---
+
+## Session J1 — Skill combo job filter (G34 partial)
+
+**Goal**: Filter skill combo to current job, handle multi-job skills correctly.
+Stopped at G34 due to context limit; G35/G36/G37 deferred to Session J2.
+
+**J1-scraper — `tools/import_skill_tree.py` + `core/data/pre-re/tables/skill_tree.json`**
+New scraper reads `Hercules/db/pre-re/skill_tree.conf`, parses job blocks with inheritance
+chains, resolves skills recursively (own + all inherited), and emits
+`skill_tree.json` — `{job_id_str: [sorted_skill_names]}` for all 33 jobs in the ID mapping.
+  - Key insight: `skill_db.conf` (skills.json) has **no job field** — the job→skill mapping
+    lives in `skill_tree.conf`. Multi-job shared skills (e.g., SM_BASH for all Swordsman classes)
+    are handled correctly by inheritance resolution.
+  - Job name → ID mapping: skill_tree.conf uses `Magician` (we show "Mage"), `Whitesmith`
+    (we show "Mastersmith"), `Professor` (we show "Scholar") — mapping table in scraper.
+
+**J1-loader — `DataLoader.get_skills_for_job(job_id) → frozenset[str]`**
+Loads `skill_tree.json`, returns frozenset of skill names for the given job_id.
+
+**G34 — Skill combo job filter (`combat_controls.py`)**
+  - `_repopulate_skill_combo(job_id, preserve_selection)`: rebuilds the skill QComboBox filtered
+    to `loader.get_skills_for_job(job_id)`. If the previously selected skill is no longer in the
+    filtered set, falls back to Normal Attack (index 0) and emits `combat_settings_changed`.
+  - Rogue (17) and Stalker (34) also include all skills with `AllowPlagiarism` in skill_info
+    (sourced from skills.json — currently 5 skills match in the DB).
+  - "All" QCheckBox in the skill row bypasses the filter (shows all 1168 skills).
+  - `update_job(job_id)` public method: stores job_id, calls `_repopulate_skill_combo`.
+  - Wired in `main_window.py`: `build_header.job_changed → combat_controls.update_job`.
+  - Normal Attack (id=0) always shown at top regardless of filter.

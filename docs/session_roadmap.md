@@ -91,32 +91,43 @@ Verified: Poring + Knight of Abyss numbers match reference (avg diff is rounding
 
 ---
 
-## Session J — Job filters (four filter UIs)
+## Session J1 — Skill combo job filter ✓ DONE (G34)
 
-**Goal**: Filter skill combo, equipment browser, monster browser, and passives by job.
-**Gap IDs**: G34, G35, G36, G37
-**Estimated tokens**: ~20–28k (pure GUI, no Hercules; similar pattern × 4)
+**Goal**: Filter skill combo to current job; handle multi-job shared skills.
+**Gap IDs**: G34
+**Actual context**: ~80% (stopped to avoid hitting limit)
 
-**Files to load at start**: `docs/gaps.md`
+### What was done:
+
+- `tools/import_skill_tree.py` — new scraper for `Hercules/db/pre-re/skill_tree.conf`.
+  Parses job blocks with `inherit` chains; resolves skills recursively. Emits
+  `core/data/pre-re/tables/skill_tree.json` ({job_id_str: [sorted_skill_names]}, 33 jobs).
+- `DataLoader.get_skills_for_job(job_id) → frozenset[str]` — loads skill_tree.json.
+- `CombatControlsSection.update_job(job_id)` — repopulates skill QComboBox filtered to job.
+  Rogue (17) / Stalker (34) also include AllowPlagiarism skills from other jobs.
+  "All" QCheckBox in skill row bypasses the filter.
+- `main_window.py` — `build_header.job_changed` → `combat_controls.update_job` wired.
+
+---
+
+## Session J2 — Remaining job filters (G35, G36, G37)
+
+**Goal**: Equipment browser, monster browser, and passives job filters.
+**Gap IDs**: G35, G36, G37
+**Estimated tokens**: ~20–25k (pure GUI; similar pattern × 3)
 
 ### Work items (in order):
 
-1. **G34 — Skill combo job filter (`combat_controls.py`)**
-   Filter `skills.json` entries to jobs matching `build.job_id`.
-   Special case: Rogue (job_id 22) and Stalker (job_id 40) include skills with
-   `skill_info: ["AllowPlagiarism"]` from any job — add these to their pool.
-   Add "Show All" toggle (QCheckBox in section header).
-
-2. **G35 — Equipment Browser job filter (`dialogs/equipment_browser.py`)**
+1. **G35 — Equipment Browser job filter (`dialogs/equipment_browser.py`)**
    Filter by `item["job"]` list. Add "All Jobs" toggle in dialog toolbar.
    Trigger: caller passes `job_id` to dialog constructor; dialog filters on open.
 
-3. **G36 — Monster Browser filter dropdowns (`dialogs/monster_browser.py`)**
+2. **G36 — Monster Browser filter dropdowns (`dialogs/monster_browser.py`)**
    Add Race / Element / Size QComboBox above the table.
    Filter logic: AND all active non-"All" dropdowns with name search.
    Numeric column sort already works via `_NumericItem` — no change.
 
-4. **G37 — Passives/Masteries job filter (`passive_section.py`)**
+3. **G37 — Passives/Masteries job filter (`passive_section.py`)**
    Hide/disable entries irrelevant to current job.
    Pattern already exists for ASC_KATAR (`_MASTERY_JOB_FILTER` dict + `update_job()`).
    Extend: add job filter maps for all self-buff SCs and mastery skills.

@@ -77,7 +77,7 @@ _Status: [ ] open, [x] done, [~] partial_
 
 | ID | Status | Description |
 |---|---|---|
-| G34 | [ ] | 4.4 — Skill combo job filter. Rogue/Stalker: include AllowPlagiarism skills from other jobs. Session H. |
+| G34 | [x] | 4.4 — Skill combo job filter. skill_tree.json scraper + DataLoader.get_skills_for_job + CombatControlsSection.update_job + "All" toggle. Rogue/Stalker include AllowPlagiarism skills. |
 | G35 | [ ] | 4.5 — Equipment Browser job filter. Session H. |
 | G36 | [ ] | 4.6 — Monster Browser race/element/size dropdowns. Session H. |
 | G37 | [ ] | 4.7 — Passives/Masteries job filter. Extend existing _MASTERY_JOB_FILTER pattern. Session H. |
