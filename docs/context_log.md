@@ -308,6 +308,52 @@ Two-part mob ATK architecture decision is the primary deliverable beyond the arm
 
 ---
 
+## Post-Session E (doc pass)  2026-03-07  claude-sonnet-4-6
+ctx_used: 58%
+
+Work items completed:
+- aspd.md: resolved all "What to Verify Next" unknowns — confirmed status_calc_aspd is
+  #ifdef RENEWAL_ASPD only (bonus=7 never fires pre-renewal); confirmed pre-renewal PC ASPD
+  call chain in status_calc_sc_; confirmed SC_ASSNCROS val2 formula from skill_unitsetting
+  + skill_unit_onplace_timer; corrected wrong function name in prior notes.
+- BARD_DANCER_SONGS.md: new doc — three skill categories (Song/Dance/Ensemble), unit flags,
+  confirmed SC formulas for ASSNCROS/POEMBRAGI/APPLEIDUN/DONTFORGETME/FORTUNEKISS/SERVICEFORYOU,
+  party buff scope table, Soul Link note. User answered four open questions during session.
+- CLAUDE.md + MEMORY.md: BARD_DANCER_SONGS.md registered in both.
+- current_state.md: updated for handoff.
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/aspd.md (initial) | 122 | ~488 |
+| docs/current_state.md | 72 | ~288 |
+| memory/MEMORY.md (partial) | 20 | ~80 |
+| Hercules/src/map/status.c (greps + reads: status_calc_aspd, status_base_amotion_pc, status_calc_aspd_rate, status_calc_sc_) | ~390 | ~2,730 |
+| Hercules/src/map/skill.c (greps + reads: BA_ASSASSINCROSS, skill_unitsetting context, skill_unit_onplace_timer) | ~130 | ~910 |
+| core/data/pre-re/db/skills.json (multiple targeted reads for BA_/DC_/BD_ entries) | ~400 | ~2,000 |
+| **subtotal reads** | **~1,134** | **~6,496** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| docs/aspd.md | rewrite ~145 lines | ~580 |
+| CLAUDE.md | +1 | ~7 |
+| memory/MEMORY.md | +2 | ~8 |
+| docs/current_state.md | rewrite | ~340 |
+| docs/context_log.md | +this entry | ~200 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| docs/BARD_DANCER_SONGS.md | 200 | ~800 |
+
+Total est_tokens: ~6,496 reads + ~1,135 edits + 800 create + 6,000 fixed + ~20,000 conv ≈ 34,000
+Notes: Pure doc session, no code changes. Higher-than-expected context (58%) likely driven by
+skills.json reads (large file, many partial reads) and status.c grep result verbosity.
+SC_ASSNCROS formula fully confirmed and documented; all aspd.md unknowns cleared.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
