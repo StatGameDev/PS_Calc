@@ -12,7 +12,7 @@
     "luk": 1
   },
   "bonus_stats": {
-    "str": 0,
+    "str": 4,
     "agi": 0,
     "vit": 0,
     "int": 0,
@@ -26,37 +26,46 @@
     "def2": 0,
     "aspd_percent": 0
   },
-  "target_mob_id": null,
+  "target_mob_id": 1002,
   "equipped": {
-    "right_hand": 1388,
+    "right_hand": 1361,
     "left_hand": null,
     "ammo": null,
-    "armor": 2315,
-    "garment": 2502,
-    "footwear": 2406,
+    "armor": null,
+    "garment": null,
+    "footwear": null,
     "acc_l": null,
     "acc_r": null,
     "head_top": null,
     "head_mid": 2292,
-    "head_low": null
+    "head_low": null,
+    "right_hand_card_0": null,
+    "right_hand_card_1": null
   },
   "refine": {
     "right_hand": 7,
     "left_hand": 0,
-    "armor": 7,
-    "garment": 9,
-    "footwear": 8,
+    "armor": 0,
+    "garment": 0,
+    "footwear": 0,
     "head_top": 0,
     "head_mid": 0,
     "head_low": 0
   },
-  "weapon_element": 2,
+  "weapon_element": 0,
   "active_buffs": {},
   "mastery_levels": {},
   "flags": {
     "is_ranged_override": null,
     "is_riding_peco": false,
-    "no_sizefix": false
+    "no_sizefix": false,
+    "armor_element": 0
   },
-  "server": "standard"
+  "server": "standard",
+  "cached_display": {
+    "job_name": "Blacksmith",
+    "hp": 5338,
+    "def_": 0,
+    "mdef": 0
+  }
 }

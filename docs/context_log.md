@@ -640,6 +640,65 @@ Scraper fix added as prerequisite to G35 — the right call but unplanned cost.
 
 ---
 
+## Session K  2026-03-08  claude-sonnet-4-6
+ctx_used: 98%
+
+Work items completed:
+- G16: Katar second hit — TF_DOUBLE formula, applied post-CardFix from first hit PMF; katar_second/katar_second_crit added to BattleResult; summary_section shows "first + second" format
+- G17: Forged weapon Verys bonus — ForgeBonus modifier (star×div flat after AttrFix); Weapon/PlayerBuild forge fields; build_manager resolve_weapon element priority (override > forge_element > item_db); GUI forge toggle in equipment_section (hides card row, shows Crumbs/Ranked/Ele controls); TF_DOUBLE passive added to passive_section
+- G44 added to gaps.md: forge toggle restriction to forgeable weapon types (needs item_db consolidation first)
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md | ~50 (K section) | ~350 |
+| core/models/damage.py | ~120 | ~840 |
+| core/calculators/battle_pipeline.py | ~248 | ~1,736 |
+| core/models/weapon.py | ~27 | ~189 |
+| core/models/build.py | ~83 | ~581 |
+| core/build_manager.py | ~260 | ~1,820 |
+| gui/main_window.py | ~450 | ~3,150 |
+| gui/sections/equipment_section.py | ~600 | ~4,200 |
+| gui/sections/passive_section.py | ~150 | ~1,050 |
+| gui/sections/summary_section.py | ~120 | ~840 |
+| docs/context_log.md | ~669 | ~4,683 |
+
+Files edited:
+| file | lines changed | est_tok |
+|---|---|---|
+| core/models/damage.py | +4 | ~16 |
+| core/calculators/battle_pipeline.py | +45 | ~180 |
+| core/models/weapon.py | +3 | ~12 |
+| core/models/build.py | +5 | ~20 |
+| core/build_manager.py | +20 | ~80 |
+| gui/main_window.py | +12 | ~48 |
+| gui/sections/equipment_section.py | +75 | ~300 |
+| gui/sections/passive_section.py | +2 | ~8 |
+| gui/sections/summary_section.py | +20 | ~80 |
+| docs/gaps.md | +12 net | ~48 |
+| docs/completed_work.md | +50 | ~200 |
+| docs/session_roadmap.md | +8 net | ~32 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| core/calculators/modifiers/forge_bonus.py | 61 | ~427 |
+
+Extra reads (debug/investigation not in plan):
+| file | lines | est_tok |
+|---|---|---|
+| Hercules/src/map/battle.c (greps only) | ~30 extracted | ~210 |
+| Hercules/src/map/status.c (greps only) | ~20 extracted | ~140 |
+| Hercules/src/map/skill.c (greps only) | ~20 extracted | ~140 |
+
+Total est_tokens: ~19,579 reads + ~1,024 edits + ~490 created + ~490 extra + 6,000 fixed + ~30,000 conv ≈ 57,583
+Notes: G17 required deeper source archaeology than expected — forge bonus lives in status.c CARD0_FORGE
+decoding (not battle.c directly), and skill_produce_mix in skill.c handles encoding. Hercules star values
+differ from user's prior beliefs (clamp to 40, not 45; +10 ranked, not +20); implemented per source.
+Katar second hit CardFix exclusion confirmed via flag.lh ordering in battle.c.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
