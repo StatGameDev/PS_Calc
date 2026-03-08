@@ -1,0 +1,38 @@
+# List of skills that can apply a negative status effect
+5 //Only via effect of SM_FATALBLOW ID 145
+15
+16
+52
+72 //only against Undead attribute
+75
+78
+83
+85
+88
+89
+110
+119
+120
+121
+136
+140 //ground effect causes poison status
+149
+152
+214
+215
+216
+217
+218
+230
+250
+253
+254
+306
+318
+326
+415
+417 //only relevant for advanced combat modelling, does not apply to target itself
+1004
+1010
+1011
+1016

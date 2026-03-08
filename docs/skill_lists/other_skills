@@ -1,0 +1,87 @@
+# List of skills that have no immediate effect on combat calculations by themselves
+1 //not relevant
+10 //needs to be active for WZ_SIGHTRASHER ID 81
+12 //prevents a set number of melee hits, only relevant for advanced combat modelling feature
+25 //prevents all direct ranged hits for entire duration, only relevant for advanced combat modelling feature
+26 //no effect in calculator
+27 //no effect in calculator
+31 //creates an item, might be interesting to model uses/s as advanced feature
+35 //removes some statuses
+40 //not relevant
+41 //not relevant
+50 //maybe add steal chance calculator as advanced feature
+51 //Hide status relevant for some skills like RG_RAID ID 214 especially in advanced combat model
+53 //removes poison status
+71 //not relevant
+72 //removes some statuses
+73 //prevents a certain amount of damage or number of hits, only relevant for advanced combat modelling feature
+87 //maybe relevant as target, or as timer for advanced combat modelling using ice wall prison
+93 //not relevant
+94 //not relevant
+95 //not relevant
+96 //not relevant
+97 //not relevant
+98 //not relevant
+99 //not relevant
+100 //not relevant
+101 //not relevant
+102 //not relevant
+103 //not relevant
+104 //not relevant
+106 //not relevant
+108 //not relevant
+115 //not relevant
+117 //mostly relevant for advanced combat modelling, show angle snare duration on target?
+118 //not relevant
+124 //not relevant
+125 //not relevant
+130 //not relevant
+131 //not relevant
+143 //not relevant
+147 //maybe add somewhere to list arrow crafting recipes
+150 //not relevant
+151 //creates an item, might be interesting to model uses/s as advanced feature
+154 //not relevant
+211 //not relevant
+213 //not relevant
+220 //not relevant
+221 //not relevant
+222 //not relevant
+223 //not relevant
+224 //not relevant
+228 //creates an item, might be interesting to model uses/s as advanced feature
+232 //summons mobs to fight, maybe model heal skill of Geographer summon
+233 //summons a mob that can self-destruct, model summon HP and self-destruct damage
+234 //not relevant
+235 //not relevant
+236 //not relevant
+237 //not relevant
+238 //not relevant
+243 //not relevant
+244 //not relevant
+247 //not relevant
+262 //not relevant
+264 //not relevant
+275 //not relevant
+276 //only relevant for advanced combat modelling
+288 //not relevant
+289 //removes most buffs and debuffs
+290 //not relevant
+304 //not relevant
+305 //only relevant for modelling SP usage
+307 //not relevant
+311 //not relevant
+312 //not relevant
+325 //not relevant
+426 //not relevant
+496 //creates an item, might be interesting to model uses/s as advanced feature
+497 //creates an item, might be interesting to model uses/s as advanced feature
+498 //creates an item, might be interesting to model uses/s as advanced feature
+1002 //only relevant for advanced combat modelling
+1007 //creates an item, might be interesting to model uses/s as advanced feature
+1012 //not relevant
+1013 //not relevant
+1014 //not relevant
+1015 //allow number of spirit sphere selection for any build
+2535 //not relevant
+2544 //not relevant
