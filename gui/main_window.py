@@ -367,6 +367,10 @@ class MainWindow(QMainWindow):
             eff_build.equipped.get("right_hand"),
             eff_build.refine_levels.get("right_hand", 0),
             eff_build.weapon_element,
+            is_forged=eff_build.is_forged,
+            forge_sc_count=eff_build.forge_sc_count,
+            forge_ranked=eff_build.forge_ranked,
+            forge_element=eff_build.forge_element,
         )
         status = StatusCalculator(self._config).calculate(eff_build, weapon)
         self._derived_section.refresh(status)
@@ -381,6 +385,10 @@ class MainWindow(QMainWindow):
             eff_build.equipped.get("right_hand"),
             eff_build.refine_levels.get("right_hand", 0),
             eff_build.weapon_element,
+            is_forged=eff_build.is_forged,
+            forge_sc_count=eff_build.forge_sc_count,
+            forge_ranked=eff_build.forge_ranked,
+            forge_element=eff_build.forge_element,
         )
         status = StatusCalculator(self._config).calculate(eff_build, weapon)
         skill = self._combat_controls.get_skill_instance()
@@ -403,6 +411,10 @@ class MainWindow(QMainWindow):
                     pvp_eff.equipped.get("right_hand"),
                     pvp_eff.refine_levels.get("right_hand", 0),
                     pvp_eff.weapon_element,
+                    is_forged=pvp_eff.is_forged,
+                    forge_sc_count=pvp_eff.forge_sc_count,
+                    forge_ranked=pvp_eff.forge_ranked,
+                    forge_element=pvp_eff.forge_element,
                 )
                 pvp_status = StatusCalculator(self._config).calculate(pvp_eff, pvp_weapon)
                 pvp_gear_bonuses = GearBonusAggregator.compute(pvp_eff.equipped, pvp_eff.refine_levels)

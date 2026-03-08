@@ -20,3 +20,7 @@ class Weapon:
     hand: str = "right"            # "right" or "left" – selects atkmods[t_size] in battle.c sizefix
     aegis_name: str = ""           # AegisName from item_db — display only, no calculation effect
     refineable: bool = True        # Refine: false in item_db → suppress overrefine bonus in base_damage.py
+    # G17: Forge bonus fields. Set by resolve_weapon from PlayerBuild forge state.
+    # ForgeBonus modifier computes star = f(forge_sc_count, forge_ranked) and adds flat per hit.
+    forge_sc_count: int = 0        # star crumb count (0–3); 0 = no forge bonus
+    forge_ranked: bool = False     # forger was ranked blacksmith (+10 star)

@@ -55,6 +55,7 @@ _PASSIVES: list[tuple] = [
     ("BA_MUSICALLESSON", "Musical Lesson", 10, "BA_MUSICALLESSON"),
     ("DC_DANCINGLESSON", "Dancing Lesson", 10, "DC_DANCINGLESSON"),
     ("SA_ADVANCEDBOOK",  "Advanced Book",  10, "SA_ADVANCEDBOOK"),
+    ("TF_DOUBLE",        "Double Attack",  10, "TF_DOUBLE"),
     ("AS_KATAR",         "Katar",          10, "AS_KATAR"),
     ("ASC_KATAR",        "Adv. Katar",     10, "ASC_KATAR"),
     ("AL_DEMONBANE",     "Demon Bane",     10, "AL_DEMONBANE"),

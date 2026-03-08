@@ -904,3 +904,31 @@ Loads `skill_tree.json`, returns frozenset of skill names for the given job_id.
 - Corrections: SC_MAXIMIZEPOWER/OVERTHRUST → BS family; SC_SPEARQUICKEN → Crusader/Paladin;
   SC_ONEHANDQUICKEN → Knight/LK (KN_ONEHAND, Soul Link note in code).
 - `dark.qss`: added `passive_sub_separator` style.
+
+---
+
+## Session K
+
+**G16 — Katar second hit (`battle.c:5941-5952 #ifndef RENEWAL`)**
+- Formula: `damage2 = max(1, damage * (1 + TF_DOUBLE_level * 2) // 100)`. Normal attacks only (skill_id == 0, W_KATAR).
+- CardFix does NOT apply to damage2: flag.lh is set after the CardFix block in battle.c.
+- Applied post-pipeline: second hit is derived from the first hit's final PMF.
+- `BattleResult` gains `katar_second` and `katar_second_crit: Optional[DamageResult]`.
+- `BattlePipeline._katar_second_hit()` static method computes the second-hit PMF.
+- `summary_section.refresh()` shows "first + second" in Min/Avg/Max cells when `katar_second` is set.
+- `TF_DOUBLE` (Double Attack, max lv 10) added to `_PASSIVES` in `passive_section.py`; job-filtered.
+- New gap G44: forge toggle should be restricted to forgeable weapon types — needs DB consolidation first.
+
+**G17 — Forged weapon Verys (`status.c:1634-1643, battle.c:5864 #ifndef RENEWAL`)**
+- Forge data stored in card[0]=CARD0_FORGE, card[1]=((sc*5)<<8)+ele, card[2/3]=char_id.
+- Star value: sc×5; if ≥15 → 40 (3 crumbs); +10 if ranked blacksmith.
+- Applied flat per hit (×div) after AttrFix, before CardFix.
+- New modifier `core/calculators/modifiers/forge_bonus.py` (ForgeBonus.calculate).
+- Pipeline: ForgeBonus inserted between AttrFix and CardFix in `battle_pipeline.py`.
+  `div` taken from `skill_data.get("hit", 1)`.
+- `Weapon` gets `forge_sc_count: int` and `forge_ranked: bool`.
+- `PlayerBuild` gets `is_forged`, `forge_sc_count`, `forge_ranked`, `forge_element`.
+- `resolve_weapon` updated: element priority = manual override > forge_element (when is_forged) > item_db.
+- `equipment_section.py`: "Forged" QCheckBox on right_hand row. When checked: hides card row, shows
+  forge controls (Crumbs spinner 0–3, Ranked checkbox, Ele combo). Loads/saves via PlayerBuild forge fields.
+- Known limitation (G44): forge toggle appears on all right_hand weapons; should be restricted to forgeable types.

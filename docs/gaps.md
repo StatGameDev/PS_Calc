@@ -24,8 +24,9 @@ _Status: [ ] open, [x] done, [~] partial_
 | G13 | [x] | F1 — Card slot UI absent. No sub-slot buttons per item. | — | Fixed Session G: equipment_section.py card sub-slot buttons per item (dynamic count from item.slots). EquipmentBrowserDialog item_type_override="IT_CARD" + EQP_ACC bug fix. collect_into/load_build round-trip via {slot}_card_{n} keys in build.equipped. |
 | G14 | [ ] | bWeaponAtk (weapon-type ATK%) not in system. `sd->weapon_atk_rate[weapontype]` applied in base damage. | battle.c:679-685 | Rare in pre-re DB; low priority |
 | G15 | [ ] | F4 — Gear bonuses invisible in Stats section. No "from gear" indicator. | — | UX only. Session I. |
-| G16 | [ ] | E4 — Katar second hit fraction unverified. | battle.c katar dual-hit section | Grep before implementing. Session I. |
-| G17 | [ ] | E6 — Forged weapon Verys: flat +5 ATK per Very gemstone after AttrFix. | battle.c forged weapon section | Low priority. Session I. |
+| G16 | [x] | E4 — Katar second hit. Normal attacks only. Formula: `damage2 = max(1, damage * (1 + TF_DOUBLE*2) // 100)`. CardFix does NOT apply to damage2 (flag.lh set after CardFix block). | battle.c:5941-5952 #ifndef RENEWAL | Done Session K: ForgeBonus + BattleResult.katar_second/_crit; summary "X + Y" display; TF_DOUBLE in passives. |
+| G17 | [x] | E6 — Forged weapon Verys: flat star ATK per hit after AttrFix before CardFix. star: sc_count×5, ≥15→40, +10 if ranked. Element from forge elemental stone. | status.c:1634-1643; battle.c:5864 #ifndef RENEWAL | Done Session K: ForgeBonus modifier; forge toggle in equipment_section (replaces card row); is_forged/forge_sc_count/forge_ranked/forge_element on PlayerBuild+Weapon. |
+| G44 | [ ] | P2 — Forge toggle exposed on all right_hand weapons. Should only appear on forgeable weapon types. Requires item_db weapon consolidation (duplicate IDs with different slot counts) before allowed-types list can be defined. | — | Prerequisite: DB consolidation discussion. |
 
 ---
 

@@ -14,6 +14,7 @@ from core.calculators.status_calculator import StatusCalculator
 from core.calculators.modifiers.base_damage import BaseDamage
 from core.calculators.modifiers.skill_ratio import SkillRatio
 from core.calculators.modifiers.attr_fix import AttrFix
+from core.calculators.modifiers.forge_bonus import ForgeBonus
 from core.calculators.modifiers.card_fix import CardFix
 from core.calculators.modifiers.defense_fix import DefenseFix
 from core.calculators.modifiers.mastery_fix import MasteryFix
@@ -84,13 +85,57 @@ class BattlePipeline:
         crit = (self._run_branch(status, weapon, skill, target, build, is_crit=True)
                 if is_eligible else None)
 
+        # G16: Katar second hit — normal attacks only (skill_id == 0).
+        # Source: battle.c:5941-5952 (#ifndef RENEWAL):
+        #   temp = pc->checkskill(sd, TF_DOUBLE)
+        #   wd.damage2 = wd.damage * (1 + (temp * 2)) / 100
+        #   if (wd.damage && !wd.damage2) wd.damage2 = 1;   // pre-renewal minimum
+        # Applied AFTER full pipeline (post-CardFix wd.damage); CardFix does NOT run on damage2
+        # because flag.lh is set after the CardFix block.
+        katar_second = None
+        katar_second_crit = None
+        if weapon.weapon_type == "Katar" and skill.id == 0:
+            tf_level = build.mastery_levels.get("TF_DOUBLE", 0)
+            katar_second = self._katar_second_hit(normal, tf_level)
+            if crit is not None:
+                katar_second_crit = self._katar_second_hit(crit, tf_level)
+
         return BattleResult(
             normal=normal,
             crit=crit,
             crit_chance=crit_chance,
             hit_chance=hit_chance,
             perfect_dodge=perfect_dodge,
+            katar_second=katar_second,
+            katar_second_crit=katar_second_crit,
         )
+
+    @staticmethod
+    def _katar_second_hit(first: DamageResult, tf_level: int) -> DamageResult:
+        """Compute katar second-hit DamageResult from the first hit's final PMF.
+
+        Formula: damage2 = max(1, damage1 * (1 + TF_DOUBLE_level * 2) // 100)
+        Source: battle.c:5941-5952 (#ifndef RENEWAL)
+        """
+        factor = 1 + tf_level * 2
+        out_pmf: dict = {}
+        for dmg, prob in first.pmf.items():
+            d2 = max(1, dmg * factor // 100)
+            out_pmf[d2] = out_pmf.get(d2, 0.0) + prob
+        mn, mx, av = pmf_stats(out_pmf)
+        dr = DamageResult()
+        dr.pmf = out_pmf
+        dr.min_damage = mn
+        dr.max_damage = mx
+        dr.avg_damage = av
+        dr.add_step(
+            "Katar 2nd Hit",
+            value=av, min_value=mn, max_value=mx,
+            note=f"TF_DOUBLE lv{tf_level}: damage × (1+{tf_level}×2)÷100, min 1",
+            formula=f"max(1, damage * {factor} // 100)",
+            hercules_ref="battle.c:5941-5952 (#ifndef RENEWAL): wd.damage2 = wd.damage*(1+(TF_DOUBLE*2))/100",
+        )
+        return dr
 
     def _run_branch(self,
                     status: StatusData,
@@ -170,6 +215,11 @@ class BattlePipeline:
 
         # === ATTR FIX ===
         pmf = AttrFix.calculate(weapon, target, pmf, result)
+
+        # === FORGE BONUS — flat star ATK × div, after AttrFix, before CardFix ===
+        # Source: battle.c:5864 (#ifndef RENEWAL): ATK_ADD2(wd.div_*right_weapon.star, ...)
+        div = skill_data.get("hit", 1) if skill_data else 1
+        pmf = ForgeBonus.calculate(weapon, div, pmf, result)
 
         # === CARD FIX — race/ele/size/long_atk bonuses; target resist (PvP) ===
         pmf = CardFix.calculate(build, gear_bonuses, weapon, target, is_ranged, pmf, result)

@@ -146,15 +146,14 @@ GUI work, so results are in context when needed. Each is a short targeted sectio
 
 ### Work items (in order):
 
-1. **G16 — E4 Katar second hit**
-   Grep: `grep -n "katar" Hercules/src/map/battle.c | grep -i "second\|dual\|hit"`
-   Then read the relevant section. Implement as second hit branch result
-   (similar to crit branch in `battle_pipeline.py`).
+1. **G16 — E4 Katar second hit** ✓ DONE (Session K)
+   Formula: `max(1, damage * (1 + TF_DOUBLE*2) // 100)`. BattleResult.katar_second/_crit.
+   Summary shows "X + Y" format. TF_DOUBLE in passives (job-filtered).
 
-2. **G17 — E6 Forged weapon Verys**
-   Grep: `grep -n "[Vv]ery" Hercules/src/map/battle.c | head -20`
-   After AttrFix: check `build.equipped` weapon for Verystrong/Verydexterous gemstones;
-   add +5 ATK per gemstone. Requires identifying how Hercules stores gemstone count.
+2. **G17 — E6 Forged weapon Verys** ✓ DONE (Session K)
+   ForgeBonus modifier between AttrFix/CardFix. forge toggle replaces card row in equipment_section.
+   Forge fields on PlayerBuild + Weapon + resolve_weapon.
+   G44 added: forge toggle should be restricted to forgeable weapon types (needs DB consolidation).
 
 3. **G15 — F4 Gear bonus visibility**
    Decide with user: tooltip vs separate "From Gear" row.

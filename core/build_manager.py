@@ -221,6 +221,10 @@ class BuildManager:
         item_id: Optional[int],
         refine: int = 0,
         element_override: Optional[int] = None,
+        is_forged: bool = False,
+        forge_sc_count: int = 0,
+        forge_ranked: bool = False,
+        forge_element: int = 0,
     ) -> Weapon:
         """
         Resolve an item ID to a Weapon via item_db.
@@ -229,8 +233,10 @@ class BuildManager:
         - item_id is None (slot unequipped)
         - the item ID is not found in item_db
 
-        element_override replaces the item_db element when not None (used for
-        elemental imbues until a proper SC/item imbue system is implemented).
+        Element priority (G17):
+          1. element_override (manual "Weapon Element" override — always wins)
+          2. forge_element when is_forged=True (elemental stone from forging)
+          3. item_db element (base weapon, usually 0 for forgeable weapons)
         """
         from core.data_loader import loader  # local import — avoids circular dependency
 
@@ -245,7 +251,12 @@ class BuildManager:
             )
             return Weapon()
 
-        element = element_override if element_override is not None else item.get("element", 0)
+        if element_override is not None:
+            element = element_override
+        elif is_forged:
+            element = forge_element      # elemental stone from forging
+        else:
+            element = item.get("element", 0)
 
         return Weapon(
             atk=item.get("atk", 0),
@@ -256,4 +267,6 @@ class BuildManager:
             hand="right",
             aegis_name=item.get("aegis_name", ""),
             refineable=item.get("refineable", True),
+            forge_sc_count=forge_sc_count if is_forged else 0,
+            forge_ranked=forge_ranked if is_forged else False,
         )

@@ -73,3 +73,11 @@ class PlayerBuild:
     target_mob_id: Optional[int] = None
     # When set, pipeline resolves target via loader.get_monster(target_mob_id).
     # None = caller supplies Target manually (used by GUI inputs once built).
+
+    # G17: Forged weapon properties (right_hand only for now).
+    # is_forged=True hides card slots and activates forge_element in resolve_weapon.
+    # forge_element: element from forge process (int 0-9); overridden by weapon_element if set.
+    is_forged: bool = False
+    forge_sc_count: int = 0    # star crumb count (0–3)
+    forge_ranked: bool = False  # forger was ranked blacksmith (+10 star)
+    forge_element: int = 0     # element from elemental stone (0=Neutral/none)

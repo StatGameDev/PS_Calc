@@ -83,3 +83,8 @@ class BattleResult:
     hit_chance: float = 100.0      # basic hit% (80 + HIT - FLEE, clamped to [min, max])
     perfect_dodge: float = 0.0    # target's perfect dodge chance (luk+10)/10 %
     magic: Optional["DamageResult"] = None  # BF_MAGIC result (Session B); also mirrored in normal for GUI
+    # G16: Katar normal-attack second hit (battle.c:5941-5952, #ifndef RENEWAL).
+    # Computed from final post-pipeline PMF: damage2 = max(1, damage * (1 + TF_DOUBLE*2) // 100).
+    # katar_second = second hit of non-crit branch; katar_second_crit = second hit of crit branch.
+    katar_second: Optional["DamageResult"] = None
+    katar_second_crit: Optional["DamageResult"] = None

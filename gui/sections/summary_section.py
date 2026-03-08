@@ -104,15 +104,28 @@ class SummarySection(Section):
             return
 
         n = result.normal
-        self._n_min.setText(str(n.min_damage))
-        self._n_avg.setText(str(n.avg_damage))
-        self._n_max.setText(str(n.max_damage))
+        # G16: Katar second hit — show "first + second" when present
+        if result.katar_second is not None:
+            k = result.katar_second
+            self._n_min.setText(f"{n.min_damage} + {k.min_damage}")
+            self._n_avg.setText(f"{n.avg_damage} + {k.avg_damage}")
+            self._n_max.setText(f"{n.max_damage} + {k.max_damage}")
+        else:
+            self._n_min.setText(str(n.min_damage))
+            self._n_avg.setText(str(n.avg_damage))
+            self._n_max.setText(str(n.max_damage))
 
         if result.crit is not None:
             c = result.crit
-            self._c_min.setText(str(c.min_damage))
-            self._c_avg.setText(str(c.avg_damage))
-            self._c_max.setText(str(c.max_damage))
+            if result.katar_second_crit is not None:
+                kc = result.katar_second_crit
+                self._c_min.setText(f"{c.min_damage} + {kc.min_damage}")
+                self._c_avg.setText(f"{c.avg_damage} + {kc.avg_damage}")
+                self._c_max.setText(f"{c.max_damage} + {kc.max_damage}")
+            else:
+                self._c_min.setText(str(c.min_damage))
+                self._c_avg.setText(str(c.avg_damage))
+                self._c_max.setText(str(c.max_damage))
             self._crit_pct.setText(f"{result.crit_chance:.1f}% crit")
         else:
             self._c_min.setText(_DASH)

@@ -4,6 +4,7 @@ from typing import Optional
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QGridLayout,
@@ -102,6 +103,12 @@ class EquipmentSection(Section):
         # Container widgets for name+card area (col 1 of grid)
         self._name_containers: dict[str, QWidget] = {}
         self._card_rows:       dict[str, QWidget] = {}
+        # G17: Forge controls (right_hand only)
+        self._forge_toggle_chk: Optional[QCheckBox] = None
+        self._forge_controls_row: Optional[QWidget] = None
+        self._forge_sc_spin: Optional[QSpinBox] = None
+        self._forge_ranked_chk: Optional[QCheckBox] = None
+        self._forge_element_combo: Optional[QComboBox] = None
 
         # ── Slot grid ──────────────────────────────────────────────────────
         grid_widget = QWidget()
@@ -126,6 +133,45 @@ class EquipmentSection(Section):
             name_lbl.setObjectName("equip_item_label")
             self._name_labels[slot_key] = name_lbl
             name_col_layout.addWidget(name_lbl)
+
+            # G17: Forge toggle + controls (right_hand only)
+            if slot_key == "right_hand":
+                forge_toggle = QCheckBox("Forged")
+                forge_toggle.setObjectName("forge_toggle_chk")
+                forge_toggle.toggled.connect(self._on_forge_toggled)
+                name_col_layout.addWidget(forge_toggle)
+                self._forge_toggle_chk = forge_toggle
+
+                forge_ctrl = QWidget()
+                forge_layout = QHBoxLayout(forge_ctrl)
+                forge_layout.setContentsMargins(0, 0, 0, 0)
+                forge_layout.setSpacing(4)
+
+                forge_layout.addWidget(QLabel("Crumbs:"))
+                sc_spin = QSpinBox()
+                sc_spin.setRange(0, 3)
+                sc_spin.setFixedWidth(40)
+                sc_spin.valueChanged.connect(self.equipment_changed)
+                forge_layout.addWidget(sc_spin)
+                self._forge_sc_spin = sc_spin
+
+                ranked_chk = QCheckBox("Ranked")
+                ranked_chk.toggled.connect(self.equipment_changed)
+                forge_layout.addWidget(ranked_chk)
+                self._forge_ranked_chk = ranked_chk
+
+                forge_layout.addWidget(QLabel("Ele:"))
+                ele_combo = QComboBox()
+                for ele_idx, ele_name in enumerate(_ELEMENT_NAMES):
+                    ele_combo.addItem(ele_name, ele_idx)
+                ele_combo.currentIndexChanged.connect(self.equipment_changed)
+                forge_layout.addWidget(ele_combo)
+                self._forge_element_combo = ele_combo
+
+                forge_layout.addStretch()
+                forge_ctrl.setVisible(False)
+                name_col_layout.addWidget(forge_ctrl)
+                self._forge_controls_row = forge_ctrl
 
             card_row = QWidget()
             card_row_layout = QHBoxLayout(card_row)
@@ -192,6 +238,20 @@ class EquipmentSection(Section):
         armor_elem_layout.addStretch()
         self.add_content_widget(armor_elem_row)
 
+    # ── Forge helpers ───────────────────────────────────────────────────────
+
+    def _on_forge_toggled(self, checked: bool) -> None:
+        """Show forge controls and hide card row (or vice versa) for right_hand."""
+        if self._forge_controls_row is not None:
+            self._forge_controls_row.setVisible(checked)
+        card_row = self._card_rows.get("right_hand")
+        if card_row is not None:
+            if checked:
+                card_row.setVisible(False)
+            else:
+                self._refresh_card_slots("right_hand")
+        self.equipment_changed.emit()
+
     # ── Card slot helpers ───────────────────────────────────────────────────
 
     def _refresh_card_slots(self, slot_key: str) -> None:
@@ -199,6 +259,13 @@ class EquipmentSection(Section):
         from gui.dialogs.equipment_browser import EquipmentBrowserDialog  # noqa: F401 (lazy)
         card_row = self._card_rows[slot_key]
         layout = card_row.layout()
+
+        # G17: suppress card display when forge is active for right_hand
+        if (slot_key == "right_hand"
+                and self._forge_toggle_chk is not None
+                and self._forge_toggle_chk.isChecked()):
+            card_row.setVisible(False)
+            return
 
         # Remove existing card buttons
         for btn in self._card_btns[slot_key]:
@@ -372,6 +439,28 @@ class EquipmentSection(Section):
 
         self._current_job_id = build.job_id
 
+        # G17: restore forge state BEFORE the slot loop so _refresh_card_slots
+        # for right_hand already sees the correct forge toggle state.
+        if self._forge_toggle_chk is not None:
+            self._forge_toggle_chk.blockSignals(True)
+            self._forge_toggle_chk.setChecked(build.is_forged)
+            self._forge_toggle_chk.blockSignals(False)
+        if self._forge_controls_row is not None:
+            self._forge_controls_row.setVisible(build.is_forged)
+        if self._forge_sc_spin is not None:
+            self._forge_sc_spin.blockSignals(True)
+            self._forge_sc_spin.setValue(build.forge_sc_count)
+            self._forge_sc_spin.blockSignals(False)
+        if self._forge_ranked_chk is not None:
+            self._forge_ranked_chk.blockSignals(True)
+            self._forge_ranked_chk.setChecked(build.forge_ranked)
+            self._forge_ranked_chk.blockSignals(False)
+        if self._forge_element_combo is not None:
+            self._forge_element_combo.blockSignals(True)
+            fe_idx = self._forge_element_combo.findData(build.forge_element)
+            self._forge_element_combo.setCurrentIndex(fe_idx if fe_idx >= 0 else 0)
+            self._forge_element_combo.blockSignals(False)
+
         for slot_key, _, has_refine in _SLOTS:
             item_id = build.equipped.get(slot_key)
             self._item_ids[slot_key] = item_id
@@ -437,3 +526,8 @@ class EquipmentSection(Section):
         }
         build.weapon_element = self._element_combo.currentData()  # None or int 0-9
         build.armor_element = self._armor_element_combo.currentData() or 0  # int 0-9
+        # G17: forge state (right_hand only)
+        build.is_forged = self._forge_toggle_chk.isChecked() if self._forge_toggle_chk is not None else False
+        build.forge_sc_count = self._forge_sc_spin.value() if self._forge_sc_spin is not None else 0
+        build.forge_ranked = self._forge_ranked_chk.isChecked() if self._forge_ranked_chk is not None else False
+        build.forge_element = (self._forge_element_combo.currentData() or 0) if self._forge_element_combo is not None else 0
