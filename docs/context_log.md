@@ -763,6 +763,59 @@ G45 and G40 deferred to next session.
 
 ---
 
+## Session J-plan  2026-03-08  claude-sonnet-4-6
+ctx_used: 73%
+
+Work items completed:
+- Full Bard/Dancer taxonomy: confirmed all solo song/dance/ensemble formulas from Hercules
+- Key insight: val position mapping (SC.val2 = sg->val1, SC.val3 = sg->val2 via sc_start4)
+- BA_WHISTLE confirmed: FLEE += val2, FLEE2 += val3×10 (perfect dodge) — two separate stats
+- DC_HUMMING confirmed: no ×2 in pre-RE (that's #ifdef RENEWAL)
+- All BD_* ensemble effects confirmed (DRUMBATTLE/NIBELUNGEN/SIEGFRIED/ETERNALCHAOS/RICHMANKIM)
+- Buff taxonomy designed: 6 categories (songs_dances, support_buffs, weapon_endow, stat_foods, ground_effects)
+- docs/BARD_DANCER_SONGS.md → replaced by docs/buffs/ (6 files)
+- Data model drafted: song_state dict + support_buffs dict on PlayerBuild
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/BARD_DANCER_SONGS.md | 196 | ~784 |
+| docs/gaps.md | 143 | ~572 |
+| docs/aspd.md | 180 | ~720 |
+| gui/sections/passive_section.py | 429 | ~3,003 |
+| core/calculators/status_calculator.py (partial) | ~70 | ~490 |
+| Hercules/src/map/skill.c (greps + sed, extracted) | ~120 | ~840 |
+| Hercules/src/map/status.c (greps, extracted) | ~100 | ~700 |
+| **subtotal reads** | **~1,238** | **~7,109** |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| docs/buffs/README.md | 90 | ~360 |
+| docs/buffs/songs_dances.md | 200 | ~800 |
+| docs/buffs/support_buffs.md | 80 | ~320 |
+| docs/buffs/weapon_endow.md | 75 | ~300 |
+| docs/buffs/stat_foods.md | 60 | ~240 |
+| docs/buffs/ground_effects.md | 65 | ~260 |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| CLAUDE.md | +6 net | ~42 |
+| memory/MEMORY.md | +6 net | ~42 |
+| docs/context_log.md | +this entry | ~250 |
+
+Files deleted: docs/BARD_DANCER_SONGS.md (replaced by docs/buffs/)
+
+Total est_tokens: ~7,109 reads + ~1,614 edits + 2,280 created + 6,000 fixed + Explore agent (~95k) + ~25,000 conv ≈ 137,000
+Notes: Explore agent (95k tokens) was the dominant cost — ran comprehensive multi-grep pass over
+status.c + skill.c. Main session context was used for planning discussion, targeted verification
+greps, and doc writing. No code changes made — pure taxonomy + doc structure session.
+Explore agent findings partially incorrect on val positions (used val1/val2 instead of confirmed
+val2/val3 mapping); corrected by direct targeted greps in main conversation.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6

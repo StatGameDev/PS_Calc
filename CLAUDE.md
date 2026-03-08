@@ -140,7 +140,12 @@ Always grep first. Never load entire files.
     completed_work.md  — full history of completed work (Sessions 1–A); append each session
     gui_plan.md        — GUI architecture reference, future phases 5–8, known bugs archive
     phases_done.md     — GUI phase specs archive (Phases 0–4)
-    BARD_DANCER_SONGS.md — Bard/Dancer song categories, unit flags, all confirmed SC formulas, party buff scope
+    buffs/               — Party buff reference docs (one file per category; see buffs/README.md)
+        songs_dances.md  — All BA_*/DC_*/BD_* SCs: confirmed formulas, val mapping, status
+        support_buffs.md — Priest/Knight/etc party-cast buffs (SC_BLESSING, SC_GLORIA, etc.)
+        weapon_endow.md  — Weapon element endow (SA_*, PR_ASPERSIO, AS_*, TK_*)
+        stat_foods.md    — Consumable stat buffs (SC_FOOD_*, SC_INC*)
+        ground_effects.md — Ground/zone AoE buff effects (SA_VOLCANO, etc.)
 
     Load these on demand — do NOT load all at session start.
     Always load gaps.md + session_roadmap.md when planning or scoping a session.

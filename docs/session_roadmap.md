@@ -45,7 +45,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 ## Session J — Party buffs
 
 **Goal**: Implement confirmed Bard/Dancer song SCs in StatusCalculator + new Party Buffs UI panel.
-**Gap IDs**: G9~ (SC_ASSNCROS), new items for SC_POEMBRAGI, SC_APPLEIDUN, DC_FORTUNEKISS, DC_SERVICEFORYOU
+**Gap IDs**: G9~ (SC_ASSNCROS), new items for SC_POEMBRAGI, SC_APPLEIDUN, DC_FORTUNEKISS, DC_SERVICEFORYOU and other Songs
 **Estimated tokens**: ~35–45k (new UI sub-section + multiple formula implementations + possible new StatusData fields)
 
 **All confirmed formulas are in `docs/BARD_DANCER_SONGS.md` — no Hercules research needed for these six.**

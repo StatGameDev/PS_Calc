@@ -1,215 +1,129 @@
-# PS_Calc — Current State
-# Updated end of Session F1 (partial — target selector redesign deferred to Session F2).
-# Any Claude instance taking over should read this before starting work.
+# PS_Calc — Current State (Handoff)
+
+_Updated: Session J-plan, 2026-03-08. For use when switching Claude instances._
 
 ---
 
-## Last Completed Session
-**Session F1 — Incoming damage controls (partial).**
+## What was completed this session
 
-### Code changes this session:
+**Session J-plan — taxonomy research and doc structure only. No code was written.**
 
-1. `core/calculators/incoming_magic_pipeline.py`
-   - `ele_override: Optional[int] = None` — use instead of skill/mob natural element when set
-   - `ratio_override: Optional[int] = None` — substitute as skill ratio when set (bypasses skill lookup)
+1. Full Bard/Dancer buff taxonomy confirmed from Hercules source (skill.c + status.c).
+2. Key architectural finding: **val position mapping** — songs are applied via `sc_start4`
+   so `sg->val1` (set in `skill_unitsetting`) becomes `SC->val2`; `sg->val2` becomes `SC->val3`.
+   Confirmed from `skill_unit_onplace_timer` (skill.c:~14278). All songs follow this rule.
+3. `docs/BARD_DANCER_SONGS.md` deleted and replaced by `docs/buffs/` (6 separate files).
+4. Data model drafted (not implemented): `song_state` dict + `support_buffs` dict on `PlayerBuild`.
 
-2. `gui/sections/incoming_damage.py`
-   - Added `config_changed = Signal()`
-   - Added config row: Ranged checkbox + magic element QComboBox (Mob natural + 10 elements by ID) + Ratio QSpinBox 0–1000%
-   - `get_incoming_config() -> tuple[bool, Optional[int], Optional[int]]` — (is_ranged, ele_override, ratio_override)
-   - PvP row removed (was added then removed after design revision — see below)
-
-3. `gui/main_window.py`
-   - `config_changed` wired to `_run_battle_pipeline`
-   - `is_ranged` passed to IncomingPhysicalPipeline
-   - `ele_override` / `ratio_override` passed to IncomingMagicPipeline
-   - `# TODO(Session F2)` stubs left for pvp_stem wiring (combat_controls not yet restructured)
-
-4. `gui/themes/dark.qss`
-   - `QLabel#combat_target_display` — prominent style (background, 13px bold) replacing old `combat_mob_selected`
-   - `QPushButton#target_mode_btn:checked` — red (#e05555) for Player mode
-
-### What changed mid-session (design revision):
-F2 (G30) was initially implemented with a PvP combo in IncomingDamageSection.
-After user feedback: PvP target selection belongs in CombatControls as the **unified target**
-(one target per panel drives both outgoing and incoming). The PvP combo was backed out.
-The full target selector redesign is Session F2's primary task.
+All confirmed formulas are in `docs/buffs/songs_dances.md` — do not re-research them.
 
 ---
 
-## Architecture Notes (for next instance)
+## Entry point for next session
 
-**IncomingDamageSection.get_incoming_config()** — 3-tuple: `(is_ranged, ele_override, ratio_override)`
-- `ele_override`: None = mob natural; int 0-9 = element ID override for incoming magic
-- `ratio_override`: None = skill ratio; int > 0 = manual % override
+**The user will provide a list of all skills with buff/debuff effects.**
 
-**IncomingMagicPipeline.calculate()** — new optional params at end of signature:
-- `ele_override: Optional[int] = None`
-- `ratio_override: Optional[int] = None`
-Both default to None = original behavior preserved.
+Use that list to fill in stubs in:
+- `docs/buffs/support_buffs.md` — Priest/Knight/etc party-cast buffs
+- `docs/buffs/weapon_endow.md` — TK_SEVENWIND level→element table + any missed endow
+- `docs/buffs/stat_foods.md` — specific consumable SC keys + stacking rules
+- `docs/buffs/ground_effects.md` — Volcano/Deluge/ViolentGale formulas + any missed
 
-**dark.qss target label** — objectName `"combat_target_display"` (not `"combat_mob_selected"`).
-`combat_controls.py` still uses `"combat_mob_selected"` — must be renamed to `"combat_target_display"` in Session F2 when the section is restructured.
+For each stub entry: one targeted grep in Hercules status.c or skill.c to confirm.
+Update confidence level from [stub] to [confirmed] or [explore] as appropriate.
 
----
-
-## Session F2 — Unified Target Selector
-
-**Primary task: Restructure CombatControlsSection target area.**
-No Hercules greps needed. Pure GUI + wiring + one new dialog + save format extension.
-
-### G0 — Extend save format with cached_display
-
-Add to `BuildManager.save_build()` output:
-```json
-"cached_display": {
-    "job_name": "...",
-    "hp": 1234,
-    "def_": 45,
-    "mdef": 12
-}
-```
-- `job_name`: `loader.get_job_entry(build.job_id)["name"]` (or stem if None)
-- `hp`: `loader.get_hp_at_level(build.job_id, build.base_level - 1) * (100 + base_vit) // 100 + build.bonus_maxhp`
-- `def_`: `build.equip_def`
-- `mdef`: `build.equip_mdef`
-
-Load path: `load_build` passes `cached_display` through as a raw dict on the PlayerBuild (or just reads it from JSON in the browser). No PlayerBuild field change needed — the browser reads it directly from JSON.
-
-### G1 — MonsterBrowserDialog: add MDef column
-
-File: `gui/dialogs/monster_browser.py`
-- `_COLUMNS`: insert `"MDef"` after `"DEF"` (currently index 4) → MDef at index 5, shift Element/Race/Size/Boss to 5→9
-- `_NUMERIC_COLS`: add 5 (MDef)
-- `_populate`: add `self._make_item(str(m.get("mdef", "")), numeric=True)` at col 5; shift others +1
-- mob_db field: `mdef` (top-level, confirmed in mob_db.json schema)
-
-### G2 — PlayerTargetBrowserDialog (new file)
-
-File: `gui/dialogs/player_target_browser.py`
-
-Same QDialog structure as MonsterBrowserDialog.
-Columns: `["Name", "Job", "Lv", "HP", "DEF", "MDEF"]`
-All numeric except Name and Job.
-
-Population:
-```python
-for stem in stems:
-    path = os.path.join(saves_dir, f"{stem}.json")
-    data = json.load(open(path))
-    cd = data.get("cached_display", {})
-    name = data.get("name", stem)
-    job_name = cd.get("job_name", "?")
-    level = data.get("base_level", "?")
-    hp = cd.get("hp", "?")
-    def_ = cd.get("def_", "?")
-    mdef = cd.get("mdef", "?")
-    # store stem as UserRole on name item
-```
-
-Public API: `selected_build_stem() -> Optional[str]`
-
-### G3 — Restructure CombatControlsSection
-
-File: `gui/sections/combat_controls.py`
-
-**State to add:**
-- `_target_type: str = "mob"` (default)
-- `_target_pvp_stem: Optional[str] = None`
-- `_player_build_pairs: list[tuple[str, str]] = []` — (stem, display_name)
-
-**Layout change (target area only):**
-```
-[Mob]  toggle btn (objectName="target_mode_btn")
-
-[search field…          ] [Browse…]
-[results list — hidden until search/selection]
-
-► Poring  [Lv 1]          ← QLabel objectName="combat_target_display"
-  or "Player: Natural Crit Sin"
-```
-
-- Toggle btn: single QPushButton, checkable, text="Mob" when unchecked / "Player" when checked
-- Search field: filters mobs (mob mode) or player build display names (player mode) — same widget, same ≥2-char threshold
-- Browse btn: opens MonsterBrowserDialog (mob mode) or PlayerTargetBrowserDialog (player mode)
-- Results list: same QListWidget, populated with mob names or build display names
-- `_mob_selected_lbl` → rename/replace with `_target_display` (objectName="combat_target_display")
-
-**New/changed methods:**
-- `_on_mode_toggled(checked)`: update `_target_type`, update btn text, clear search/list, update display
-- `_on_search_changed(text)`: mob mode = existing behavior; player mode = filter `_player_build_pairs`
-- `_on_target_selected(item)`: mob mode = store mob_id; player mode = store pvp_stem
-- `_open_browse()`: dispatch to correct dialog by mode
-- `_update_target_display()`: format label based on mode + current selection
-- `get_target_pvp_stem() -> Optional[str]`: returns `_target_pvp_stem` if player mode, else None
-- `refresh_target_builds(pairs: list[tuple[str, str]])`: repopulate `_player_build_pairs`; if current pvp_stem still in list: keep; else: clear `_target_pvp_stem` + update display
-
-**load_build change:** always reset to mob mode (pvp target is session-only, not saved).
-
-**collect_into change:** `build.target_mob_id = self._selected_mob_id if self._target_type == "mob" else None`
-
-### G4 — main_window.py wiring
-
-Replace `# TODO(Session F2)` stubs:
-
-In `_refresh_builds`:
-```python
-pairs = [(stem, display) for stem, display in zip(stems, displays)]
-self._combat_controls.refresh_target_builds(pairs)
-```
-
-In `_run_battle_pipeline`:
-```python
-pvp_stem = self._combat_controls.get_target_pvp_stem()
-mob_id = None if pvp_stem else (
-    self._combat_controls.get_target_mob_id() or eff_build.target_mob_id
-)
-
-# PvP target setup (reused for both outgoing target and incoming)
-pvp_eff = pvp_weapon = pvp_status = pvp_gear_bonuses = None
-if pvp_stem:
-    pvp_path = os.path.join(app_config.SAVES_DIR, f"{pvp_stem}.json")
-    pvp_build = BuildManager.load_build(pvp_path)
-    pvp_eff = self._apply_gear_bonuses(pvp_build)
-    pvp_weapon = BuildManager.resolve_weapon(...)
-    pvp_status = StatusCalculator(self._config).calculate(pvp_eff, pvp_weapon)
-    pvp_gear_bonuses = GearBonusAggregator.compute(pvp_eff.equipped)
-    target = BuildManager.player_build_to_target(pvp_eff, pvp_status, pvp_gear_bonuses)
-else:
-    target = loader.get_monster(mob_id) if mob_id is not None else Target()
-
-# Incoming
-if pvp_stem and pvp_eff:
-    pvp_battle = self._pipeline.calculate(
-        pvp_status, pvp_weapon, SkillInstance(), player_target, pvp_eff
-    )
-    phys_result = pvp_battle.normal
-    magic_result = None
-elif mob_id is not None:
-    # existing mob physical + magic pipelines
-    ...
-```
-
-Add `from core.models.skill import SkillInstance` import.
+Once the full list is processed, proceed to implementation (see Implementation Order below).
 
 ---
 
-## Open Gaps (updated)
+## Implementation order for Party Buffs (Session J proper)
 
-| Gap | Status | Session | Description |
-|---|---|---|---|
-| G43 | [x] | F | Ranged checkbox + magic ele/ratio override — DONE |
-| G30 | [~] | G | PvP target — pipeline code ready; UI redesign deferred to Session F2 |
-| G12 | [ ] | G | Armor refine DEF |
-| G13 | [ ] | G | Card slot UI |
-| G34–G37 | [ ] | H | Job/race/element filters |
-| G15–G17, G39–G40 | [ ] | I | Stats visibility, katar 2nd hit, etc. |
-| G9 + Party buffs | [~]/[ ] | J | ASPD + Bard/Dancer songs |
-| G41, C1 | [ ] | Deferred | PC VIT DEF, variance distribution |
+**Step 1 — Data model** (`core/models/build.py`):
+Add `song_state: dict = field(default_factory=dict)` and
+`support_buffs: dict = field(default_factory=dict)`.
+Add save/load round-trip in `core/build_manager.py`.
+
+**Step 2 — New StatusData fields** (`core/models/status.py`):
+- `cast_time_reduction_pct: int = 0`
+- `after_cast_delay_reduction_pct: int = 0`
+- `sp_cost_reduction_pct: int = 0`
+
+**Step 3 — StatusCalculator** (`core/calculators/status_calculator.py`):
+Apply all song/support effects in the correct stat blocks:
+- ASPD block: SC_ASSNCROS (scaffolded — wire `song_state`)
+- HIT block: SC_HUMMING, support HIT buffs
+- FLEE block: SC_WHISTLE val2 (FLEE) + val3×10 (FLEE2 / perfect dodge)
+- CRI block: SC_FORTUNE
+- MaxHP block: SC_APPLEIDUN
+- MaxSP block: SC_SERVICEFORYU val2
+- New fields: SC_POEMBRAGI → cast/ACD; SC_SERVICEFORYU val3 → sp_cost
+- Base stat blocks: SC_BLESSING (STR/INT/DEX), SC_INCREASEAGI (AGI), SC_GLORIA (+30 LUK), etc.
+
+**Step 4 — Pipeline step for WATK bonuses**:
+SC_DRUMBATTLE and SC_NIBELUNGEN add flat WATK. Confirm pipeline position before implementing.
+(Open design question #2 in `docs/buffs/README.md`.)
+
+**Step 5 — GUI** (`gui/sections/passive_section.py` or new section):
+Party Buffs sub-group in PassiveSection:
+- Song caster panel: AGI, LUK, VIT, DEX, INT spinboxes (1–99) + MusLesson + DanceLesson (0–10)
+- Per-song rows: checkbox + level spinbox (1–10) for each confirmed song/dance/ensemble
+- Support buff rows: checkbox or level spinbox per confirmed buff
+
+**Step 6 — derived_section** (`gui/sections/derived_section.py`):
+New display rows for cast_time_reduction_pct, after_cast_delay_reduction_pct, sp_cost_reduction_pct.
 
 ---
 
-## Known Issues
-- `sub_size={}` in player_build_to_target — no defensive size resist from player cards.
-- `combat_controls.py` still uses objectName `"combat_mob_selected"` — rename to `"combat_target_display"` in G3.
-- G43: Physical/Magic toggle in IncomingDamageSection is manual — follows mob attack type only in Phase 8+.
+## Confirmed song formulas (do not re-research)
+
+Full detail in `docs/buffs/songs_dances.md`. Quick reference:
+
+| SC | stat | SC val | formula (from skill_unitsetting, pre-RE) |
+|----|------|--------|------------------------------------------|
+| SC_ASSNCROS | ASPD | val2 | `(MusLesson/2 + 10 + lv + agi/10) * 10` |
+| SC_WHISTLE | FLEE | val2 | `lv + agi/10 + MusLesson` |
+| SC_WHISTLE | FLEE2 | val3×10 | `(lv+1)/2 + luk/10 + MusLesson` |
+| SC_POEMBRAGI | cast% | val2 | `3*lv + dex/10 + 2*MusLesson` |
+| SC_POEMBRAGI | ACD% | val3 | `(lv<10?3*lv:50) + int/5 + 2*MusLesson` |
+| SC_APPLEIDUN | MaxHP% | val2 | `5 + 2*lv + vit/10 + MusLesson` |
+| SC_HUMMING | HIT | val2 | `2*lv + dex/10 + DanceLesson` (no x2 in pre-RE) |
+| SC_FORTUNE | CRI | val2 | `(10 + lv + luk/10 + DanceLesson) * 10` |
+| SC_SERVICEFORYU | MaxSP% | val2 | `15 + lv + int/10 + DanceLesson/2` |
+| SC_SERVICEFORYU | SP cost% | val3 | `20 + 3*lv + int/10 + DanceLesson/2` |
+| SC_DRUMBATTLE | WATK | val2 | `(lv+1)*25` (ensemble, level only) |
+| SC_DRUMBATTLE | DEF | val3 | `(lv+1)*2` (ensemble, level only) |
+| SC_NIBELUNGEN | WATK | val2 | `(lv+2)*25` (ensemble, level only) |
+| SC_SIEGFRIED | subele% | val2 | `55 + lv*5` all elements (ensemble) |
+
+---
+
+## Open design questions (answer before implementing)
+
+1. **SC_SIEGFRIED** — elemental resistance on buffed player, feeds into `target.sub_ele` for incoming. Scope now or defer?
+2. **SC_DRUMBATTLE / SC_NIBELUNGEN WATK** — where in BF_WEAPON pipeline? Before or after SkillRatio? Needs one pipeline grep.
+3. **SC_ETERNALCHAOS** — zeroes enemy def2. Hostile debuff on target. Scope or defer?
+4. **Stat foods** — stay in G46 Active Items spinboxes, or separate Foods sub-section once list confirmed?
+
+---
+
+## Active known bugs
+
+None.
+
+---
+
+## Key files for next session
+
+| File | Purpose |
+|------|---------|
+| `docs/buffs/README.md` | Data model design, interface points, open questions |
+| `docs/buffs/songs_dances.md` | All confirmed song/dance/ensemble formulas |
+| `docs/buffs/support_buffs.md` | Stubs to fill from user's skill list |
+| `docs/buffs/weapon_endow.md` | Stubs to fill |
+| `docs/buffs/stat_foods.md` | Stubs to fill |
+| `docs/buffs/ground_effects.md` | Stubs to fill |
+| `docs/aspd.md` | ASPD system reference (1000-scale, SC_ASSNCROS wiring) |
+| `core/calculators/status_calculator.py` | Where song effects wire in |
+| `gui/sections/passive_section.py` | Where song GUI goes |
+| `core/models/build.py` | Where `song_state` / `support_buffs` dicts go |
+| `core/models/status.py` | Where new StatusData fields go |
