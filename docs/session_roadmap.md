@@ -1,5 +1,4 @@
 # PS_Calc — Session Roadmap
-_Sessions A–I, J1, J2, K, K2, L complete — see docs/completed_work.md for history._
 _Gap IDs reference docs/gaps.md. Pipeline specs in docs/pipeline_specs.md._
 
 ---
@@ -26,34 +25,20 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | Session | Primary work | Key gaps closed |
 |---|---|---|
 | 1–5 | Foundation, GUI Phases 0–4, data scrapers | B3–B9, C3, D1–D5, E1, F2, F5, F6 |
-| A | Target model, CardFix, G1/G2/G3/G5/G6/G8/G11 | G1–G3, G5, G6, G8, G11 |
+| A | Target model, CardFix | G1–G3, G5, G6, G8, G11 |
 | B | BF_MAGIC outgoing pipeline | G18–G25 |
 | C | ASC_KATAR mastery, ASPD buffs, bAtkRate | G4, G9~, G10, G42 |
-| D | armor_element field, mob ATK architecture investigation | G27 |
+| D | armor_element field, mob ATK investigation | G27 |
 | E | Incoming physical + magic pipelines, player_build_to_target | G7, G26–G29, G31–G32 |
-| F | Incoming config controls (ranged/ele/ratio) + unified target selector (Mob↔Player) | G43, G30 |
+| F | Incoming config controls + unified target selector | G43, G30 |
 | G | Card slot UI + armor refine DEF | G12, G13 |
 | H | PMF foundation: pmf/ package + damage.py + base_damage.py | — |
 | I | PMF migration: all 9 modifiers + 4 pipelines; DamageRange removed | — |
 | J1 | Skill combo job filter + skill_tree.json scraper | G34 |
 | J2 | Equipment browser / monster browser / passives job filters | G35, G36, G37 |
-| K | Katar second hit + forged weapon Verys | G16, G17 |
-| K2 | G46 ActiveItems + G47 ManualAdj sections + G15 bonus column redesign + skill_data bugfix | G15, G46, G47 |
-| L | G45 StepsBar tooltips + G40 state persistence + G39 inline dropdown + job ID system fix | G39, G40, G45 |
-
----
-
-## Session K — Polish + pipeline completions  ✓ COMPLETE (Sessions K + K2)
-
-**All K items done**: G16, G17, G46, G47, G15.
-**Remaining K items** moved to Session L below: G45, G40, G39.
-
----
-
-## Session L — StepsBar polish + minor UX  ✓ COMPLETE
-
-**All L items done**: G45, G40, G39. Job ID system also corrected this session.
-See completed_work.md for full details.
+| K | Katar second hit + forged weapon bonus | G16, G17 |
+| K2 | ActiveItems + ManualAdj sections + bonus column redesign + skill_data bugfix | G15, G46, G47 |
+| L | StepsBar tooltips + state persistence + inline dropdown + job ID system fix | G39, G40, G45 |
 
 ---
 
