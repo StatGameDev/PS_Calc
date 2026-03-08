@@ -592,6 +592,54 @@ reference: Poring + Knight of Abyss match (avg diff is rounding method only, exp
 
 ---
 
+## Session J2  2026-03-07  claude-sonnet-4-6
+ctx_used: 98%
+
+Work items completed:
+- Scraper fix: import_item_db.py parse_job_list → list[int] via _HERCULES_JOB_TO_IDS; item_db re-scraped
+- G35: EquipmentBrowserDialog job filter (job_id in item["job"]) + "All Jobs" checkbox
+- G36: MonsterBrowserDialog Race/Element/Size QComboBox dropdowns + _apply_filters()
+- G37: PassiveSection data-driven job filter via get_skills_for_job + source_skill per entry;
+        buff_type: self/passive/party; BS_HILTBINDING added; _MASTERIES → _PASSIVES; "Show All" checkbox
+- CLAUDE.md: "IDs Over Name Strings" rule added
+- Docs: gaps.md G35/G36/G37 done; completed_work.md Session J2; MEMORY.md updated
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md | 227 | ~908 |
+| gui/dialogs/equipment_browser.py | 239 | ~1,673 |
+| gui/sections/passive_section.py | 369 | ~2,583 |
+| tools/import_item_db.py | 465 | ~3,255 |
+| gui/sections/build_header.py (partial) | ~35 | ~245 |
+| docs/gaps.md (partial) | ~8 | ~32 |
+| docs/context_log.md | 593 | ~2,372 |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| tools/import_item_db.py | ~465 | ~3,255 |
+| gui/dialogs/equipment_browser.py | ~240 | ~1,680 |
+| gui/dialogs/monster_browser.py | ~200 | ~1,400 |
+| gui/sections/passive_section.py | ~370 | ~2,590 |
+| gui/themes/dark.qss | +5 | ~20 |
+| CLAUDE.md | +12 | ~84 |
+| docs/gaps.md | +3 net | ~12 |
+| docs/completed_work.md | +47 | ~188 |
+| memory/MEMORY.md | +8 net | ~32 |
+| docs/context_log.md | +this entry | ~250 |
+
+Files created: none (item_db.json regenerated in-place)
+
+Total est_tokens: ~11,068 reads + ~9,511 edits + 6,000 fixed + ~30,000 conv ≈ 57,000
+Notes: Higher-than-expected conversation overhead due to extended design discussion (skill mappings,
+buff_type categorization, data-driven vs hardcoded approach). Design iteration on SC_ADRENALINE
+dual-role and buff category naming consumed significant context before implementation.
+Job mapping corrections required mid-session (Maximize/Overthrust → BS; SpearQuicken → Crusader).
+Scraper fix added as prerequisite to G35 — the right call but unplanned cost.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
