@@ -74,6 +74,14 @@ class PlayerBuild:
     # When set, pipeline resolves target via loader.get_monster(target_mob_id).
     # None = caller supplies Target manually (used by GUI inputs once built).
 
+    # G46: Active Items bonuses (consumable/food effects — temporary catch-all).
+    # Keys: "str","agi","vit","int","dex","luk","batk","hit","flee","cri","def","mdef","aspd_pct","maxhp","maxsp"
+    active_items_bonuses: Dict[str, int] = field(default_factory=dict)
+
+    # G47: Manual Stat Adjustments (pure numeric escape hatch — no source attribution).
+    # Same key set as active_items_bonuses.
+    manual_adj_bonuses: Dict[str, int] = field(default_factory=dict)
+
     # G17: Forged weapon properties (right_hand only for now).
     # is_forged=True hides card slots and activates forge_element in resolve_weapon.
     # forge_element: element from forge process (int 0-9); overridden by weapon_element if set.

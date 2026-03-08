@@ -73,8 +73,7 @@ class BattlePipeline:
                 perfect_dodge=perfect_dodge,
             )
 
-        # Load skill data early (used by SkillRatio and NK checks)
-        loader.get_skill(skill.id)
+        # skill_data is loaded inside _run_branch where it is used (ForgeBonus div)
 
         # Crit eligibility and chance
         is_eligible, crit_chance = calculate_crit_chance(status, weapon, skill, target, self.config)
@@ -218,6 +217,7 @@ class BattlePipeline:
 
         # === FORGE BONUS — flat star ATK × div, after AttrFix, before CardFix ===
         # Source: battle.c:5864 (#ifndef RENEWAL): ATK_ADD2(wd.div_*right_weapon.star, ...)
+        skill_data = loader.get_skill(skill.id)
         div = skill_data.get("hit", 1) if skill_data else 1
         pmf = ForgeBonus.calculate(weapon, div, pmf, result)
 

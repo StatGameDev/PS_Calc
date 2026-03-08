@@ -7,3 +7,6 @@ __pycache__/
 # IDE local state
 .vs/
 .vscode/
+
+# Claude Code local state (project instructions live in CLAUDE.md instead)
+.claude/

@@ -42,6 +42,20 @@
       "compact_mode": "compact_view"
     },
     {
+      "key": "active_items_section",
+      "panel": "builder",
+      "display_name": "Active Items",
+      "default_collapsed": true,
+      "compact_mode": "hidden"
+    },
+    {
+      "key": "manual_adj_section",
+      "panel": "builder",
+      "display_name": "Manual Adjustments",
+      "default_collapsed": true,
+      "compact_mode": "hidden"
+    },
+    {
       "key": "combat_controls",
       "panel": "combat",
       "display_name": "Combat Controls",

@@ -1,5 +1,5 @@
 # PS_Calc — Session Roadmap
-_Revised after Session E. Sessions A–E complete — see docs/completed_work.md for history._
+_Sessions A–I, J1, J2, K, K2 complete — see docs/completed_work.md for history._
 _Gap IDs reference docs/gaps.md. Pipeline specs in docs/pipeline_specs.md._
 
 ---
@@ -35,142 +35,46 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | G | Card slot UI + armor refine DEF | G12, G13 |
 | H | PMF foundation: pmf/ package + damage.py + base_damage.py | — |
 | I | PMF migration: all 9 modifiers + 4 pipelines; DamageRange removed | — |
+| J1 | Skill combo job filter + skill_tree.json scraper | G34 |
+| J2 | Equipment browser / monster browser / passives job filters | G35, G36, G37 |
+| K | Katar second hit + forged weapon Verys | G16, G17 |
+| K2 | G46 ActiveItems + G47 ManualAdj sections + G15 bonus column redesign + skill_data bugfix | G15, G46, G47 |
 
 ---
 
-## Session G — Card slots + Armor refine DEF ✓ DONE
+## Session K — Polish + pipeline completions  ✓ COMPLETE (Sessions K + K2)
 
-**Goal**: Complete the equipment system: card sub-slots, armor refine DEF table.
-**Gap IDs**: G12, G13 — both completed.
-
-### What was done:
-
-- **G12**: `tools/import_refine_db.py` scraper + `refine_armor.json` (stats_per_level=66).
-  `DataLoader.get_armor_refine_units(r)`. `GearBonusAggregator.compute(equipped, refine_levels)`
-  accumulates raw units per IT_ARMOR slot, applies `(total+50)//100` aggregate rounding.
-  Source: status.c ~1655,1713. Verified: +10 → 7 DEF (≈ 2/3 per level, matches in-game).
-  5 call sites updated in battle_pipeline.py, magic_pipeline.py, main_window.py.
-
-- **G13**: Card sub-slot buttons in `equipment_section.py`. Dynamic count from `item["slots"]`.
-  `_refresh_card_slots()` inserts QPushButton (objectName="card_slot_btn", width=72) per slot.
-  `_open_card_browser()` opens `EquipmentBrowserDialog(item_type_override="IT_CARD")`.
-  `collect_into` / `load_build` round-trip via `{slot}_card_{n}` keys in `build.equipped`.
-  Card labels: strip " Card" suffix, truncate to 10 chars.
-
-- **Opportunistic bug fix**: `equipment_browser.py` `EQP_ACC_L`/`EQP_ACC_R` → `EQP_ACC`.
-  Both regular accessories and accessory cards use `EQP_ACC` in item_db; old filter produced
-  zero results (broken since Phase 1). Also added `item_type_override` param to dialog.
+**All K items done**: G16, G17, G46, G47, G15.
+**Remaining K items** moved to Session L below: G45, G40, G39.
 
 ---
 
-## Session H — PMF foundation + damage.py ✓ DONE (completed in C1 planning session)
+## Session L — StepsBar polish + minor UX
 
-All Session H work was completed during the C1 variance planning session:
-- `pmf/__init__.py`, `pmf/operations.py`, `pmf/statistics.py`, `pmf/single_hit.py` — created
-- `core/models/damage.py` — `DamageRange` removed; `pmf: dict` field added to `DamageResult`
-- `core/calculators/modifiers/base_damage.py` — fully converted to PMF ops (returns `dict[int,float]`)
-- `requirements.txt` — `scipy>=1.13` added; `CLAUDE.md` — pre-alpha notice added
-
-App is intentionally broken until Session I completes (pipeline still wired for DamageRange).
-
----
-
-## Session I — All remaining modifiers + pipelines ✓ DONE
-
-**Goal**: Convert all remaining modifiers from DamageRange to PMF ops. Wire pipelines.
-**Actual context**: 79%
-
-### What was done:
-
-All 9 modifiers converted (`skill_ratio`, `crit_atk_rate`, `defense_fix`, `active_status_bonus`,
-`refine_fix`, `mastery_fix`, `attr_fix`, `card_fix`, `final_rate_bonus`).
-Both outgoing pipelines (`battle_pipeline`, `magic_pipeline`) and both incoming pipelines
-(`incoming_physical_pipeline`, `incoming_magic_pipeline`) updated to pass `pmf: dict`.
-`result.pmf` populated in all 4 pipelines. `DamageRange` fully removed from active code paths.
-Verified: Poring + Knight of Abyss numbers match reference (avg diff is rounding method only).
-
----
-
-## Session J1 — Skill combo job filter ✓ DONE (G34)
-
-**Goal**: Filter skill combo to current job; handle multi-job shared skills.
-**Gap IDs**: G34
-**Actual context**: ~80% (stopped to avoid hitting limit)
-
-### What was done:
-
-- `tools/import_skill_tree.py` — new scraper for `Hercules/db/pre-re/skill_tree.conf`.
-  Parses job blocks with `inherit` chains; resolves skills recursively. Emits
-  `core/data/pre-re/tables/skill_tree.json` ({job_id_str: [sorted_skill_names]}, 33 jobs).
-- `DataLoader.get_skills_for_job(job_id) → frozenset[str]` — loads skill_tree.json.
-- `CombatControlsSection.update_job(job_id)` — repopulates skill QComboBox filtered to job.
-  Rogue (17) / Stalker (34) also include AllowPlagiarism skills from other jobs.
-  "All" QCheckBox in skill row bypasses the filter.
-- `main_window.py` — `build_header.job_changed` → `combat_controls.update_job` wired.
-
----
-
-## Session J2 — Remaining job filters (G35, G36, G37)
-
-**Goal**: Equipment browser, monster browser, and passives job filters.
-**Gap IDs**: G35, G36, G37
-**Estimated tokens**: ~20–25k (pure GUI; similar pattern × 3)
+**Goal**: StepsBar step tooltips, state persistence; inline equipment dropdown if context allows.
+**Gap IDs**: G45, G40, G39
+**Estimated tokens**: ~20–30k (all purely GUI widget changes; no Hercules greps needed)
+**No prerequisites.** All data for G45 is already on DamageStep. G40 is a two-line Panel change.
 
 ### Work items (in order):
 
-1. **G35 — Equipment Browser job filter (`dialogs/equipment_browser.py`)**
-   Filter by `item["job"]` list. Add "All Jobs" toggle in dialog toolbar.
-   Trigger: caller passes `job_id` to dialog constructor; dialog filters on open.
+1. **G45 — P3 StepsBar step tooltip**
+   Hovering a step row shows input value, formula, output, and hercules_ref.
+   All data already on DamageStep (`label`, `value`, `formula`, `hercules_ref` fields).
+   Purely a widget change in StepsBar — add `setToolTip()` per row when steps are rendered.
+   Files: `gui/panel.py` (StepsBar rendering), `gui/themes/dark.qss` (QToolTip style if needed).
 
-2. **G36 — Monster Browser filter dropdowns (`dialogs/monster_browser.py`)**
-   Add Race / Element / Size QComboBox above the table.
-   Filter logic: AND all active non-"All" dropdowns with name search.
-   Numeric column sort already works via `_NumericItem` — no change.
-
-3. **G37 — Passives/Masteries job filter (`passive_section.py`)**
-   Hide/disable entries irrelevant to current job.
-   Pattern already exists for ASC_KATAR (`_MASTERY_JOB_FILTER` dict + `update_job()`).
-   Extend: add job filter maps for all self-buff SCs and mastery skills.
-   Add "Show All" override checkbox in Passives section header.
-
----
-
-## Session K — Polish + pipeline completions
-
-**Goal**: Gear bonus visibility, Katar second hit, forged weapon Verys, minor polish.
-**Gap IDs**: G15, G16, G17, G39, G40
-**Estimated tokens**: ~28–38k (G16 and G17 each need one Hercules grep; rest is pure GUI)
-
-**Note on Hercules greps**: Grep `battle.c` for G16 and G17 at session start before any
-GUI work, so results are in context when needed. Each is a short targeted section.
-
-### Work items (in order):
-
-1. **G16 — E4 Katar second hit** ✓ DONE (Session K)
-   Formula: `max(1, damage * (1 + TF_DOUBLE*2) // 100)`. BattleResult.katar_second/_crit.
-   Summary shows "X + Y" format. TF_DOUBLE in passives (job-filtered).
-
-2. **G17 — E6 Forged weapon Verys** ✓ DONE (Session K)
-   ForgeBonus modifier between AttrFix/CardFix. forge toggle replaces card row in equipment_section.
-   Forge fields on PlayerBuild + Weapon + resolve_weapon.
-   G44 added: forge toggle should be restricted to forgeable weapon types (needs DB consolidation).
-
-3. **G15 — F4 Gear bonus visibility**
-   Decide with user: tooltip vs separate "From Gear" row.
-   Recommended: add tooltip on each stat total label showing breakdown
-   `"Base: X  +Bonuses: Y  +Gear: Z"`. Avoids layout changes.
-   In `stats_section.py`: store `gear_bonuses` reference when `apply_gear_bonuses()` is called;
-   use it to populate tooltip text on `_total_labels`.
-
-4. **G40 — P1 StepsBar state persistence**
+2. **G40 — P1 StepsBar state persistence**
    `Panel.set_visible_bar(True)` currently always calls `reset_steps_to_collapsed()`.
    Add `_steps_was_expanded: bool = False` to `Panel`.
    On hide: save `_steps_was_expanded = self._steps_bar._expanded`.
    On show: restore that state instead of always collapsing.
+   File: `gui/panel.py` only.
 
-5. **G39 — F7 Inline equipment dropdown** _(if context allows)_
-   Low priority. Add inline QComboBox as quick-select alternative to Edit button.
+3. **G39 — F7 Inline equipment dropdown** _(if context allows; lowest priority)_
+   Add inline QComboBox as quick-select alternative to Edit button in equipment_section.
    Populate from `loader.get_items_by_slot(slot)`. On change: set item ID directly.
+   File: `gui/sections/equipment_section.py`.
 
 ---
 

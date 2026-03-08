@@ -84,6 +84,8 @@ class BuildManager:
                 "armor_element": build.armor_element,
             },
             "server": build.server,
+            "active_items": dict(build.active_items_bonuses),
+            "manual_adj": dict(build.manual_adj_bonuses),
         }
 
         # cached_display — read by PlayerTargetBrowserDialog to show build stats
@@ -171,6 +173,8 @@ class BuildManager:
             no_sizefix=flags.get("no_sizefix", False),
             armor_element=flags.get("armor_element", 0),
             server=data.get("server", "standard"),
+            active_items_bonuses=data.get("active_items", {}),
+            manual_adj_bonuses=data.get("manual_adj", {}),
         )
 
     @staticmethod

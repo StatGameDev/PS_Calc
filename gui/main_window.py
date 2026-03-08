@@ -38,6 +38,8 @@ from gui.sections.build_header import BuildHeaderSection
 from gui.sections.combat_controls import CombatControlsSection
 from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
+from gui.sections.active_items_section import ActiveItemsSection
+from gui.sections.manual_adj_section import ManualAdjSection
 from gui.sections.passive_section import PassiveSection
 from gui.sections.stats_section import StatsSection
 from gui.sections.incoming_damage import IncomingDamageSection
@@ -91,6 +93,8 @@ class MainWindow(QMainWindow):
         self._derived_section: DerivedSection     = self._panel_container.get_section("derived_section")   # type: ignore[assignment]
         self._equip_section:   EquipmentSection   = self._panel_container.get_section("equipment_section") # type: ignore[assignment]
         self._passive_section: PassiveSection     = self._panel_container.get_section("passive_section")   # type: ignore[assignment]
+        self._active_items:    ActiveItemsSection = self._panel_container.get_section("active_items_section") # type: ignore[assignment]
+        self._manual_adj:      ManualAdjSection   = self._panel_container.get_section("manual_adj_section")   # type: ignore[assignment]
 
         # ── Typed section references — combat ─────────────────────────────
         self._combat_controls:  CombatControlsSection  = self._panel_container.get_section("combat_controls")   # type: ignore[assignment]
@@ -193,6 +197,8 @@ class MainWindow(QMainWindow):
         self._stats_section.stats_changed.connect(self._on_build_changed)
         self._equip_section.equipment_changed.connect(self._on_build_changed)
         self._passive_section.passives_changed.connect(self._on_build_changed)
+        self._active_items.bonuses_changed.connect(self._on_build_changed)
+        self._manual_adj.bonuses_changed.connect(self._on_build_changed)
         self._incoming_damage.config_changed.connect(self._run_battle_pipeline)
 
     def _connect_combat_signals(self) -> None:
@@ -284,6 +290,12 @@ class MainWindow(QMainWindow):
             print(f"WARNING: Failed to load build '{name}': {exc}")
             return
 
+        # G15: legacy bonus_* fields from old saves are no longer user-editable.
+        # Zero them on load so they don't stack on top of auto-computed gear bonuses.
+        build.bonus_str = build.bonus_agi = build.bonus_vit = 0
+        build.bonus_int = build.bonus_dex = build.bonus_luk = 0
+        build.bonus_batk = build.bonus_hit = build.bonus_flee = build.bonus_cri = 0
+        build.equip_def = build.equip_mdef = build.bonus_aspd_percent = 0
         self._current_build = build
         self._save_btn.setEnabled(True)
         self._load_build_into_sections(build)
@@ -308,6 +320,8 @@ class MainWindow(QMainWindow):
         self._stats_section.load_build(build)
         self._equip_section.load_build(build)
         self._passive_section.load_build(build)
+        self._active_items.load_build(build)
+        self._manual_adj.load_build(build)
         self._combat_controls.load_build(build)
 
     # ── Build-change pipeline ─────────────────────────────────────────────
@@ -329,31 +343,51 @@ class MainWindow(QMainWindow):
         self._stats_section.collect_into(build)
         self._equip_section.collect_into(build)
         self._passive_section.collect_into(build)
+        self._active_items.collect_into(build)
+        self._manual_adj.collect_into(build)
         self._combat_controls.collect_into(build)
+        # G15: bonus_str–luk and flat bonus fields are now auto-computed from gear/AI/MA;
+        # zero them so old loaded values don't double-stack on top of gear bonuses.
+        build.bonus_str = 0
+        build.bonus_agi = 0
+        build.bonus_vit = 0
+        build.bonus_int = 0
+        build.bonus_dex = 0
+        build.bonus_luk = 0
+        build.bonus_batk = 0
+        build.bonus_hit = 0
+        build.bonus_flee = 0
+        build.bonus_cri = 0
+        build.equip_def = 0
+        build.equip_mdef = 0
+        build.bonus_aspd_percent = 0
 
     def _apply_gear_bonuses(self, build: PlayerBuild) -> PlayerBuild:
-        """Return a new PlayerBuild with gear bonuses added on top of manual bonuses.
+        """Return a new PlayerBuild with all bonus sources stacked on top of base values.
 
+        Sources stacked: gear scripts (GearBonuses) + Active Items (G46) + Manual Adj (G47).
         The original build is unchanged so save_build always writes clean values.
         """
         gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
+        ai = build.active_items_bonuses
+        ma = build.manual_adj_bonuses
         return dataclasses.replace(
             build,
-            bonus_str=build.bonus_str + gb.str_,
-            bonus_agi=build.bonus_agi + gb.agi,
-            bonus_vit=build.bonus_vit + gb.vit,
-            bonus_int=build.bonus_int + gb.int_,
-            bonus_dex=build.bonus_dex + gb.dex,
-            bonus_luk=build.bonus_luk + gb.luk,
-            bonus_batk=build.bonus_batk + gb.batk,
-            bonus_hit=build.bonus_hit + gb.hit,
-            bonus_flee=build.bonus_flee + gb.flee,
-            bonus_cri=build.bonus_cri + gb.cri,
-            equip_def=build.equip_def + gb.def_,
-            equip_mdef=build.equip_mdef + gb.mdef_,
-            bonus_maxhp=build.bonus_maxhp + gb.maxhp,
-            bonus_maxsp=build.bonus_maxsp + gb.maxsp,
-            bonus_aspd_percent=build.bonus_aspd_percent + gb.aspd_percent,
+            bonus_str=build.bonus_str + gb.str_ + ai.get("str", 0) + ma.get("str", 0),
+            bonus_agi=build.bonus_agi + gb.agi + ai.get("agi", 0) + ma.get("agi", 0),
+            bonus_vit=build.bonus_vit + gb.vit + ai.get("vit", 0) + ma.get("vit", 0),
+            bonus_int=build.bonus_int + gb.int_ + ai.get("int", 0) + ma.get("int", 0),
+            bonus_dex=build.bonus_dex + gb.dex + ai.get("dex", 0) + ma.get("dex", 0),
+            bonus_luk=build.bonus_luk + gb.luk + ai.get("luk", 0) + ma.get("luk", 0),
+            bonus_batk=build.bonus_batk + gb.batk + ai.get("batk", 0) + ma.get("batk", 0),
+            bonus_hit=build.bonus_hit + gb.hit + ai.get("hit", 0) + ma.get("hit", 0),
+            bonus_flee=build.bonus_flee + gb.flee + ai.get("flee", 0) + ma.get("flee", 0),
+            bonus_cri=build.bonus_cri + gb.cri + ai.get("cri", 0) + ma.get("cri", 0),
+            equip_def=build.equip_def + gb.def_ + ai.get("def", 0) + ma.get("def", 0),
+            equip_mdef=build.equip_mdef + gb.mdef_ + ai.get("mdef", 0) + ma.get("mdef", 0),
+            bonus_maxhp=build.bonus_maxhp + gb.maxhp + ai.get("maxhp", 0) + ma.get("maxhp", 0),
+            bonus_maxsp=build.bonus_maxsp + gb.maxsp + ai.get("maxsp", 0) + ma.get("maxsp", 0),
+            bonus_aspd_percent=build.bonus_aspd_percent + gb.aspd_percent + ai.get("aspd_pct", 0) + ma.get("aspd_pct", 0),
             bonus_aspd_add=build.bonus_aspd_add + gb.aspd_add,
         )
 
@@ -362,6 +396,11 @@ class MainWindow(QMainWindow):
         build = self._current_build
         if build is None:
             return
+        # Compute gear bonuses separately so StatsSection can show the breakdown.
+        gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
+        self._stats_section.update_from_bonuses(
+            gb, build.active_items_bonuses, build.manual_adj_bonuses
+        )
         eff_build = self._apply_gear_bonuses(build)
         weapon = BuildManager.resolve_weapon(
             eff_build.equipped.get("right_hand"),

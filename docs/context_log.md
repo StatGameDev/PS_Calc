@@ -699,6 +699,70 @@ Katar second hit CardFix exclusion confirmed via flag.lh ordering in battle.c.
 
 ---
 
+## Session K2  2026-03-08  claude-sonnet-4-6
+ctx_used: 100% (hit limit during EOS maintenance; session compacted, maintenance completed in new context)
+
+Work items completed:
+- Gaps design discussion: G15/G45/G46/G47 scoped + added to gaps.md and session_roadmap.md
+- G46: ActiveItemsSection + PlayerBuild.active_items_bonuses + BuildManager save/load
+- G47: ManualAdjSection + PlayerBuild.manual_adj_bonuses + BuildManager save/load
+- G15: StatsSection bonus column → read-only auto-computed labels with per-source tooltip
+- Bugfix: skill_data scope error in battle_pipeline._run_branch (latent G17 bug)
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/gaps.md (~2 partial reads) | ~120 | ~480 |
+| docs/session_roadmap.md | ~130 | ~520 |
+| core/models/gear_bonuses.py | 65 | ~455 |
+| core/models/build.py | 92 | ~644 |
+| gui/sections/stats_section.py | 270 | ~1,890 |
+| gui/main_window.py (4 partial reads) | ~170 | ~1,190 |
+| core/build_manager.py (2 partial reads) | ~90 | ~630 |
+| gui/sections/passive_section.py (2 partial reads) | ~100 | ~700 |
+| core/models/item_effect.py | 10 | ~70 |
+| gui/section.py | 50 | ~350 |
+| gui/panel_container.py | 40 | ~280 |
+| core/calculators/battle_pipeline.py (3 reads) | ~230 | ~1,610 |
+| core/calculators/status_calculator.py (grep) | ~5 | ~35 |
+| gui/themes/dark.qss (partial) | 15 | ~60 |
+| docs/completed_work.md (tail) | ~30 | ~120 |
+| docs/context_log.md | ~700 | ~4,900 |
+| docs/data_models.md (partial) | ~60 | ~240 |
+| **subtotal reads** | **~2,177** | **~14,174** |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| core/models/build.py | +8 | ~56 |
+| core/build_manager.py | +4 | ~28 |
+| gui/layout_config.json | +14 | ~70 |
+| gui/main_window.py | ~60 lines added | ~420 |
+| gui/sections/stats_section.py | rewrite ~270 | ~1,890 |
+| gui/panel_container.py | +4 | ~28 |
+| core/calculators/battle_pipeline.py | +2 net | ~14 |
+| gui/themes/dark.qss | +12 | ~48 |
+| docs/gaps.md | +50 net (G15/G45/G46/G47) | ~200 |
+| docs/session_roadmap.md | +15 net | ~60 |
+| docs/completed_work.md | +55 | ~220 |
+| docs/data_models.md | +18 | ~72 |
+| docs/context_log.md | +this entry | ~300 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| gui/sections/active_items_section.py | 110 | ~770 |
+| gui/sections/manual_adj_section.py | 95 | ~665 |
+
+Total est_tokens: ~14,174 reads + ~3,406 edits + ~1,435 created + 6,000 fixed + ~30,000 conv ≈ 55,000
+Notes: Large design discussion at session start (G15 scope, new sections, step tooltip) consumed ~15%
+context before any code written. G46/G47 straightforward. G15 rewrite required careful handling of
+legacy bonus_* fields on PlayerBuild (zeroed on load+collect to avoid double-stacking). skill_data
+scope bug (latent from K G17) only surfaced when new sections triggered pipeline — caught immediately.
+G45 and G40 deferred to next session.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6

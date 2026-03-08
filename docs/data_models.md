@@ -125,17 +125,28 @@ _Added Session B: mdef_ (bMdef hard MDEF), ignore_mdef_rate (bIgnoreMdefRate by 
 ### Current fields [EXISTS]:
 _See `core/models/build.py` for full field list._
 
-### Fields to add [NEW]:
+### Fields added in Session D [EXISTS]:
 ```python
 armor_element: int = 0      # Element the player defends as for incoming damage.
-                             # 0 = Neutral (default for bare armor).
-                             # Set by: armor card (Pasana=Fire), endow status effect, etc.
-                             # This is separate from weapon_element.
+                             # Manual override; future: derive from equipped armor element card.
 ```
 
-Note: `armor_element` can be derived from equipped armor's element card in the future (via
-`GearBonusAggregator` or a dedicated pass). For now, expose as a manual override similar
-to `weapon_element`.
+### Fields added in Session K [EXISTS]:
+```python
+is_forged: bool = False       # Right-hand weapon is player-forged (hides card row, enables forge element)
+forge_sc_count: int = 0       # Star crumb count 0–3
+forge_ranked: bool = False    # Forger was ranked Blacksmith (+10 star bonus)
+forge_element: int = 0        # Element from elemental stone (0=Neutral/none)
+```
+
+### Fields added in Session K2 [EXISTS]:
+```python
+active_items_bonuses: Dict[str, int] = {}   # G46: consumable/food bonuses (temporary catch-all)
+manual_adj_bonuses:   Dict[str, int] = {}   # G47: raw numeric escape hatch, no source attribution
+# Keys: "str","agi","vit","int","dex","luk","batk","hit","flee","cri","def","mdef","aspd_pct","maxhp","maxsp"
+# Saved/loaded under "active_items" / "manual_adj" in build JSON.
+# bonus_str–luk and flat bonus fields are now zeroed on load; all bonuses come from gear+G46+G47.
+```
 
 ### Other [EXISTS] fields added in Session B:
 ```python

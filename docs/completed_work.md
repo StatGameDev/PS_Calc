@@ -844,6 +844,29 @@ All 5 call sites updated to pass `build.refine_levels`:
 
 ---
 
+## Session H — PMF Foundation
+
+**Goal**: Create the pmf/ package and begin the DamageRange → PMF migration.
+Completed during the C1 variance planning session; app intentionally broken until Session I wires all pipelines.
+
+**H1 — pmf/ package**
+Created: `pmf/__init__.py`, `pmf/operations.py`, `pmf/statistics.py`, `pmf/single_hit.py`.
+PMF represented as `dict[int, float]` (damage value → probability).
+Key operations: `_uniform_pmf`, `_scale_floor`, `_add_flat`, `_subtract_uniform`, `_floor_at`, `pmf_stats`.
+
+**H2 — DamageResult.pmf field**
+`core/models/damage.py`: `DamageRange` removed; `pmf: dict` field added to `DamageResult`.
+
+**H3 — base_damage.py PMF conversion**
+`core/calculators/modifiers/base_damage.py` fully converted to PMF ops (returns `dict[int,float]`).
+Crit branch: single spike at atkmax. Normal: `_uniform_pmf(atkmin, atkmax)`.
+Overrefine: subtracted via `_subtract_uniform`.
+
+**H4 — requirements.txt + CLAUDE.md**
+`requirements.txt`: `scipy>=1.13` added. `CLAUDE.md`: pre-alpha notice added.
+
+---
+
 ## Session J1 — Skill combo job filter (G34 partial)
 
 **Goal**: Filter skill combo to current job, handle multi-job skills correctly.
@@ -932,3 +955,42 @@ Loads `skill_tree.json`, returns frozenset of skill names for the given job_id.
 - `equipment_section.py`: "Forged" QCheckBox on right_hand row. When checked: hides card row, shows
   forge controls (Crumbs spinner 0–3, Ranked checkbox, Ele combo). Loads/saves via PlayerBuild forge fields.
 - Known limitation (G44): forge toggle appears on all right_hand weapons; should be restricted to forgeable types.
+
+---
+
+## Session K2  2026-03-08  claude-sonnet-4-6
+
+**G46 — Active Items section** (`gui/sections/active_items_section.py`)
+- New collapsible builder section, collapsed by default, compact_mode=hidden.
+- Per-stat spinboxes for: STR/AGI/VIT/INT/DEX/LUK, BATK, HIT, FLEE, CRI, Hard DEF, Hard MDEF, ASPD%, MaxHP, MaxSP.
+- Optional Source/Notes QLineEdit.
+- Header note documents it as a temporary catch-all.
+- `active_items_bonuses: Dict[str,int]` added to `PlayerBuild`; saved/loaded under `"active_items"` key.
+- Registered in `panel_container.py` `_SECTION_FACTORY`.
+
+**G47 — Manual Stat Adjustments section** (`gui/sections/manual_adj_section.py`)
+- Same layout as G46 without the source field.
+- Header note clarifies it's a raw escape hatch; known bonuses belong in proper sections.
+- `manual_adj_bonuses: Dict[str,int]` added to `PlayerBuild`; saved/loaded under `"manual_adj"` key.
+- Registered in `panel_container.py` `_SECTION_FACTORY`.
+
+**G15 — Bonus stat column redesign** (`gui/sections/stats_section.py` rewritten)
+- Bonus spinboxes (6 stats + 7 flat bonuses) removed; replaced by read-only `QLabel` with `objectName="stat_bonus_auto"` (italic, muted color via dark.qss).
+- `_bonus_values` / `_flat_values` dicts store current computed values; `_update_totals` uses them.
+- `update_from_bonuses(gb, ai, ma)` method: sets label text + tooltip per stat from gear/AI/MA breakdown. Tooltip format: `"Gear: +X  |  Active Items: +Y  |  Manual: +Z"`.
+- Flat bonuses now include Hard MDEF (was absent); Soft DEF+ removed (not tracked by any source).
+- `collect_into` writes only base stats; `load_build` reads only base stats.
+- `main_window._run_status_calc` calls `GearBonusAggregator.compute` separately, then `update_from_bonuses`.
+- `_collect_build` and `_on_build_selected` zero legacy `bonus_*` fields to prevent double-stacking with gear.
+- SC stat effects (Blessing, IncreaseAgi, etc.) not included — StatusCalculator does not yet expose per-SC contributions; deferred.
+
+**Bug fix — `skill_data` scope error in `battle_pipeline.py`**
+- `skill_data` was set in `calculate()` but used in `_run_branch()` — different method, out of scope.
+- Fix: `skill_data = loader.get_skill(skill.id)` added at the ForgeBonus step inside `_run_branch`.
+- Dead `loader.get_skill(skill.id)` call in `calculate()` (result discarded) replaced with comment.
+- This bug was latent from Session K G17 and surfaced when pipeline was triggered from new sections.
+
+**Gaps added this session:**
+- G45 — StepsBar step tooltip (not yet implemented)
+- G46 — Active Items section (implemented this session)
+- G47 — Manual Stat Adjustments section (implemented this session)

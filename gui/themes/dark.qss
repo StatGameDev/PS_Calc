@@ -304,6 +304,12 @@ QLabel#stat_row_label {
 
 QLabel#stat_operator { color: #6b7480; }
 
+/* G15: auto-computed bonus label (read-only, sourced from gear/AI/MA) */
+QLabel#stat_bonus_auto {
+    color: #a8b4c2;
+    font-style: italic;
+}
+
 QLabel#stat_total {
     color: #4d8fff;
     font-weight: bold;
@@ -361,6 +367,14 @@ QLabel#compact_equip_weapon {
 QLabel#compact_equip_summary {
     color: #8892a2;
     font-size: 11px;
+}
+
+/* ── G46/G47 Active Items / Manual Adjustments ───────────────────────────── */
+QLabel#active_items_note {
+    color: #6b7480;
+    font-size: 11px;
+    font-style: italic;
+    margin-bottom: 4px;
 }
 
 /* ── Phase 1.5 Passive Section ───────────────────────────────────────────── */

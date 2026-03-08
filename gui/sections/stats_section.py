@@ -11,32 +11,58 @@ from PySide6.QtWidgets import (
 )
 
 from core.models.build import PlayerBuild
+from core.models.gear_bonuses import GearBonuses
 from gui.section import Section
 
-# (display_label, spinbox_key, build_base_attr, build_bonus_attr)
-_STATS: list[tuple[str, str, str, str]] = [
-    ("STR", "str", "base_str",  "bonus_str"),
-    ("AGI", "agi", "base_agi",  "bonus_agi"),
-    ("VIT", "vit", "base_vit",  "bonus_vit"),
-    ("INT", "int", "base_int",  "bonus_int"),
-    ("DEX", "dex", "base_dex",  "bonus_dex"),
-    ("LUK", "luk", "base_luk",  "bonus_luk"),
+# (display_label, key, base_attr, gb_attr)
+# gb_attr: attribute name on GearBonuses, or None if not tracked there
+_STATS: list[tuple[str, str, str, str | None]] = [
+    ("STR", "str", "base_str",  "str_"),
+    ("AGI", "agi", "base_agi",  "agi"),
+    ("VIT", "vit", "base_vit",  "vit"),
+    ("INT", "int", "base_int",  "int_"),
+    ("DEX", "dex", "base_dex",  "dex"),
+    ("LUK", "luk", "base_luk",  "luk"),
 ]
 
-# (display_label, spinbox_key, build_attr, min_val, max_val)
-_FLAT_BONUSES: list[tuple[str, str, str, int, int]] = [
-    ("BATK+",     "batk",      "bonus_batk",        -9999, 9999),
-    ("HIT+",      "hit",       "bonus_hit",          -500,  500),
-    ("FLEE+",     "flee",      "bonus_flee",         -500,  500),
-    ("CRI+",      "cri",       "bonus_cri",          -100,  100),
-    ("Hard DEF",  "def",       "equip_def",           0,    999),
-    ("Soft DEF+", "def2",      "bonus_def2",         -500,  500),
-    ("ASPD%",     "aspd_pct",  "bonus_aspd_percent", -100,  100),
+# (display_label, key, gb_attr, ai_key, ma_key)
+# ai_key / ma_key: matching key in active_items_bonuses / manual_adj_bonuses
+_FLAT_BONUSES: list[tuple[str, str, str | None, str]] = [
+    ("BATK+",     "batk",     "batk",         "batk"),
+    ("HIT+",      "hit",      "hit",           "hit"),
+    ("FLEE+",     "flee",     "flee",          "flee"),
+    ("CRI+",      "cri",      "cri",           "cri"),
+    ("Hard DEF",  "def",      "def_",          "def"),
+    ("Hard MDEF", "mdef",     "mdef_",         "mdef"),
+    ("ASPD%",     "aspd_pct", "aspd_percent",  "aspd_pct"),
 ]
+
+
+def _fmt_bonus(v: int) -> str:
+    return f"+{v}" if v > 0 else str(v)
+
+
+def _make_tooltip(gear: int, ai: int, ma: int) -> str:
+    parts = []
+    if gear:
+        parts.append(f"Gear: {_fmt_bonus(gear)}")
+    if ai:
+        parts.append(f"Active Items: {_fmt_bonus(ai)}")
+    if ma:
+        parts.append(f"Manual: {_fmt_bonus(ma)}")
+    return "  |  ".join(parts) if parts else "No bonuses"
 
 
 class StatsSection(Section):
-    """Phase 1.2 — Base stat spinboxes (STR/AGI/VIT/INT/DEX/LUK) + flat bonuses."""
+    """Phase 1.2 — Base stat spinboxes (STR/AGI/VIT/INT/DEX/LUK).
+
+    G15: Bonus column is now a read-only auto-computed label.
+    Value = GearBonuses (gear+card scripts) + Active Items (G46) + Manual Adjustments (G47).
+    Tooltip per stat shows per-source breakdown.
+
+    SC stat effects (Blessing, IncreaseAgi, etc.) are not yet reflected here;
+    they will be added once StatusCalculator exposes per-SC contributions.
+    """
 
     stats_changed = Signal()
 
@@ -45,6 +71,10 @@ class StatsSection(Section):
 
         self._compact_widget: QWidget | None = None
         self._compact_labels: dict[str, QLabel] = {}
+
+        # Tracked numeric bonus values (auto-computed, not user-editable)
+        self._bonus_values: dict[str, int] = {k: 0 for _, k, *_ in _STATS}
+        self._flat_values:  dict[str, int] = {k: 0 for _, k, *_ in _FLAT_BONUSES}
 
         # ── Stat point counter ────────────────────────────────────────────
         self._points_label = QLabel("Base Stat Total: 6")
@@ -58,18 +88,17 @@ class StatsSection(Section):
         grid.setHorizontalSpacing(6)
         grid.setVerticalSpacing(3)
 
-        # Column headers
         for col, header in enumerate(("", "Base", "+", "Bonus", "=", "Total"), start=0):
             if header:
                 lbl = QLabel(header)
                 lbl.setObjectName("stat_col_header")
                 grid.addWidget(lbl, 0, col)
 
-        self._base_spins:  dict[str, QSpinBox] = {}
-        self._bonus_spins: dict[str, QSpinBox] = {}
-        self._total_labels: dict[str, QLabel]  = {}
+        self._base_spins:   dict[str, QSpinBox] = {}
+        self._bonus_labels: dict[str, QLabel]   = {}
+        self._total_labels: dict[str, QLabel]   = {}
 
-        for row, (display, key_s, _base_attr, _bonus_attr) in enumerate(_STATS, start=1):
+        for row, (display, key_s, _base_attr, _gb_attr) in enumerate(_STATS, start=1):
             name_lbl = QLabel(display)
             name_lbl.setObjectName("stat_row_label")
             grid.addWidget(name_lbl, row, 0)
@@ -85,12 +114,12 @@ class StatsSection(Section):
             plus_lbl.setObjectName("stat_operator")
             grid.addWidget(plus_lbl, row, 2)
 
-            bonus_spin = QSpinBox()
-            bonus_spin.setRange(-99, 999)
-            bonus_spin.setValue(0)
-            bonus_spin.setFixedWidth(65)
-            self._bonus_spins[key_s] = bonus_spin
-            grid.addWidget(bonus_spin, row, 3)
+            bonus_lbl = QLabel("0")
+            bonus_lbl.setObjectName("stat_bonus_auto")
+            bonus_lbl.setFixedWidth(65)
+            bonus_lbl.setToolTip("No bonuses")
+            self._bonus_labels[key_s] = bonus_lbl
+            grid.addWidget(bonus_lbl, row, 3)
 
             eq_lbl = QLabel("=")
             eq_lbl.setObjectName("stat_operator")
@@ -103,42 +132,39 @@ class StatsSection(Section):
             grid.addWidget(total_lbl, row, 5)
 
             base_spin.valueChanged.connect(self._on_stat_changed)
-            bonus_spin.valueChanged.connect(self._on_stat_changed)
 
         self.add_content_widget(grid_widget)
 
-        # ── Flat bonuses sub-group ────────────────────────────────────────
+        # ── Flat bonuses sub-group (read-only auto-computed) ──────────────
         bonus_header = QLabel("— Flat Bonuses —")
         bonus_header.setObjectName("stat_sub_header")
         self.add_content_widget(bonus_header)
 
-        bonus_grid_widget = QWidget()
-        bonus_grid = QGridLayout(bonus_grid_widget)
-        bonus_grid.setContentsMargins(0, 0, 0, 0)
-        bonus_grid.setHorizontalSpacing(6)
-        bonus_grid.setVerticalSpacing(3)
+        flat_grid_widget = QWidget()
+        flat_grid = QGridLayout(flat_grid_widget)
+        flat_grid.setContentsMargins(0, 0, 0, 0)
+        flat_grid.setHorizontalSpacing(6)
+        flat_grid.setVerticalSpacing(3)
 
-        self._flat_spins: dict[str, QSpinBox] = {}
-        cols_per_row = 4  # label+spin pairs per row
+        self._flat_labels: dict[str, QLabel] = {}
+        cols_per_row = 4
 
-        for i, (display, key_s, _attr, min_v, max_v) in enumerate(_FLAT_BONUSES):
+        for i, (display, key_s, _gb_attr, _ai_key) in enumerate(_FLAT_BONUSES):
             row = i // (cols_per_row // 2)
             col_base = (i % (cols_per_row // 2)) * 2
 
             lbl = QLabel(display + ":")
             lbl.setObjectName("flat_bonus_label")
-            bonus_grid.addWidget(lbl, row, col_base)
+            flat_grid.addWidget(lbl, row, col_base)
 
-            spin = QSpinBox()
-            spin.setRange(min_v, max_v)
-            spin.setValue(0)
-            spin.setFixedWidth(65)
-            self._flat_spins[key_s] = spin
-            bonus_grid.addWidget(spin, row, col_base + 1)
+            val_lbl = QLabel("0")
+            val_lbl.setObjectName("stat_bonus_auto")
+            val_lbl.setFixedWidth(65)
+            val_lbl.setToolTip("No bonuses")
+            self._flat_labels[key_s] = val_lbl
+            flat_grid.addWidget(val_lbl, row, col_base + 1)
 
-            spin.valueChanged.connect(self._on_stat_changed)
-
-        self.add_content_widget(bonus_grid_widget)
+        self.add_content_widget(flat_grid_widget)
 
     # ── Internal ──────────────────────────────────────────────────────────
 
@@ -148,9 +174,9 @@ class StatsSection(Section):
 
     def _update_totals(self) -> None:
         total_base = 0
-        for key_s, *_ in [(k, ) for k in self._base_spins]:
+        for key_s in self._base_spins:
             base = self._base_spins[key_s].value()
-            bonus = self._bonus_spins[key_s].value()
+            bonus = self._bonus_values.get(key_s, 0)
             self._total_labels[key_s].setText(str(base + bonus))
             total_base += base
         self._points_label.setText(f"Base Stat Total: {total_base}")
@@ -162,8 +188,8 @@ class StatsSection(Section):
             lbl = self._compact_labels.get(key_s)
             if lbl is not None:
                 base = self._base_spins[key_s].value()
-                bonus = self._bonus_spins[key_s].value()
-                lbl.setText(f"{display}: {base}+{bonus}")
+                bonus = self._bonus_values.get(key_s, 0)
+                lbl.setText(f"{display}: {base}+{bonus}" if bonus else f"{display}: {base}")
 
     def _build_compact_widget(self) -> None:
         w = QWidget()
@@ -208,14 +234,42 @@ class StatsSection(Section):
 
     # ── Public API ────────────────────────────────────────────────────────
 
+    def update_from_bonuses(
+        self,
+        gb: GearBonuses,
+        ai: dict[str, int],
+        ma: dict[str, int],
+    ) -> None:
+        """Refresh auto-computed bonus labels from all sources.
+
+        Called by MainWindow whenever the build changes (gear, active items, or
+        manual adjustments). SC stat effects not included yet (future G15 follow-up).
+        """
+        for _display, key_s, _base_attr, gb_attr in _STATS:
+            gear_val = int(getattr(gb, gb_attr, 0)) if gb_attr else 0
+            ai_val   = ai.get(key_s, 0)
+            ma_val   = ma.get(key_s, 0)
+            total    = gear_val + ai_val + ma_val
+            self._bonus_values[key_s] = total
+            lbl = self._bonus_labels[key_s]
+            lbl.setText(_fmt_bonus(total) if total else "0")
+            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val))
+
+        for _display, key_s, gb_attr, ai_key in _FLAT_BONUSES:
+            gear_val = int(getattr(gb, gb_attr, 0)) if gb_attr else 0
+            ai_val   = ai.get(ai_key, 0)
+            ma_val   = ma.get(ai_key, 0)
+            total    = gear_val + ai_val + ma_val
+            self._flat_values[key_s] = total
+            lbl = self._flat_labels[key_s]
+            lbl.setText(_fmt_bonus(total) if total else "0")
+            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val))
+
+        self._update_totals()
+
     def load_build(self, build: PlayerBuild) -> None:
-        """Populate spinboxes from build without emitting change signals."""
-        all_spins = (
-            list(self._base_spins.values())
-            + list(self._bonus_spins.values())
-            + list(self._flat_spins.values())
-        )
-        for spin in all_spins:
+        """Populate base stat spinboxes from build. Bonus column is auto-computed."""
+        for spin in self._base_spins.values():
             spin.blockSignals(True)
 
         self._base_spins["str"].setValue(build.base_str)
@@ -225,45 +279,15 @@ class StatsSection(Section):
         self._base_spins["dex"].setValue(build.base_dex)
         self._base_spins["luk"].setValue(build.base_luk)
 
-        self._bonus_spins["str"].setValue(build.bonus_str)
-        self._bonus_spins["agi"].setValue(build.bonus_agi)
-        self._bonus_spins["vit"].setValue(build.bonus_vit)
-        self._bonus_spins["int"].setValue(build.bonus_int)
-        self._bonus_spins["dex"].setValue(build.bonus_dex)
-        self._bonus_spins["luk"].setValue(build.bonus_luk)
-
-        self._flat_spins["batk"].setValue(build.bonus_batk)
-        self._flat_spins["hit"].setValue(build.bonus_hit)
-        self._flat_spins["flee"].setValue(build.bonus_flee)
-        self._flat_spins["cri"].setValue(build.bonus_cri)
-        self._flat_spins["def"].setValue(build.equip_def)
-        self._flat_spins["def2"].setValue(build.bonus_def2)
-        self._flat_spins["aspd_pct"].setValue(build.bonus_aspd_percent)
-
-        for spin in all_spins:
+        for spin in self._base_spins.values():
             spin.blockSignals(False)
         self._update_totals()
 
     def collect_into(self, build: PlayerBuild) -> None:
-        """Write section state into an existing PlayerBuild in-place."""
+        """Write base stats into build. Bonus fields are computed in _apply_gear_bonuses."""
         build.base_str = self._base_spins["str"].value()
         build.base_agi = self._base_spins["agi"].value()
         build.base_vit = self._base_spins["vit"].value()
         build.base_int = self._base_spins["int"].value()
         build.base_dex = self._base_spins["dex"].value()
         build.base_luk = self._base_spins["luk"].value()
-
-        build.bonus_str = self._bonus_spins["str"].value()
-        build.bonus_agi = self._bonus_spins["agi"].value()
-        build.bonus_vit = self._bonus_spins["vit"].value()
-        build.bonus_int = self._bonus_spins["int"].value()
-        build.bonus_dex = self._bonus_spins["dex"].value()
-        build.bonus_luk = self._bonus_spins["luk"].value()
-
-        build.bonus_batk = self._flat_spins["batk"].value()
-        build.bonus_hit  = self._flat_spins["hit"].value()
-        build.bonus_flee = self._flat_spins["flee"].value()
-        build.bonus_cri  = self._flat_spins["cri"].value()
-        build.equip_def  = self._flat_spins["def"].value()
-        build.bonus_def2 = self._flat_spins["def2"].value()
-        build.bonus_aspd_percent = self._flat_spins["aspd_pct"].value()
