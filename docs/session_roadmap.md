@@ -1,5 +1,5 @@
 # PS_Calc — Session Roadmap
-_Sessions A–I, J1, J2, K, K2 complete — see docs/completed_work.md for history._
+_Sessions A–I, J1, J2, K, K2, L complete — see docs/completed_work.md for history._
 _Gap IDs reference docs/gaps.md. Pipeline specs in docs/pipeline_specs.md._
 
 ---
@@ -39,6 +39,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | J2 | Equipment browser / monster browser / passives job filters | G35, G36, G37 |
 | K | Katar second hit + forged weapon Verys | G16, G17 |
 | K2 | G46 ActiveItems + G47 ManualAdj sections + G15 bonus column redesign + skill_data bugfix | G15, G46, G47 |
+| L | G45 StepsBar tooltips + G40 state persistence + G39 inline dropdown + job ID system fix | G39, G40, G45 |
 
 ---
 
@@ -49,32 +50,10 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
-## Session L — StepsBar polish + minor UX
+## Session L — StepsBar polish + minor UX  ✓ COMPLETE
 
-**Goal**: StepsBar step tooltips, state persistence; inline equipment dropdown if context allows.
-**Gap IDs**: G45, G40, G39
-**Estimated tokens**: ~20–30k (all purely GUI widget changes; no Hercules greps needed)
-**No prerequisites.** All data for G45 is already on DamageStep. G40 is a two-line Panel change.
-
-### Work items (in order):
-
-1. **G45 — P3 StepsBar step tooltip**
-   Hovering a step row shows input value, formula, output, and hercules_ref.
-   All data already on DamageStep (`label`, `value`, `formula`, `hercules_ref` fields).
-   Purely a widget change in StepsBar — add `setToolTip()` per row when steps are rendered.
-   Files: `gui/panel.py` (StepsBar rendering), `gui/themes/dark.qss` (QToolTip style if needed).
-
-2. **G40 — P1 StepsBar state persistence**
-   `Panel.set_visible_bar(True)` currently always calls `reset_steps_to_collapsed()`.
-   Add `_steps_was_expanded: bool = False` to `Panel`.
-   On hide: save `_steps_was_expanded = self._steps_bar._expanded`.
-   On show: restore that state instead of always collapsing.
-   File: `gui/panel.py` only.
-
-3. **G39 — F7 Inline equipment dropdown** _(if context allows; lowest priority)_
-   Add inline QComboBox as quick-select alternative to Edit button in equipment_section.
-   Populate from `loader.get_items_by_slot(slot)`. On change: set item ID directly.
-   File: `gui/sections/equipment_section.py`.
+**All L items done**: G45, G40, G39. Job ID system also corrected this session.
+See completed_work.md for full details.
 
 ---
 
