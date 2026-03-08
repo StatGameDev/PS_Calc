@@ -132,7 +132,7 @@ class EquipmentBrowserDialog(QDialog):
         # F6: Assassin/Assassin Cross (job 12/24) can also equip 1H weapons in left hand.
         # Merge in IT_WEAPON items with EQP_WEAPON (1H only — EQP_ARMS/2H excluded).
         # Not applicable when browsing cards.
-        if slot_key == "left_hand" and job_id in (12, 24) and not item_type_override:
+        if slot_key == "left_hand" and job_id in (12, 4013) and not item_type_override:
             weapons_1h = [
                 it for it in loader.get_items_by_type("IT_WEAPON")
                 if "EQP_WEAPON" in it.get("loc", [])

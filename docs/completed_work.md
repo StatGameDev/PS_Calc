@@ -994,3 +994,39 @@ Loads `skill_tree.json`, returns frozenset of skill names for the given job_id.
 - G45 — StepsBar step tooltip (not yet implemented)
 - G46 — Active Items section (implemented this session)
 - G47 — Manual Stat Adjustments section (implemented this session)
+
+---
+
+## Session L  2026-03-08  claude-sonnet-4-6
+
+**G45 — StepsBar step tooltips** (`gui/panel.py` StepsBar.refresh)
+- Per-row tooltip built from DamageStep fields: name, formula, value/min_value/max_value, hercules_ref.
+- Range shown as "Range: X – Y  (avg Z)" when min≠max; "Value: X" when fixed.
+- `QToolTip` dark theme rule added to `dark.qss`.
+
+**G40 — StepsBar expanded state persistence** (`gui/panel.py`)
+- `_steps_was_expanded: bool` on Panel stores state when StepsBar is hidden.
+- `StepsBar.set_expanded_state(expanded)` restores all three internal fields simultaneously (_expanded, _scroll.setVisible, _bar.set_expanded) without emitting signals.
+- `Panel.set_steps_bar_visible(show)`: saves/restores expanded state across panel focus switches.
+- `panel_container.py` simplified to single `set_steps_bar_visible` call.
+
+**G39 — Inline equipment dropdown** (`gui/sections/equipment_section.py`)
+- `_NoWheelCombo(QComboBox)`: wheelEvent override calls event.ignore() — prevents scroll-wheel changing equipment when scrolling the panel.
+- `_load_slot_items(slot_key, job_id)`: returns filtered item list by slot loc + job_id; Assassin dual-wield (job_id in {12, 4013}) adds 1H weapons to left_hand.
+- `_repopulate_combo(slot_key)`: clears and rebuilds combo with current job filter, preserving selection.
+- `_on_inline_changed(slot_key)`: updates _item_ids, refreshes cards, updates left hand state, emits change.
+- `update_for_job(job_id)`: repopulates all combos filtered for new job (wired to build_header.job_changed).
+- `load_build`: repopulates all combos with build.job_id before restoring selections.
+- `_open_browser`: syncs combo after browser pick (adds item dynamically if not in filtered list).
+- QSS rule added for `QComboBox#equip_inline_combo` and `:disabled` state.
+
+**Job ID system fix** (scrapers + GUI)
+- Root cause: original scrapers used sequential IDs 23-35 for transcendent classes, colliding with Hercules's actual IDs (Job_SuperNovice=23, Job_Gunslinger=24, Job_Ninja=25). Gunslinger/Ninja items with `Job: { Gunslinger: true }` collapsed to job=[] ("all jobs") instead of being properly restricted.
+- Fix: all four scrapers updated to use Hercules constants.conf Job_* values throughout.
+- Transcendent classes now use 4008-4021; Gunslinger=24, Ninja=25, Super Novice=23.
+- `build_header.py`, `new_build_dialog.py`: job list updated; Super Novice/Gunslinger/Ninja added as selectable.
+- `_DUAL_WIELD_JOBS` updated to `{12, 4013}`; equipment browser dual-wield check updated.
+- `import_item_db.py`, `import_job_db.py`, `import_skill_tree.py`: all JOB_NAME_TO_ID / _HERCULES_JOB_TO_IDS corrected.
+- All three JSON files regenerated: item_db.json, job_db.json, skill_tree.json.
+- Extended classes (Taekwon=4046, Star_Gladiator=4047, Soul_Linker=4049, Gangsi=4050, etc.) now have proper IDs — their items correctly filter out for all supported main jobs.
+- **Breaking**: saved builds with transcendent job_id values (23-35 old IDs) are invalid and must be recreated.

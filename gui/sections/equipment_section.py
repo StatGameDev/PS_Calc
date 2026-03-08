@@ -30,7 +30,7 @@ _TWO_HANDED_WEAPON_TYPES: frozenset[str] = frozenset({
 
 # Jobs that may equip 1H weapons (dual-wield) in left hand (F6).
 # All jobs can use shields; only these jobs additionally see 1H weapons in the browser.
-_DUAL_WIELD_JOBS: frozenset[int] = frozenset({12, 24})  # Assassin, Assassin Cross
+_DUAL_WIELD_JOBS: frozenset[int] = frozenset({12, 4013})  # Assassin, Assassin Cross
 
 # (slot_key, display_label, has_refine)
 _SLOTS: list[tuple[str, str, bool]] = [
@@ -52,6 +52,58 @@ _ELEMENT_NAMES = [
     "Neutral", "Water", "Earth", "Fire", "Wind",
     "Poison", "Holy", "Dark", "Ghost", "Undead",
 ]
+
+# G39: slot → item type + valid EQP locs (mirrors equipment_browser logic)
+_SLOT_TYPE: dict[str, str] = {
+    "right_hand": "IT_WEAPON",
+    "left_hand":  "IT_ARMOR",
+    "ammo":       "IT_AMMO",
+    "armor":      "IT_ARMOR",
+    "garment":    "IT_ARMOR",
+    "footwear":   "IT_ARMOR",
+    "acc_l":      "IT_ARMOR",
+    "acc_r":      "IT_ARMOR",
+    "head_top":   "IT_ARMOR",
+    "head_mid":   "IT_ARMOR",
+    "head_low":   "IT_ARMOR",
+}
+
+_SLOT_LOC: dict[str, set[str]] = {
+    "right_hand": {"EQP_WEAPON", "EQP_ARMS"},
+    "left_hand":  {"EQP_SHIELD"},
+    "ammo":       {"EQP_AMMO"},
+    "armor":      {"EQP_ARMOR"},
+    "garment":    {"EQP_GARMENT"},
+    "footwear":   {"EQP_SHOES"},
+    "acc_l":      {"EQP_ACC"},
+    "acc_r":      {"EQP_ACC"},
+    "head_top":   {"EQP_HEAD_TOP"},
+    "head_mid":   {"EQP_HEAD_MID"},
+    "head_low":   {"EQP_HEAD_LOW"},
+}
+
+
+def _load_slot_items(slot_key: str, job_id: Optional[int] = None) -> list[tuple[str, int]]:
+    """Return [(display_name, item_id), ...] sorted alphabetically for the inline combo.
+    job_id=None disables job filtering (used at widget construction time).
+    For left_hand + Assassin dual-wield jobs, 1H weapons are included alongside shields."""
+    item_type = _SLOT_TYPE.get(slot_key)
+    valid_locs = set(_SLOT_LOC.get(slot_key, set()))
+    if item_type is None:
+        return []
+    # Assassin dual-wield: include 1H weapons in the left_hand combo
+    if slot_key == "left_hand" and job_id in _DUAL_WIELD_JOBS:
+        valid_locs |= {"EQP_WEAPON"}
+        items = loader.get_items_by_type("IT_ARMOR") + loader.get_items_by_type("IT_WEAPON")
+    else:
+        items = loader.get_items_by_type(item_type)
+    filtered = [
+        it for it in items
+        if any(loc in valid_locs for loc in it.get("loc", []))
+        and (job_id is None or not it.get("job") or job_id in it.get("job", []))
+    ]
+    filtered.sort(key=lambda it: it.get("name", it.get("aegis_name", "")))
+    return [(it.get("name", it.get("aegis_name", f"ID {it['id']}")), it["id"]) for it in filtered]
 
 
 def _resolve_item_name(item_id: Optional[int]) -> str:
@@ -78,6 +130,13 @@ def _resolve_card_label(card_id: Optional[int]) -> str:
     return name[:10] if len(name) > 10 else name
 
 
+class _NoWheelCombo(QComboBox):
+    """QComboBox that never reacts to the scroll wheel (prevents accidental slot changes)."""
+
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
+
 class EquipmentSection(Section):
     """Phase 1.4 — Equipment slots with item name, refine spinners, Edit button."""
 
@@ -91,10 +150,10 @@ class EquipmentSection(Section):
         self._compact_summary_lbl: QLabel | None = None
 
         # Per-slot widget storage (keyed by slot_key)
-        self._item_ids:     dict[str, Optional[int]] = {s: None for s, *_ in _SLOTS}
-        self._name_labels:  dict[str, QLabel]        = {}
-        self._refine_spins: dict[str, QSpinBox]      = {}
-        self._edit_btns:    dict[str, QPushButton]   = {}
+        self._item_ids:      dict[str, Optional[int]] = {s: None for s, *_ in _SLOTS}
+        self._inline_combos: dict[str, QComboBox]     = {}  # G39: quick-select combos
+        self._refine_spins:  dict[str, QSpinBox]      = {}
+        self._edit_btns:     dict[str, QPushButton]   = {}
         self._current_job_id: int = 0
 
         # G13: card sub-slot storage — list of card item IDs per slot (length = item's slots count)
@@ -129,10 +188,17 @@ class EquipmentSection(Section):
             name_col_layout.setContentsMargins(0, 0, 0, 0)
             name_col_layout.setSpacing(2)
 
-            name_lbl = QLabel("— Empty —")
-            name_lbl.setObjectName("equip_item_label")
-            self._name_labels[slot_key] = name_lbl
-            name_col_layout.addWidget(name_lbl)
+            # G39: inline quick-select combo (replaces static name label)
+            combo = _NoWheelCombo()
+            combo.setObjectName("equip_inline_combo")
+            combo.addItem("— Empty —", None)
+            for item_name, item_id in _load_slot_items(slot_key):  # no job filter at construction
+                combo.addItem(item_name, item_id)
+            combo.currentIndexChanged.connect(
+                lambda _sig, k=slot_key: self._on_inline_changed(k)
+            )
+            self._inline_combos[slot_key] = combo
+            name_col_layout.addWidget(combo)
 
             # G17: Forge toggle + controls (right_hand only)
             if slot_key == "right_hand":
@@ -306,6 +372,42 @@ class EquipmentSection(Section):
 
         card_row.setVisible(True)
 
+    # ── Inline combo ────────────────────────────────────────────────────────
+
+    def _repopulate_combo(self, slot_key: str) -> None:
+        """Rebuild combo items filtered for current job, preserving selection if still valid."""
+        combo = self._inline_combos.get(slot_key)
+        if combo is None:
+            return
+        current_id: Optional[int] = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("— Empty —", None)
+        for item_name, item_id in _load_slot_items(slot_key, self._current_job_id):
+            combo.addItem(item_name, item_id)
+        idx = combo.findData(current_id)
+        if idx < 0 and current_id is not None:
+            combo.addItem(_resolve_item_name(current_id), current_id)
+            idx = combo.count() - 1
+        combo.setCurrentIndex(max(0, idx))
+        combo.blockSignals(False)
+
+    def _on_inline_changed(self, slot_key: str) -> None:
+        """Handle quick-select combo change (G39)."""
+        combo = self._inline_combos.get(slot_key)
+        if combo is None:
+            return
+        new_id: Optional[int] = combo.currentData()
+        self._item_ids[slot_key] = new_id
+        if new_id is None and slot_key in self._refine_spins:
+            self._refine_spins[slot_key].setValue(0)
+        self._refresh_card_slots(slot_key)
+        if slot_key == "right_hand":
+            self._update_left_hand_state()
+        if self._compact_widget is not None:
+            self._update_compact_labels()
+        self.equipment_changed.emit()
+
     def _open_card_browser(self, slot_key: str, card_index: int) -> None:
         from gui.dialogs.equipment_browser import EquipmentBrowserDialog
         current = self._card_ids[slot_key][card_index] if card_index < len(self._card_ids[slot_key]) else None
@@ -332,7 +434,15 @@ class EquipmentSection(Section):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             new_id = dlg.selected_item_id()
             self._item_ids[slot_key] = new_id
-            self._name_labels[slot_key].setText(_resolve_item_name(new_id))
+            combo = self._inline_combos.get(slot_key)
+            if combo is not None:
+                combo.blockSignals(True)
+                idx = combo.findData(new_id)
+                if idx < 0 and new_id is not None:
+                    combo.addItem(_resolve_item_name(new_id), new_id)
+                    idx = combo.count() - 1
+                combo.setCurrentIndex(max(0, idx))
+                combo.blockSignals(False)
             if new_id is None and slot_key in self._refine_spins:
                 self._refine_spins[slot_key].setValue(0)
             self._refresh_card_slots(slot_key)
@@ -360,16 +470,20 @@ class EquipmentSection(Section):
         if edit_btn:
             edit_btn.setEnabled(enabled)
 
+        combo_lh = self._inline_combos.get("left_hand")
+        if combo_lh is not None:
+            combo_lh.setEnabled(enabled)
+            combo_lh.setItemText(0, "— Empty —" if enabled else "— Blocked (2H) —")
+
         if not enabled:
             # Clear the slot when blocked by a 2H weapon
             self._item_ids["left_hand"] = None
-            self._name_labels["left_hand"].setText("— Empty —")
+            if combo_lh is not None:
+                combo_lh.blockSignals(True)
+                combo_lh.setCurrentIndex(0)
+                combo_lh.blockSignals(False)
             if "left_hand" in self._refine_spins:
                 self._refine_spins["left_hand"].setValue(0)
-
-        name_lbl = self._name_labels.get("left_hand")
-        if name_lbl:
-            name_lbl.setEnabled(enabled)
 
     # ── Compact API ────────────────────────────────────────────────────────
 
@@ -428,8 +542,10 @@ class EquipmentSection(Section):
     # ── Public API ────────────────────────────────────────────────────────
 
     def update_for_job(self, job_id: int) -> None:
-        """Track job for left_hand browser filtering (F6: Assassin dual-wield)."""
+        """Repopulate inline combos filtered for the new job (G39)."""
         self._current_job_id = job_id
+        for slot_key in list(self._inline_combos):
+            self._repopulate_combo(slot_key)
 
     def load_build(self, build: PlayerBuild) -> None:
         """Populate all equipment widgets from build without emitting change signals."""
@@ -461,10 +577,28 @@ class EquipmentSection(Section):
             self._forge_element_combo.setCurrentIndex(fe_idx if fe_idx >= 0 else 0)
             self._forge_element_combo.blockSignals(False)
 
+        # Repopulate inline combos for the loaded job before restoring selections
+        for slot_key in list(self._inline_combos):
+            c = self._inline_combos[slot_key]
+            c.blockSignals(True)
+            c.clear()
+            c.addItem("— Empty —", None)
+            for item_name, item_id in _load_slot_items(slot_key, build.job_id):
+                c.addItem(item_name, item_id)
+            c.blockSignals(False)
+
         for slot_key, _, has_refine in _SLOTS:
             item_id = build.equipped.get(slot_key)
             self._item_ids[slot_key] = item_id
-            self._name_labels[slot_key].setText(_resolve_item_name(item_id))
+            combo = self._inline_combos.get(slot_key)
+            if combo is not None:
+                combo.blockSignals(True)
+                idx = combo.findData(item_id)
+                if idx < 0 and item_id is not None:
+                    combo.addItem(_resolve_item_name(item_id), item_id)
+                    idx = combo.count() - 1
+                combo.setCurrentIndex(max(0, idx))
+                combo.blockSignals(False)
 
             if has_refine and slot_key in self._refine_spins:
                 self._refine_spins[slot_key].setValue(
@@ -501,11 +635,11 @@ class EquipmentSection(Section):
         # Apply F5 state without emitting signals (2H right-hand blocks left hand)
         is_2h = self._is_right_hand_two_handed()
         edit_btn = self._edit_btns.get("left_hand")
-        name_lbl = self._name_labels.get("left_hand")
+        combo_lh = self._inline_combos.get("left_hand")
         if edit_btn:
             edit_btn.setEnabled(not is_2h)
-        if name_lbl:
-            name_lbl.setEnabled(not is_2h)
+        if combo_lh:
+            combo_lh.setEnabled(not is_2h)
 
         if self._compact_widget is not None:
             self._update_compact_labels()

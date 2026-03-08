@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # --------------------------------------------------------------------------
-# Mapping: job_db.conf job name → internal job_id (Hercules pc.c constants)
+# Mapping: job_db.conf job name → job_id (Hercules constants.conf Job_* values).
 # Only pre-renewal jobs are included; unknown names are silently skipped.
 # --------------------------------------------------------------------------
 JOB_NAME_TO_ID: dict[str, int] = {
@@ -36,20 +36,24 @@ JOB_NAME_TO_ID: dict[str, int] = {
     "Alchemist": 18,
     "Bard": 19,
     "Dancer": 20,
-    # 21 = Crusader on Peco, 22 = Super Novice
-    "Lord_Knight": 23,
-    "Assassin_Cross": 24,
-    "High_Wizard": 25,
-    "Sniper": 26,
-    "Whitesmith": 27,   # displayed as "Mastersmith" in many localizations
-    "High_Priest": 28,
-    "Paladin": 29,
-    "Clown": 30,
-    "Champion": 31,
-    "Professor": 32,    # displayed as "Scholar" in many localizations
-    "Creator": 33,
-    "Stalker": 34,
-    "Gypsy": 35,
+    # 21 = Crusader on Peco, 22 = Wedding (not playable)
+    "Super_Novice": 23,
+    "Gunslinger": 24,
+    "Ninja": 25,
+    # Transcendent (renewal-promoted) classes — 4xxx IDs from Hercules constants.conf
+    "Lord_Knight": 4008,
+    "High_Priest": 4009,
+    "High_Wizard": 4010,
+    "Whitesmith": 4011,  # displayed as "Mastersmith" in many localizations
+    "Sniper": 4012,
+    "Assassin_Cross": 4013,
+    "Paladin": 4015,
+    "Champion": 4016,
+    "Professor": 4017,   # displayed as "Scholar" in many localizations
+    "Stalker": 4018,
+    "Creator": 4019,
+    "Clown": 4020,
+    "Gypsy": 4021,
 }
 
 # --------------------------------------------------------------------------

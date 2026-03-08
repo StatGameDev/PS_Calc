@@ -131,6 +131,12 @@ class StepsBar(QWidget):
             self._bar.set_expanded(False)
         self.setVisible(visible)
 
+    def set_expanded_state(self, expanded: bool) -> None:
+        """Programmatically set internal expanded state without emitting signals (G40)."""
+        self._expanded = expanded
+        self._scroll.setVisible(expanded)
+        self._bar.set_expanded(expanded)
+
     def refresh(self, result: Optional[BattleResult]) -> None:
         """Rebuild step rows from BattleResult (wired to result_updated)."""
         while self._rows_layout.count() > 1:
@@ -155,6 +161,21 @@ class StepsBar(QWidget):
             row_layout.addWidget(val_lbl)
             self._rows_layout.insertWidget(i, row_w)
 
+            # G45: per-row tooltip from DamageStep fields
+            if step.min_value != step.max_value:
+                output_str = f"Range: {step.min_value} – {step.max_value}  (avg {step.value})"
+            else:
+                output_str = f"Value: {step.value}"
+            tooltip = (
+                f"<b>{step.name}</b><br>"
+                f"<br>"
+                f"Formula: {step.formula}<br>"
+                f"Output: {output_str}<br>"
+                f"<br>"
+                f"Source: {step.hercules_ref}"
+            )
+            row_w.setToolTip(tooltip)
+
 
 class Panel(QWidget):
     """
@@ -176,6 +197,7 @@ class Panel(QWidget):
 
         self._steps_bar: Optional[StepsBar] = None
         self._inner_splitter: Optional[QSplitter] = None
+        self._steps_was_expanded: bool = False
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -232,13 +254,27 @@ class Panel(QWidget):
         self._inner_splitter.setSizes([total - _BAR_W, _BAR_W])
 
     def reset_steps_to_collapsed(self) -> None:
-        """Set inner splitter to collapsed state (bar only, no step list).
-        Called via QTimer.singleShot from PanelContainer after first show (B3)."""
+        """Set inner splitter to collapsed state (bar only, no step list)."""
         if self._inner_splitter is None:
             return
         total = sum(self._inner_splitter.sizes())
         if total > 0:
             self._inner_splitter.setSizes([total - _BAR_W, _BAR_W])
+
+    def set_steps_bar_visible(self, show: bool) -> None:
+        """Show/hide the steps sidebar, persisting expanded state across focus switches (G40)."""
+        if self._steps_bar is None:
+            return
+        if not show:
+            self._steps_was_expanded = self._steps_bar._expanded
+            self._steps_bar.set_visible_bar(False)
+        else:
+            self._steps_bar.set_visible_bar(True)
+            if self._steps_was_expanded:
+                self._steps_bar.set_expanded_state(True)  # restore internal state first
+                QTimer.singleShot(0, self._on_steps_expand)  # then fix splitter sizes
+            else:
+                QTimer.singleShot(0, self.reset_steps_to_collapsed)
 
     # ── Properties ────────────────────────────────────────────────────────
 

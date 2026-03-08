@@ -82,9 +82,9 @@ _Status: [ ] open, [x] done, [~] partial_
 | G35 | [x] | 4.5 — Equipment Browser job filter. item_db.job now list[int] IDs; filter = job_id in item["job"]. "All Jobs" checkbox. |
 | G36 | [x] | 4.6 — Monster Browser Race/Element/Size QComboBox dropdowns; AND filter with name search. |
 | G37 | [x] | 4.7 — Passives job filter. Data-driven via get_skills_for_job + source_skill field. buff_type: self/passive/party. BS_HILTBINDING added. "Show All" checkbox. |
-| G39 | [ ] | F7 — Inline equipment dropdown (low priority). Session I if context allows. |
-| G40 | [ ] | P1 — StepsBar expanded state persists across focus changes. Session I. |
-| G45 | [ ] | P3 — StepsBar step tooltip. Hovering each step row shows: input value entering the step, formula applied, output value, and hercules_ref citation. All data already exists on DamageStep; purely a widget change in the StepsBar. |
+| G39 | [x] | F7 — Inline equipment dropdown. _NoWheelCombo subclass; job-filtered repopulate; dual-wield left hand; browser sync. Done Session L. |
+| G40 | [x] | P1 — StepsBar expanded state persists across focus changes. set_expanded_state() + QTimer. Done Session L. |
+| G45 | [x] | P3 — StepsBar step tooltip (name, formula, output range, hercules_ref). Done Session L. |
 | G46 | [x] | F8 — "Active Items" section (temporary catch-all). New collapsible section for consumable item effects (foods, triggered item script bonuses, potions) not tracked by gear parsing or skill/buff sections. Documented as a temporary catch-all: effects will be migrated to proper dedicated sections as they are implemented. Provides per-stat bonus spinboxes with an optional source/note label. Feeds into G15 auto-computed bonus column. | Done Session K: active_items_section.py; active_items_bonuses dict on PlayerBuild; stacked in _apply_gear_bonuses. |
 | G47 | [x] | F9 — "Manual Stat Adjustments" section. New collapsible section for explicit numeric bonus entry on any base or derived stat. Pure escape hatch — no source attribution required. Intended for edge cases not covered by any tracked section, not for known script bonuses (those belong in gear/buff/G46). Feeds into G15 auto-computed bonus column alongside gear, SC, and G46 values. | Done Session K: manual_adj_section.py; manual_adj_bonuses dict on PlayerBuild; stacked in _apply_gear_bonuses. |
 | G42 | [x] | ASPD display shows integer (e.g. 185) — should show one decimal place (e.g. 185.3). | Fixed Session C: StatusData.aspd→float; /10 not //10; derived_section {:.1f} |

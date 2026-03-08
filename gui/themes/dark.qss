@@ -353,6 +353,20 @@ QLabel#equip_slot_label {
 
 QLabel#equip_item_label { color: #dde1e8; }
 
+/* G39: inline slot quick-select combo — override global min-width */
+QComboBox#equip_inline_combo {
+    min-width: 80px;
+    min-height: 18px;
+    font-size: 11px;
+    padding: 1px 6px;
+}
+
+QComboBox#equip_inline_combo:disabled {
+    color: #4a5060;
+    background-color: #22252e;
+    border-color: #2a2f3a;
+}
+
 QPushButton#equip_edit_btn {
     min-height: 18px;
     padding: 2px 6px;
@@ -540,6 +554,15 @@ QLabel#compact_step_val {
     color: #4d8fff;
     font-size: 11px;
     font-weight: bold;
+}
+
+/* ── G45 Step tooltip ────────────────────────────────────────────────────── */
+QToolTip {
+    background-color: #1a1d23;
+    color: #c8cdd8;
+    border: 1px solid #3a3f4b;
+    padding: 4px 6px;
+    font-size: 11px;
 }
 
 /* ── Phase 3.1 Target Info ───────────────────────────────────────────────── */

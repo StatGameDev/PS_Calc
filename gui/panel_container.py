@@ -133,13 +133,9 @@ class PanelContainer(QSplitter):
         for key, sec in self._sections.items():
             sec.set_compact_mode(self._section_panel[key] != focused_panel)
 
-        # Show/hide the combat panel's steps sidebar
-        if self._combat_panel.steps_bar is not None:
-            show_bar = focused_panel == "builder"
-            self._combat_panel.steps_bar.set_visible_bar(show_bar)
-            if show_bar:
-                # Defer inner-splitter sizing until after layout is computed (B3).
-                QTimer.singleShot(0, self._combat_panel.reset_steps_to_collapsed)
+        # Show/hide the combat panel's steps sidebar (G40: persists expanded state)
+        show_bar = focused_panel == "builder"
+        self._combat_panel.set_steps_bar_visible(show_bar)
 
         self.focus_state_changed.emit(state)
 

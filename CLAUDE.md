@@ -108,6 +108,7 @@ Always grep first. Never load entire files.
         refine_fix.py        — RefineFix: deterministic atk2 (post-defense)
         mastery_fix.py       — MasteryFix (battle_calc_masteryfix, #ifndef RENEWAL)
         attr_fix.py          — AttrFix: elemental multiplier table
+        forge_bonus.py       — ForgeBonus: Star crumb bonus (G17, inserted between AttrFix and CardFix)
         card_fix.py          — CardFix: race/ele/size/long_atk bonuses + PvP target resist (Session A)
         final_rate_bonus.py  — FinalRateBonus: short/long damage rates
         crit_chance.py       — calculate_crit_chance, CRIT_ELIGIBLE_SKILLS
@@ -192,7 +193,7 @@ static-analysis explanation. Ask the user for runtime cooperation.
 **BF_WEAPON** (BattlePipeline → `_run_branch`):
 
     BaseDamage → SkillRatio → CritAtkRate (crit only) → DefenseFix (skip on crit) →
-    ActiveStatusBonus → RefineFix → MasteryFix → AttrFix → CardFix → FinalRateBonus
+    ActiveStatusBonus → RefineFix → MasteryFix → AttrFix → ForgeBonus → CardFix → FinalRateBonus
 
 **BF_MAGIC** (BattlePipeline routes to MagicPipeline when `attack_type == "Magic"`):
 

@@ -23,7 +23,7 @@ from pathlib import Path
 CONF_PATH = Path("Hercules/db/pre-re/skill_tree.conf")
 OUT_PATH  = Path("core/data/pre-re/tables/skill_tree.json")
 
-# skill_tree.conf job names → build_header.py job_ids
+# skill_tree.conf job names → Hercules constants.conf Job_* IDs.
 # Only jobs in this table are emitted.
 _JOB_NAME_TO_ID: dict[str, int] = {
     "Novice":          0,
@@ -46,19 +46,22 @@ _JOB_NAME_TO_ID: dict[str, int] = {
     "Alchemist":       18,
     "Bard":            19,
     "Dancer":          20,
-    "Lord_Knight":     23,
-    "Assassin_Cross":  24,
-    "High_Wizard":     25,
-    "Sniper":          26,
-    "Whitesmith":      27,
-    "High_Priest":     28,
-    "Paladin":         29,
-    "Clown":           30,
-    "Champion":        31,
-    "Professor":       32,
-    "Creator":         33,
-    "Stalker":         34,
-    "Gypsy":           35,
+    "Super_Novice":    23,
+    "Gunslinger":      24,
+    "Ninja":           25,
+    "Lord_Knight":     4008,
+    "High_Priest":     4009,
+    "High_Wizard":     4010,
+    "Whitesmith":      4011,
+    "Sniper":          4012,
+    "Assassin_Cross":  4013,
+    "Paladin":         4015,
+    "Champion":        4016,
+    "Professor":       4017,
+    "Stalker":         4018,
+    "Creator":         4019,
+    "Clown":           4020,
+    "Gypsy":           4021,
 }
 
 
@@ -175,7 +178,7 @@ def main(dry_run: bool = False) -> None:
         "_scraped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "_note": (
             "Maps job_id (str) → sorted list of skill names available to that job, "
-            "including all inherited skills. Rogue (17) and Stalker (34) inherit their "
+            "including all inherited skills. Rogue (17) and Stalker (4018) inherit their "
             "base trees; AllowPlagiarism skills from other jobs are added by the GUI filter."
         ),
         "jobs": result,
