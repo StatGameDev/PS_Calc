@@ -132,14 +132,15 @@ Always grep first. Never load entire files.
 
 ### Planning docs (`docs/`)
 
-    gaps.md            — all open gaps: ID, status, Hercules ref, one-line description
-    session_roadmap.md — Session A–G scope, work items in order, test cases
-    pipeline_specs.md  — full pipeline step specs for BF_WEAPON, BF_MAGIC, incoming
-    data_models.md     — Target/StatusData/GearBonuses/PlayerBuild field specs (current vs needed)
-    context_log.md     — historical context % used per session; used to calibrate future scope
-    completed_work.md  — full history of completed work (Sessions 1–A); append each session
-    gui_plan.md        — GUI architecture reference, future phases 5–8, known bugs archive
-    phases_done.md     — GUI phase specs archive (Phases 0–4)
+    gaps.md               — all open gaps: ID, status, Hercules ref, one-line description
+    session_roadmap.md    — session work items in order, context budget reference
+    pipeline_specs.md     — full pipeline step specs for BF_WEAPON, BF_MAGIC, incoming
+    core_architecture.md  — module map, data flow, buff integration design (open questions)
+    data_models.md        — Target/StatusData/GearBonuses/PlayerBuild field specs (current vs needed)
+    context_log.md        — historical context % used per session; used to calibrate future scope
+    completed_work.md     — full history of completed work (Sessions 1–A); append each session
+    gui_plan.md           — GUI section layout (current + planned), widget specs, Phases 5–8, Buffs UI design
+    phases_done.md        — GUI phase specs archive (Phases 0–4)
     buffs/               — Party buff reference docs (one file per category; see buffs/README.md)
         songs_dances.md  — All BA_*/DC_*/BD_* SCs: confirmed formulas, val mapping, status
         support_buffs.md — Priest/Knight/etc party-cast buffs (SC_BLESSING, SC_GLORIA, etc.)
