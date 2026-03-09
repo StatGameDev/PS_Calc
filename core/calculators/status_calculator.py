@@ -76,7 +76,9 @@ class StatusCalculator:
 
         # SC_ADRENALINE: val3 = 300 (self/Blacksmith) or 200 (party); using 300 (self assumed)
         # Weapon restriction (axe/mace only) not enforced here — user's responsibility.
-        if "SC_ADRENALINE" in active_sc:
+        # M0: SC_ADRENALINE migrated to support_buffs; check both for backward compat.
+        support = getattr(build, "support_buffs", {})
+        if "SC_ADRENALINE" in active_sc or support.get("SC_ADRENALINE"):
             sc_aspd_reduction = max(sc_aspd_reduction, 300)
 
         # SC_SPEARQUICKEN: val2 = 200 + 10*val1 (status.c:7822 #ifndef RENEWAL_ASPD)

@@ -1081,3 +1081,66 @@ Total est_tokens: ~15,359 reads + ~2,530 edits + 6,000 fixed + ~25,000 conv ≈ 
 Notes: Pure design/planning session. Extended design discussion iterated with user across 8
 decision points before writing the spec. Active Items named-effect distinction clarified mid-session.
 Next session: concrete design for how buffs/scripts communicate with core pipeline systems.
+
+---
+
+## Session M0 — Buff / Debuff UI Scaffolding
+
+**Goal**: Pure GUI structure work. No SC formula implementations. Create all new section and
+widget classes; update layout_config.json and build_header; migrate self-buff rows from
+passive_section to buffs_section; migrate Manual Adjustments into build_header sub-group.
+
+**M0-1 — CollapsibleSubGroup widget** (`gui/widgets/collapsible_sub_group.py` + `gui/widgets/__init__.py`)
+New widget class (NOT a Section) — clickable header with arrow toggle, content QWidget show/hide.
+QSS objectNames: `"subgroup_header"`, `"subgroup_arrow"`, `"subgroup_title"`.
+API: `add_content_widget(w)`, `add_header_widget(w)`, `toggle()`, `set_collapsed(bool)`, `is_collapsed`.
+No signal propagation to PanelContainer. `default_collapsed` as constructor arg.
+`_ClickableFrame` inner class provides `set_click_callback` pattern.
+dark.qss: 4 new rules for subgroup header/hover/arrow/title styles.
+
+**M0-2 — buffs_section.py** (`gui/sections/buffs_section.py`, ~170 lines)
+8 CollapsibleSubGroups. Self Buffs sub-group fully wired (migrated from passive_section):
+- SC_AURABLADE, SC_MAXIMIZEPOWER, SC_OVERTHRUST, SC_OVERTHRUSTMAX, SC_TWOHANDQUICKEN,
+  SC_SPEARQUICKEN, SC_ONEHANDQUICKEN — 7 rows with QCheckBox (has_level=False) or QSpinBox (has_level=True).
+  Job-filtered via `update_job(job_id)` + `loader.get_skills_for_job()` per source_skill.
+  `collect_into`: copies existing `active_status_levels`, removes owned SC keys, re-adds active ones.
+Sub-groups 2–8 stubbed with placeholder QLabel (content added in Sessions M, M2, N, O).
+compact_mode: `_enter_compact_view`/`_exit_compact_view` with active-buff-names summary label.
+
+**M0-3 — player_debuffs_section.py** (`gui/sections/player_debuffs_section.py`, ~75 lines)
+Single CollapsibleSubGroup "Player Debuffs", default_collapsed=False.
+`collect_into`/`load_build` are no-ops (Session R adds actual toggles).
+compact_mode implemented. Signal: `changed = Signal()`.
+
+**M0-4 — PlayerBuild new fields** (`core/models/build.py`)
+```python
+support_buffs: Dict[str, object] = field(default_factory=dict)   # party/outgoing buffs
+player_active_scs: Dict[str, object] = field(default_factory=dict)  # debuffs applied to player
+```
+BuildManager: save/load round-trip for both fields; SC_ADRENALINE migration block (moves from
+`active_status_levels` → `support_buffs` on load for backward compat with old saves).
+status_calculator.py: SC_ADRENALINE check now reads from both `active_status_levels` AND `support_buffs`.
+
+**M0-5 — layout_config.json**
+`passive_section` display_name: "Passives & Buffs" → "Passives".
+`manual_adj_section` entry removed.
+Added after passive_section: `buffs_section` (compact_view, default_collapsed=true) and
+`player_debuffs_section` (compact_view, default_collapsed=true).
+
+**M0-6 — build_header Manual Adjustments sub-group** (`gui/sections/build_header.py`)
+`ManualAdjSection` content reproduced as a `CollapsibleSubGroup` at the bottom of `BuildHeaderSection`.
+15 stat spinboxes (same as old ManualAdjSection). `bonuses_changed = Signal()` added.
+`load_build` and `collect_into` updated to handle `build.manual_adj_bonuses`.
+
+**M0-7 — passive_section.py rewrite** (`gui/sections/passive_section.py`)
+All `_SELF_BUFFS` data and UI code removed. Now contains only masteries (2-column grid) + Flags.
+Removed: QCheckBox, QHBoxLayout, loader imports, show-all checkbox, all buff row logic.
+`update_job` now only hides/shows mastery rows. `_build_summary` covers masteries + flags only.
+`collect_into` no longer touches `active_status_levels`.
+
+**M0-8 — panel_container.py + main_window.py wiring**
+`panel_container.py`: ManualAdjSection → BuffsSection + PlayerDebuffsSection in `_SECTION_FACTORY`.
+`main_window.py`: ManualAdjSection → BuffsSection + PlayerDebuffsSection typed refs.
+Signal wiring: `job_changed → _buffs_section.update_job`, `bonuses_changed → _on_build_changed`,
+`_buffs_section.changed → _on_build_changed`, `_player_debuffs.changed → _on_build_changed`.
+`_load_build_into_sections` and `_collect_build` updated accordingly.

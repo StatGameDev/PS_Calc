@@ -89,3 +89,13 @@ class PlayerBuild:
     forge_sc_count: int = 0    # star crumb count (0–3)
     forge_ranked: bool = False  # forger was ranked blacksmith (+10 star)
     forge_element: int = 0     # element from elemental stone (0=Neutral/none)
+
+    # M0: Party/outgoing buffs and target-applied debuffs received by the player's team.
+    # Keys added per-session as sub-groups are implemented (M, M2, O, R).
+    support_buffs: Dict[str, object] = field(default_factory=dict)
+    # e.g. {"SC_ADRENALINE": 0, "SC_BLESSING": 0, "SC_IMPOSITIOMANUS": 0, ...}
+
+    # M0: Debuffs the enemy has applied TO the player (affects incoming damage calcs).
+    # Keys added in Session R when player_debuffs_section gets actual toggles.
+    player_active_scs: Dict[str, object] = field(default_factory=dict)
+    # e.g. {"SC_ETERNALCHAOS": False, "SC_CURSE": False, ...}

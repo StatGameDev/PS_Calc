@@ -41,6 +41,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | K | Katar second hit + forged weapon bonus | G16, G17 |
 | K2 | ActiveItems + ManualAdj sections + bonus column redesign + skill_data bugfix | G15, G46, G47 |
 | L | StepsBar tooltips + state persistence + inline dropdown + job ID system fix | G39, G40, G45 |
+| M0 | Buff/Debuff UI scaffolding: CollapsibleSubGroup widget, buffs_section (8 sub-groups, Self Buffs wired), player_debuffs_section, Manual Adj into build_header, passive_section strip | G49~ |
 
 ---
 
@@ -58,49 +59,6 @@ _Prerequisite for Sessions M and M2. No code. Output: fill in `docs/core_archite
 - Decision on Q3 (misc_buff_bonuses aggregation path)
 - Decision on Q4 (target_active_scs reach into pipeline)
 - Decision on Q5 (SC_ETERNALCHAOS — now largely resolved by separate player_active_scs field)
-
----
-
-## Session M0 — Buff / Debuff UI Scaffolding
-
-**Goal**: Create all new section and widget classes; update layout_config.json and build_header.
-No SC formula implementations — pure GUI structure. Output: working empty sections that
-accept data but display nothing yet.
-**Estimated tokens**: ~20–30k (new files, no Hercules greps)
-
-**Prerequisite**: Design Session — Buff Architecture completed.
-
-### Work items (in order):
-
-1. **CollapsibleSubGroup widget** — `gui/widgets/collapsible_sub_group.py`
-   Clickable header row with arrow toggle; content QWidget show/hide.
-   QSS object name `"subgroup_header"`. No signal propagation to PanelContainer.
-   `default_collapsed` as constructor arg.
-
-2. **buffs_section.py skeleton** — `gui/sections/buffs_section.py`
-   8 CollapsibleSubGroups in order (see `docs/gui_plan.md` buffs_section spec).
-   compact_mode `compact_view` → one-line active-buff-names summary.
-   Wire `update_job(job_id)` for Self Buffs job filtering.
-   All sub-group content widgets stubbed (empty QLabel or no items yet).
-
-3. **player_debuffs_section.py skeleton** — `gui/sections/player_debuffs_section.py`
-   Single CollapsibleSubGroup "Player Debuffs", default_collapsed: false.
-   Widget pattern: QCheckBox 2-column grid. Content stubbed (no items yet).
-   compact_mode `compact_view` → one-line summary of active debuff names.
-
-4. **PlayerBuild.support_buffs + player_active_scs** — new dict fields with all-zero defaults.
-   Add save/load round-trip in BuildManager.
-   Build save migration: move `SC_ADRENALINE` from `active_status_levels` → `support_buffs`.
-
-5. **layout_config.json** — add `buffs_section` (position 6) and `player_debuffs_section`
-   (position 7) to builder panel. Update `passive_section` display_name to "Passives".
-   Remove `manual_adj_section` entry.
-
-6. **build_header** — add Manual Adjustments CollapsibleSubGroup at bottom
-   (move content from `manual_adj_section.py`).
-
-7. **passive_section.py** — remove `SC_ADRENALINE` and `SC_ASSNCROS` from `_SELF_BUFFS`.
-   Self-buff rows that move to `buffs_section` can be removed or just not connected yet.
 
 ---
 

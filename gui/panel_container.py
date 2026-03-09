@@ -17,7 +17,8 @@ from gui.sections.stats_section import StatsSection
 from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
 from gui.sections.active_items_section import ActiveItemsSection
-from gui.sections.manual_adj_section import ManualAdjSection
+from gui.sections.buffs_section import BuffsSection
+from gui.sections.player_debuffs_section import PlayerDebuffsSection
 from gui.sections.passive_section import PassiveSection
 from gui.sections.combat_controls import CombatControlsSection
 from gui.sections.summary_section import SummarySection
@@ -30,9 +31,10 @@ _SECTION_FACTORY: dict[str, type[Section]] = {
     "stats_section":    StatsSection,
     "derived_section":  DerivedSection,
     "equipment_section": EquipmentSection,
-    "passive_section":  PassiveSection,
-    "active_items_section": ActiveItemsSection,
-    "manual_adj_section":   ManualAdjSection,
+    "passive_section":       PassiveSection,
+    "buffs_section":         BuffsSection,
+    "player_debuffs_section": PlayerDebuffsSection,
+    "active_items_section":  ActiveItemsSection,
     "combat_controls":  CombatControlsSection,
     "summary_section":  SummarySection,
     "step_breakdown":   StepBreakdownSection,

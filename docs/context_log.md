@@ -850,6 +850,76 @@ Misc Effects was the late-session clarification that changed the Miscellaneous E
 
 ---
 
+## Session M0  2026-03-09  claude-sonnet-4-6
+ctx_used: 79%
+
+Work items completed:
+- M0-1: CollapsibleSubGroup widget + gui/widgets/__init__.py
+- M0-2: buffs_section.py (8 sub-groups; Self Buffs fully wired, 7 stubbed)
+- M0-3: player_debuffs_section.py (stubbed skeleton)
+- M0-4: PlayerBuild.support_buffs + player_active_scs; BuildManager save/load + SC_ADRENALINE migration; status_calculator dual-dict check
+- M0-5: layout_config.json (add buffs/debuffs sections, remove manual_adj, rename passive)
+- M0-6: build_header Manual Adjustments CollapsibleSubGroup (migrated from manual_adj_section)
+- M0-7: passive_section.py rewrite — all self-buff rows removed
+- M0-8: panel_container + main_window signal wiring for new sections
+- Doc maintenance: gaps.md G49~, completed_work.md, session_roadmap.md, data_models.md, context_log.md
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md | ~160 | ~640 |
+| docs/gui_plan.md | ~350 | ~1,400 |
+| gui/section.py | ~178 | ~1,246 |
+| gui/panel_container.py | ~200 | ~1,400 |
+| gui/main_window.py | ~450 | ~3,150 |
+| gui/sections/passive_section.py | ~263 | ~1,841 |
+| gui/sections/player_debuffs_section.py | ~85 | ~595 |
+| gui/layout_config.json | ~100 | ~500 |
+| gui/sections/build_header.py | ~187 | ~1,309 |
+| core/models/build.py | ~101 | ~707 |
+| core/build_manager.py (partial) | ~60 | ~420 |
+| core/calculators/status_calculator.py (partial) | ~30 | ~210 |
+| gui/themes/dark.qss (partial) | ~20 | ~80 |
+| docs/gaps.md (partial) | ~30 | ~120 |
+| docs/completed_work.md (partial) | ~30 | ~120 |
+| docs/context_log.md | ~870 | ~4,800 |
+| **subtotal reads** | **~3,124** | **~18,538** |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| gui/sections/passive_section.py | rewrite ~263 | ~1,841 |
+| gui/sections/build_header.py | +95 | ~665 |
+| gui/sections/player_debuffs_section.py | rewrite ~85 | ~595 |
+| core/models/build.py | +12 | ~84 |
+| core/build_manager.py | +15 | ~105 |
+| core/calculators/status_calculator.py | +6 | ~42 |
+| gui/panel_container.py | +4 | ~28 |
+| gui/main_window.py | +15 | ~105 |
+| gui/layout_config.json | +14 | ~70 |
+| gui/themes/dark.qss | +22 | ~88 |
+| docs/gaps.md | +2 net | ~8 |
+| docs/session_roadmap.md | -35 net | ~140 |
+| docs/data_models.md | +12 | ~48 |
+| docs/completed_work.md | +75 | ~300 |
+| docs/context_log.md | +this entry | ~350 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| gui/widgets/__init__.py | 0 | ~0 |
+| gui/widgets/collapsible_sub_group.py | ~110 | ~770 |
+| gui/sections/buffs_section.py | ~170 | ~1,190 |
+
+Total est_tokens: ~18,538 reads + ~4,469 edits + ~1,960 created + 6,000 fixed + ~28,000 conv ≈ 59,000
+Notes: Context limit hit mid-session requiring compaction; resumed cleanly. Self Buffs sub-group
+implemented fully (not stubbed) — migrated from passive_section rather than leaving them absent.
+SC_ADRENALINE dual-location (active_status_levels + support_buffs) required status_calculator fix.
+Edit tool "File has not been read yet" errors on layout_config.json and passive_section.py required
+brief reads before proceeding.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6

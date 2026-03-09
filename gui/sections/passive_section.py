@@ -18,33 +18,11 @@ from core.data_loader import loader
 from core.models.build import PlayerBuild
 from gui.section import Section
 
-# ── Self buffs and party buffs that feed active_status_levels ─────────────────
-# (sc_key, display_name, has_level, min_lv, max_lv, source_skill, buff_type)
-# buff_type:
-#   "self"  — active skill; show only when job has source_skill in its skill tree
-#   "party" — received from party member; always visible regardless of job
-#
-# *SC_ONEHANDQUICKEN: KN_ONEHAND is a Knight/LK skill normally accessible
-#  via Soul Linker buff. Treated as "self" (visible for Knight/LK); others
-#  use Show All to enable it when received via Soul Link.
-_SELF_BUFFS: list[tuple] = [
-    ("SC_AURABLADE",      "Aura Blade",           True,  1,  5,  "LK_AURABLADE",      "self"),
-    ("SC_MAXIMIZEPOWER",  "Maximize Power",        False, 1,  1,  "BS_MAXIMIZE",       "self"),
-    ("SC_OVERTHRUST",     "Overthrust",            True,  1,  10, "BS_OVERTHRUST",     "self"),
-    ("SC_OVERTHRUSTMAX",  "Max. Overthrust",       True,  1,  5,  "WS_OVERTHRUSTMAX",  "self"),
-    ("SC_TWOHANDQUICKEN", "Two-Hand Quicken",      False, 1,  1,  "KN_TWOHANDQUICKEN", "self"),
-    ("SC_SPEARQUICKEN",   "Spear Quicken",         True,  1,  10, "CR_SPEARQUICKEN",   "self"),
-    ("SC_ONEHANDQUICKEN", "One-Hand Quicken*",     False, 1,  1,  "KN_ONEHAND",        "self"),
-    # Party buffs — always visible; source_skill is the caster's skill
-    ("SC_ADRENALINE",     "Adrenaline Rush",       False, 1,  1,  "BS_ADRENALINE",     "party"),
-    ("SC_ASSNCROS",       "Assassin Cross (Song)", False, 1,  1,  "BA_ASSASSINCROSS",  "party"),
-]
+# Self-buff rows have moved to buffs_section.py (Session M0).
+# passive_section now contains only: Passives (masteries) + Flags.
 
 # ── Passives (masteries and other passive skills) ─────────────────────────────
 # (skill_key, display_name, max_lv, source_skill)
-# skill_key used as key in build.mastery_levels (must match mastery_fix.json).
-# source_skill is the skill tree name for job-visibility lookup.
-# All are buff_type="passive"; shown only when job has source_skill in skill tree.
 _PASSIVES: list[tuple] = [
     ("SM_SWORD",         "Sword",          10, "SM_SWORD"),
     ("SM_TWOHANDSWORD",  "Two-Hand Sword", 10, "SM_TWOHAND"),
@@ -71,7 +49,7 @@ def _make_sub_header(text: str) -> QLabel:
 
 
 class PassiveSection(Section):
-    """Phase 1.5 — Self Buffs, Party Buffs, Passives, Flags sub-groups."""
+    """Session M0 — Passives (masteries) + Flags. Self-buffs moved to BuffsSection."""
 
     passives_changed = Signal()
 
@@ -80,83 +58,12 @@ class PassiveSection(Section):
 
         self._compact_widget: QWidget | None = None
         self._compact_summary_lbl: QLabel | None = None
+        self._current_job_id: int = 0
 
-        # Storage
-        self._sc_checks:  dict[str, QCheckBox] = {}
-        self._sc_spins:   dict[str, QSpinBox]  = {}
         self._mastery_spins:  dict[str, QSpinBox] = {}
         self._mastery_labels: dict[str, QLabel]   = {}
-        # Track which widgets belong to job-filtered "self" buff rows
-        self._self_buff_widgets: dict[str, list[QWidget]] = {}
 
-        # ── Section header: Show All checkbox ─────────────────────────────
-        header_row = QWidget()
-        header_layout = QHBoxLayout(header_row)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(6)
-        self._show_all_chk = QCheckBox("Show All")
-        self._show_all_chk.setObjectName("passive_show_all")
-        self._show_all_chk.toggled.connect(self._on_show_all_toggled)
-        header_layout.addStretch()
-        header_layout.addWidget(self._show_all_chk)
-        self.add_content_widget(header_row)
-
-        # ── Self Buffs ────────────────────────────────────────────────────
-        self.add_content_widget(_make_sub_header("Self Buffs"))
-
-        buffs_widget = QWidget()
-        buffs_grid = QGridLayout(buffs_widget)
-        buffs_grid.setContentsMargins(0, 0, 0, 0)
-        buffs_grid.setHorizontalSpacing(6)
-        buffs_grid.setVerticalSpacing(3)
-
-        party_row_start: int | None = None
-
-        for row_i, (sc_key, display, has_lv, min_lv, max_lv, source_skill, buff_type) in enumerate(_SELF_BUFFS):
-            if buff_type == "party" and party_row_start is None:
-                # Visual separator label before party buffs
-                sep = QLabel("— Party / Song Buffs —")
-                sep.setObjectName("passive_sub_separator")
-                buffs_grid.addWidget(sep, row_i, 0, 1, 2)
-                party_row_start = row_i
-                # Shift actual widgets down one row
-                actual_row = row_i + 1
-            elif buff_type == "party":
-                actual_row = row_i + 1
-            else:
-                actual_row = row_i
-
-            chk = QCheckBox(display)
-            chk.setObjectName("passive_sc_check")
-            self._sc_checks[sc_key] = chk
-            buffs_grid.addWidget(chk, actual_row, 0)
-
-            row_widgets: list[QWidget] = [chk]
-
-            if has_lv:
-                spin = QSpinBox()
-                spin.setRange(min_lv, max_lv)
-                spin.setValue(min_lv)
-                spin.setFixedWidth(52)
-                spin.setEnabled(False)
-                self._sc_spins[sc_key] = spin
-                buffs_grid.addWidget(spin, actual_row, 1)
-                row_widgets.append(spin)
-                chk.toggled.connect(spin.setEnabled)
-
-            chk.toggled.connect(self._on_passives_changed)
-
-            if buff_type == "self":
-                self._self_buff_widgets[sc_key] = row_widgets
-
-        for spin in self._sc_spins.values():
-            spin.valueChanged.connect(self._on_passives_changed)
-
-        self.add_content_widget(buffs_widget)
-
-        # ── Passives (masteries + other passive skills) ───────────────────
-        self.add_content_widget(_make_sub_header("Passives"))
-
+        # ── Passives (masteries) ──────────────────────────────────────────
         mastery_widget = QWidget()
         mastery_grid = QGridLayout(mastery_widget)
         mastery_grid.setContentsMargins(0, 0, 0, 0)
@@ -200,7 +107,6 @@ class PassiveSection(Section):
         self._no_sizefix_chk.toggled.connect(self._on_passives_changed)
         flags_layout.addWidget(self._no_sizefix_chk, 0, 1)
 
-        # is_ranged_override: Auto | Melee | Ranged
         ranged_lbl = QLabel("Ranged Override:")
         ranged_lbl.setObjectName("passive_mastery_label")
         flags_layout.addWidget(ranged_lbl, 1, 0)
@@ -213,9 +119,9 @@ class PassiveSection(Section):
         self._ranged_group = QButtonGroup(self)
         self._ranged_group.setExclusive(True)
 
-        self._ranged_auto  = QRadioButton("Auto")
-        self._ranged_melee = QRadioButton("Melee")
-        self._ranged_ranged= QRadioButton("Ranged")
+        self._ranged_auto   = QRadioButton("Auto")
+        self._ranged_melee  = QRadioButton("Melee")
+        self._ranged_ranged = QRadioButton("Ranged")
         self._ranged_auto.setChecked(True)
 
         for rb in (self._ranged_auto, self._ranged_melee, self._ranged_ranged):
@@ -224,37 +130,15 @@ class PassiveSection(Section):
             rb.toggled.connect(self._on_passives_changed)
 
         flags_layout.addWidget(ranged_row, 1, 1, 1, 2)
-
         self.add_content_widget(flags_widget)
 
     # ── Public API (job visibility) ────────────────────────────────────────
 
     def update_job(self, job_id: int) -> None:
-        """Show/hide job-restricted rows based on current job_id and skill tree."""
         self._current_job_id = job_id
-        show_all = self._show_all_chk.isChecked()
         job_skills = loader.get_skills_for_job(job_id)
-
-        # Self buff rows: visible when job has the source skill (or Show All)
-        for sc_key, _disp, _has_lv, _min, _max, source_skill, buff_type in _SELF_BUFFS:
-            if buff_type != "self":
-                continue
-            visible = show_all or (source_skill in job_skills)
-            for w in self._self_buff_widgets.get(sc_key, []):
-                w.setVisible(visible)
-            if not visible and sc_key in self._sc_checks:
-                chk = self._sc_checks[sc_key]
-                chk.blockSignals(True)
-                chk.setChecked(False)
-                chk.blockSignals(False)
-                if sc_key in self._sc_spins:
-                    self._sc_spins[sc_key].blockSignals(True)
-                    self._sc_spins[sc_key].setValue(1)
-                    self._sc_spins[sc_key].blockSignals(False)
-
-        # Passive rows: visible when job has the source skill (or Show All)
         for m_key, _disp, _max_lv, source_skill in _PASSIVES:
-            visible = show_all or (source_skill in job_skills)
+            visible = source_skill in job_skills
             if m_key in self._mastery_labels:
                 self._mastery_labels[m_key].setVisible(visible)
             if m_key in self._mastery_spins:
@@ -267,31 +151,17 @@ class PassiveSection(Section):
 
     # ── Internal ──────────────────────────────────────────────────────────
 
-    def _on_show_all_toggled(self, _: bool) -> None:
-        self.update_job(getattr(self, "_current_job_id", 0))
-
     def _on_passives_changed(self) -> None:
         self.passives_changed.emit()
         if self._compact_summary_lbl is not None:
             self._compact_summary_lbl.setText(self._build_summary())
 
     def _build_summary(self) -> str:
-        """Single-line summary for compact view."""
         parts: list[str] = []
-
-        for sc_key, display, has_lv, *_ in _SELF_BUFFS:
-            chk = self._sc_checks.get(sc_key)
-            if chk and chk.isChecked():
-                if has_lv and sc_key in self._sc_spins:
-                    parts.append(f"{display} {self._sc_spins[sc_key].value()}")
-                else:
-                    parts.append(display)
-
         for m_key, m_display, *_ in _PASSIVES:
             spin = self._mastery_spins.get(m_key)
             if spin and spin.value() > 0:
                 parts.append(f"{m_display} {spin.value()}")
-
         flags: list[str] = []
         if self._riding_peco_chk.isChecked():
             flags.append("Riding")
@@ -303,7 +173,6 @@ class PassiveSection(Section):
             flags.append("Ranged")
         if flags:
             parts.append(f"[{', '.join(flags)}]")
-
         return "  ·  ".join(parts) if parts else "No active passives"
 
     # ── Compact API ────────────────────────────────────────────────────────
@@ -342,29 +211,12 @@ class PassiveSection(Section):
     # ── Public API ────────────────────────────────────────────────────────
 
     def load_build(self, build: PlayerBuild) -> None:
-        """Populate all passive widgets from build without emitting change signals."""
-        # Block all signals
-        for chk in self._sc_checks.values():
-            chk.blockSignals(True)
-        for spin in self._sc_spins.values():
-            spin.blockSignals(True)
         for spin in self._mastery_spins.values():
             spin.blockSignals(True)
         for rb in (self._ranged_auto, self._ranged_melee, self._ranged_ranged):
             rb.blockSignals(True)
         self._riding_peco_chk.blockSignals(True)
         self._no_sizefix_chk.blockSignals(True)
-
-        active = build.active_status_levels
-
-        for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
-            chk = self._sc_checks[sc_key]
-            is_active = sc_key in active
-            chk.setChecked(is_active)
-            if has_lv and sc_key in self._sc_spins:
-                spin = self._sc_spins[sc_key]
-                spin.setValue(active.get(sc_key, min_lv))
-                spin.setEnabled(is_active)
 
         for m_key, _, *_ in _PASSIVES:
             spin = self._mastery_spins[m_key]
@@ -381,11 +233,6 @@ class PassiveSection(Section):
         else:
             self._ranged_ranged.setChecked(True)
 
-        # Unblock
-        for chk in self._sc_checks.values():
-            chk.blockSignals(False)
-        for spin in self._sc_spins.values():
-            spin.blockSignals(False)
         for spin in self._mastery_spins.values():
             spin.blockSignals(False)
         for rb in (self._ranged_auto, self._ranged_melee, self._ranged_ranged):
@@ -400,26 +247,13 @@ class PassiveSection(Section):
             self._compact_summary_lbl.setText(self._build_summary())
 
     def collect_into(self, build: PlayerBuild) -> None:
-        """Write section state into an existing PlayerBuild in-place."""
-        active: dict[str, int] = {}
-        for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
-            chk = self._sc_checks[sc_key]
-            if chk.isChecked():
-                if has_lv and sc_key in self._sc_spins:
-                    active[sc_key] = self._sc_spins[sc_key].value()
-                else:
-                    active[sc_key] = min_lv
-        build.active_status_levels = active
-
         build.mastery_levels = {
             m_key: self._mastery_spins[m_key].value()
             for m_key, *_ in _PASSIVES
             if self._mastery_spins[m_key].value() > 0
         }
-
         build.is_riding_peco = self._riding_peco_chk.isChecked()
         build.no_sizefix = self._no_sizefix_chk.isChecked()
-
         if self._ranged_auto.isChecked():
             build.is_ranged_override = None
         elif self._ranged_melee.isChecked():

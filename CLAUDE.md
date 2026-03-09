@@ -234,10 +234,6 @@ static-analysis explanation. Ask the user for runtime cooperation.
 - Session scope and work items in order: `docs/session_roadmap.md`
 - Context budget history for scope calibration: `docs/context_log.md`
 
-One permanent constraint: **C1 full variance distribution** (histogram computation)
-requires a web-Claude design session before any implementation. Do not touch
-`DamageRange` structure until that design is done.
-
 ---
 
 ## Instance Handoff Protocol
@@ -257,13 +253,14 @@ sections of this file (rules, file structure, pipeline order).
 
 `docs/current_state.md` is the only file updated at handoff and should only be updated when user requests a handoff for switching instances. Do not duplicate into MEMORY.md or gaps.md.
 
-**End-of-session docs maintenance (before commit):**
+## End-of-Session Docs Maintenance (before commit)
+
 - `docs/gaps.md` — mark completed gaps [x], update [~] partials
 - `docs/completed_work.md` — append new session section with what was done
+- `docs/session_roadmap.md` — remove completed session section and mvoe to or update if not fully completed
 - `docs/data_models.md` — for each field implemented: move it from its [NEW] block into the [EXISTS] block of the same section, keeping the comment
-- `CLAUDE.md` — update Pipeline Step Order and modifiers list if steps added/reordered
+- `docs/core_architecture.md` — update if you changed core systems
+- `docs/pipeline_specs.md` — update if you changed the pipeline
+- `docs/gui_plan.md` — update if GUI design changes were decided upon
+- `CLAUDE.md` — update Pipeline Step Order and modifiers list if steps added/reordered, update project structure if files added/deleted/moved
 - **DO NOT touch `docs/current_state.md`** — only written on explicit user command `handoff`. Do not read or write it as part of routine session start or end.
-
-**After commit and push:** Remind the user to consider updating `docs/context_log.md`
-(files read/edited/created with line counts and token estimates) if they want the session
-recorded for future scope calibration. It is optional — only worth doing for large sessions.

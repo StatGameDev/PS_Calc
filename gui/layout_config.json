@@ -37,21 +37,28 @@
     {
       "key": "passive_section",
       "panel": "builder",
-      "display_name": "Passives & Buffs",
+      "display_name": "Passives",
       "default_collapsed": false,
+      "compact_mode": "compact_view"
+    },
+    {
+      "key": "buffs_section",
+      "panel": "builder",
+      "display_name": "Buffs",
+      "default_collapsed": true,
+      "compact_mode": "compact_view"
+    },
+    {
+      "key": "player_debuffs_section",
+      "panel": "builder",
+      "display_name": "Player Debuffs",
+      "default_collapsed": true,
       "compact_mode": "compact_view"
     },
     {
       "key": "active_items_section",
       "panel": "builder",
       "display_name": "Active Items",
-      "default_collapsed": true,
-      "compact_mode": "hidden"
-    },
-    {
-      "key": "manual_adj_section",
-      "panel": "builder",
-      "display_name": "Manual Adjustments",
       "default_collapsed": true,
       "compact_mode": "hidden"
     },

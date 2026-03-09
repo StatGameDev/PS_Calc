@@ -86,6 +86,8 @@ class BuildManager:
             "server": build.server,
             "active_items": dict(build.active_items_bonuses),
             "manual_adj": dict(build.manual_adj_bonuses),
+            "support_buffs": dict(build.support_buffs),
+            "player_active_scs": dict(build.player_active_scs),
         }
 
         # cached_display — read by PlayerTargetBrowserDialog to show build stats
@@ -137,6 +139,13 @@ class BuildManager:
                     f'Using Unarmed defaults. Build: "{build_name}"'
                 )
 
+        # M0 migration: SC_ADRENALINE moves from active_buffs → support_buffs.
+        active_buffs: dict = data.get("active_buffs", {})
+        support_buffs: dict = data.get("support_buffs", {})
+        if "SC_ADRENALINE" in active_buffs and "SC_ADRENALINE" not in support_buffs:
+            support_buffs = dict(support_buffs)
+            support_buffs["SC_ADRENALINE"] = active_buffs.pop("SC_ADRENALINE")
+
         return PlayerBuild(
             name=data.get("name", ""),
             job_id=data.get("job_id", 0),
@@ -166,7 +175,7 @@ class BuildManager:
             refine_levels=data.get("refine", {}),
             weapon_element=data.get("weapon_element", None),
             # Old files used "weapon_elements": {"right_hand": N} — silently falls back to None.
-            active_status_levels=data.get("active_buffs", {}),
+            active_status_levels=active_buffs,
             mastery_levels=data.get("mastery_levels", {}),
             is_ranged_override=flags.get("is_ranged_override", None),
             is_riding_peco=flags.get("is_riding_peco", False),
@@ -175,6 +184,8 @@ class BuildManager:
             server=data.get("server", "standard"),
             active_items_bonuses=data.get("active_items", {}),
             manual_adj_bonuses=data.get("manual_adj", {}),
+            support_buffs=support_buffs,
+            player_active_scs=data.get("player_active_scs", {}),
         )
 
     @staticmethod

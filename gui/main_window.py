@@ -39,7 +39,8 @@ from gui.sections.combat_controls import CombatControlsSection
 from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
 from gui.sections.active_items_section import ActiveItemsSection
-from gui.sections.manual_adj_section import ManualAdjSection
+from gui.sections.buffs_section import BuffsSection
+from gui.sections.player_debuffs_section import PlayerDebuffsSection
 from gui.sections.passive_section import PassiveSection
 from gui.sections.stats_section import StatsSection
 from gui.sections.incoming_damage import IncomingDamageSection
@@ -92,9 +93,10 @@ class MainWindow(QMainWindow):
         self._stats_section:   StatsSection       = self._panel_container.get_section("stats_section")     # type: ignore[assignment]
         self._derived_section: DerivedSection     = self._panel_container.get_section("derived_section")   # type: ignore[assignment]
         self._equip_section:   EquipmentSection   = self._panel_container.get_section("equipment_section") # type: ignore[assignment]
-        self._passive_section: PassiveSection     = self._panel_container.get_section("passive_section")   # type: ignore[assignment]
-        self._active_items:    ActiveItemsSection = self._panel_container.get_section("active_items_section") # type: ignore[assignment]
-        self._manual_adj:      ManualAdjSection   = self._panel_container.get_section("manual_adj_section")   # type: ignore[assignment]
+        self._passive_section:   PassiveSection       = self._panel_container.get_section("passive_section")        # type: ignore[assignment]
+        self._buffs_section:     BuffsSection         = self._panel_container.get_section("buffs_section")          # type: ignore[assignment]
+        self._player_debuffs:    PlayerDebuffsSection = self._panel_container.get_section("player_debuffs_section") # type: ignore[assignment]
+        self._active_items:      ActiveItemsSection   = self._panel_container.get_section("active_items_section")   # type: ignore[assignment]
 
         # ── Typed section references — combat ─────────────────────────────
         self._combat_controls:  CombatControlsSection  = self._panel_container.get_section("combat_controls")   # type: ignore[assignment]
@@ -192,13 +194,16 @@ class MainWindow(QMainWindow):
         self._build_header.job_changed.connect(self._on_build_changed)
         self._build_header.job_changed.connect(self._equip_section.update_for_job)
         self._build_header.job_changed.connect(self._passive_section.update_job)
+        self._build_header.job_changed.connect(self._buffs_section.update_job)
         self._build_header.job_changed.connect(self._combat_controls.update_job)
         self._build_header.level_changed.connect(self._on_build_changed)
+        self._build_header.bonuses_changed.connect(self._on_build_changed)
         self._stats_section.stats_changed.connect(self._on_build_changed)
         self._equip_section.equipment_changed.connect(self._on_build_changed)
         self._passive_section.passives_changed.connect(self._on_build_changed)
+        self._buffs_section.changed.connect(self._on_build_changed)
+        self._player_debuffs.changed.connect(self._on_build_changed)
         self._active_items.bonuses_changed.connect(self._on_build_changed)
-        self._manual_adj.bonuses_changed.connect(self._on_build_changed)
         self._incoming_damage.config_changed.connect(self._run_battle_pipeline)
 
     def _connect_combat_signals(self) -> None:
@@ -320,8 +325,9 @@ class MainWindow(QMainWindow):
         self._stats_section.load_build(build)
         self._equip_section.load_build(build)
         self._passive_section.load_build(build)
+        self._buffs_section.load_build(build)
+        self._player_debuffs.load_build(build)
         self._active_items.load_build(build)
-        self._manual_adj.load_build(build)
         self._combat_controls.load_build(build)
 
     # ── Build-change pipeline ─────────────────────────────────────────────
@@ -343,8 +349,9 @@ class MainWindow(QMainWindow):
         self._stats_section.collect_into(build)
         self._equip_section.collect_into(build)
         self._passive_section.collect_into(build)
+        self._buffs_section.collect_into(build)
+        self._player_debuffs.collect_into(build)
         self._active_items.collect_into(build)
-        self._manual_adj.collect_into(build)
         self._combat_controls.collect_into(build)
         # G15: bonus_str–luk and flat bonus fields are now auto-computed from gear/AI/MA;
         # zero them so old loaded values don't double-stack on top of gear bonuses.

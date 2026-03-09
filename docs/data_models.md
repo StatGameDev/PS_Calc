@@ -148,6 +148,19 @@ manual_adj_bonuses:   Dict[str, int] = {}   # G47: raw numeric escape hatch, no 
 # bonus_str–luk and flat bonus fields are now zeroed on load; all bonuses come from gear+G46+G47.
 ```
 
+### Fields added in Session M0 [EXISTS]:
+```python
+support_buffs: Dict[str, object] = field(default_factory=dict)
+    # Party/outgoing buffs and target-applied debuffs received by player's team.
+    # Keys added per-session as sub-groups are implemented (M, M2, O, R).
+    # e.g. {"SC_ADRENALINE": 0, "SC_BLESSING": 0, ...}
+    # SC_ADRENALINE migrated here from active_status_levels (build save migration in BuildManager).
+player_active_scs: Dict[str, object] = field(default_factory=dict)
+    # Debuffs the enemy has applied TO the player (affects incoming damage calcs).
+    # Keys added in Session R when player_debuffs_section gets actual toggles.
+    # e.g. {"SC_ETERNALCHAOS": False, "SC_CURSE": False, ...}
+```
+
 ### Other [EXISTS] fields added in Session B:
 ```python
 equip_mdef: int = 0     # Hard MDEF total from bMdef item scripts (PlayerBuild field;
