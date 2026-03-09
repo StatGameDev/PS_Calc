@@ -1144,3 +1144,41 @@ Removed: QCheckBox, QHBoxLayout, loader imports, show-all checkbox, all buff row
 Signal wiring: `job_changed → _buffs_section.update_job`, `bonuses_changed → _on_build_changed`,
 `_buffs_section.changed → _on_build_changed`, `_player_debuffs.changed → _on_build_changed`.
 `_load_build_into_sections` and `_collect_build` updated accordingly.
+
+---
+
+## Session M — Priest/Sage Party Buffs (2026-03-10)
+
+**Goal**: Party buff SCs in StatusCalculator + Party Buffs sub-group UI.
+
+**M-1 — Data models** (`core/models/status.py`, `core/models/target.py`)
+Added `def_percent: int = 100` to both. Mirrors `st->def_percent` (status.c:3872).
+
+**M-2 — StatusCalculator** (`core/calculators/status_calculator.py`)
+SC_BLESSING/SC_INC_AGI/SC_GLORIA stat bonuses: folded into `bonus_*` via `_apply_gear_bonuses`
+(not in StatusCalculator directly — avoids double-count with display pipeline).
+SC_ANGELUS: `def_percent = 100 + 5*level`; `def2 *= def_percent//100` for display.
+SC_ADRENALINE: reads `support_buffs["SC_ADRENALINE"]` as raw val3 (300/200); backward-compat
+fallback to `active_status_levels` for old saves.
+Actual SC key confirmed as `SC_INC_AGI` (not SC_INCREASEAGI). SC_MAGNIFICAT: out of scope.
+
+**M-3 — DefenseFix** (`core/calculators/modifiers/defense_fix.py`)
+PC branch: `vit_def = vit_def * target.def_percent // 100` after computing range.
+Hard DEF (def1) NOT scaled for PC targets in pre-renewal (battle.c:1492 — only mob/pet path).
+
+**M-4 — build_manager.py** (`core/build_manager.py`)
+`player_build_to_target`: added `def_percent=status.def_percent`.
+
+**M-5 — base_damage.py** (`core/calculators/modifiers/base_damage.py`)
+SC_IMPOSITIO: reads `support_buffs` first, falls back to `active_status_levels` for old saves.
+
+**M-6 — Party Buffs UI** (`gui/sections/buffs_section.py`)
+`_PARTY_BUFFS` table + real widgets replacing stub. SC_BLESSING/INC_AGI/ANGELUS/IMPOSITIO:
+QSpinBox(0..max) with "Off" as special value. SC_GLORIA: QCheckBox. SC_ADRENALINE:
+QCheckBox + QComboBox("Self"→300, "Party member"→200). Full load/collect round-trip to
+`build.support_buffs`. `_party_spins/_party_checks/_party_combos` dicts.
+
+**M-7 — Stat bonus display** (`gui/main_window.py`, `gui/sections/stats_section.py`)
+`_sc_stat_bonuses(support_buffs)` static method computes SC stat contributions.
+`_apply_gear_bonuses` folds SC bonuses into `bonus_str/agi/int/dex/luk`.
+`update_from_bonuses` gains 4th `sc: dict` param; tooltip shows "Buffs: +N" source.

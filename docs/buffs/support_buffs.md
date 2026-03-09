@@ -108,10 +108,12 @@ in Hercules source yet. Formulas and SC keys to be filled in once skill list is 
 
 | SC | Formula confirmed | Calculator | GUI |
 |----|------------------|-----------|-----|
-| SC_IMPOSITIO | yes | done (base_damage.py) | passive_section |
-| SC_BLESSING | explore | not started | — |
-| SC_INCREASEAGI | stub | not started | — |
-| SC_GLORIA | explore | not started | — |
-| SC_ANGELUS | explore | not started | — |
+| SC_IMPOSITIO | yes | done (base_damage.py; reads support_buffs, fallback active_status_levels) | Party Buffs sub-group (Session M) |
+| SC_BLESSING | confirmed (status.c:8271-8275) | done (via bonus_str/int/dex in _apply_gear_bonuses) | Party Buffs sub-group (Session M) |
+| SC_INC_AGI | confirmed (status.c:7632) — key is SC_INC_AGI, NOT SC_INCREASEAGI | done (via bonus_agi) | Party Buffs sub-group (Session M) |
+| SC_GLORIA | confirmed (status.c:4273-4274) | done (via bonus_luk) | Party Buffs sub-group (Session M) |
+| SC_ANGELUS | confirmed (status.c:8320-8321, battle.c:1492) — pre-renewal: only vit_def scaled, not def1 for PC | done (def_percent field; DefenseFix PC branch) | Party Buffs sub-group (Session M) |
+| SC_ADRENALINE | confirmed (status.c:7226-7232) — val3=300 self, 200 party | done (support_buffs raw val3) | Party Buffs sub-group (Session M) |
+| SC_MAGNIFICAT | out of scope — SP regen, no damage relevance | — | — |
 | SC_CONCENTRATION | explore | not started | — |
 | all others | stub | not started | — |

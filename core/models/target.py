@@ -26,3 +26,4 @@ class Target:
     int_:  int = 0                  # tstatus->int (soft MDEF)
     armor_element: int = 0          # 0 = Neutral
     flee:  int = 0                  # tstatus->flee
+    def_percent: int = 100          # st->def_percent: multiplier on vit_def for PC targets (battle.c:1492)

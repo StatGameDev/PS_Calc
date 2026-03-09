@@ -229,6 +229,7 @@ class BuildManager:
             near_attack_def_rate=gear_bonuses.near_atk_def_rate,
             long_attack_def_rate=gear_bonuses.long_atk_def_rate,
             magic_def_rate=gear_bonuses.magic_def_rate,
+            def_percent=status.def_percent,
         )
 
     @staticmethod

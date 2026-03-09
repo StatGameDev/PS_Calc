@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -28,6 +29,24 @@ _SELF_BUFFS: list[tuple] = [
     ("SC_SPEARQUICKEN",   "Spear Quicken",       True,  1,  10, "CR_SPEARQUICKEN"),
     ("SC_ONEHANDQUICKEN", "One-Hand Quicken*",   False, 1,  1,  "KN_ONEHAND"),
 ]
+
+
+# ── Party Buffs ───────────────────────────────────────────────────────────────
+# Tuple layout:
+#   (sc_key, display_name, widget_type, min_lv, max_lv)
+#   widget_type: "spin" = QSpinBox(0..max) — 0=off
+#                "check" = QCheckBox only
+#                "adrenaline" = QCheckBox + QComboBox (special case)
+_PARTY_BUFFS: list[tuple] = [
+    ("SC_BLESSING",  "Blessing",       "spin",       0, 10),
+    ("SC_INC_AGI",   "Increase AGI",   "spin",       0, 10),
+    ("SC_GLORIA",    "Gloria",         "check",      0,  0),
+    ("SC_ANGELUS",   "Angelus",        "spin",       0, 10),
+    ("SC_IMPOSITIO", "Impositio Manus","spin",        0,  5),
+    ("SC_ADRENALINE","Adrenaline Rush","adrenaline",  0,  0),
+]
+# SC_ADRENALINE QComboBox options: index 0 = Self (val3=300), index 1 = Party (val3=200)
+_ADRENALINE_VALUES = (300, 200)
 
 
 def _stub_label(text: str) -> QLabel:
@@ -56,6 +75,11 @@ class BuffsSection(Section):
         self._sc_checks: dict[str, QCheckBox] = {}
         self._sc_spins: dict[str, QSpinBox] = {}
         self._self_buff_widgets: dict[str, list[QWidget]] = {}
+
+        # Storage for Party Buffs
+        self._party_spins: dict[str, QSpinBox] = {}
+        self._party_checks: dict[str, QCheckBox] = {}
+        self._party_combos: dict[str, QComboBox] = {}  # SC_ADRENALINE only
 
         # ── 1. Self Buffs ─────────────────────────────────────────────────
         self._sub_self = CollapsibleSubGroup("Self Buffs", default_collapsed=False)
@@ -99,9 +123,50 @@ class BuffsSection(Section):
         self._sub_self.add_content_widget(buffs_widget)
         self.add_content_widget(self._sub_self)
 
-        # ── 2. Party Buffs (stub) ─────────────────────────────────────────
+        # ── 2. Party Buffs ────────────────────────────────────────────────
         self._sub_party = CollapsibleSubGroup("Party Buffs", default_collapsed=False)
-        self._sub_party.add_content_widget(_stub_label("(Priest/Blacksmith buffs — Session M)"))
+
+        party_widget = QWidget()
+        party_grid = QGridLayout(party_widget)
+        party_grid.setContentsMargins(0, 0, 0, 0)
+        party_grid.setHorizontalSpacing(6)
+        party_grid.setVerticalSpacing(3)
+
+        for row_i, (sc_key, display, wtype, min_lv, max_lv) in enumerate(_PARTY_BUFFS):
+            lbl = QLabel(display)
+            party_grid.addWidget(lbl, row_i, 0)
+
+            if wtype == "spin":
+                spin = QSpinBox()
+                spin.setRange(min_lv, max_lv)
+                spin.setValue(0)
+                spin.setFixedWidth(52)
+                spin.setSpecialValueText("Off")
+                self._party_spins[sc_key] = spin
+                spin.valueChanged.connect(self._on_changed)
+                party_grid.addWidget(spin, row_i, 1)
+
+            elif wtype == "check":
+                chk = QCheckBox()
+                self._party_checks[sc_key] = chk
+                chk.toggled.connect(self._on_changed)
+                party_grid.addWidget(chk, row_i, 1)
+
+            elif wtype == "adrenaline":
+                chk = QCheckBox()
+                self._party_checks[sc_key] = chk
+                combo = QComboBox()
+                combo.addItem("Self")
+                combo.addItem("Party member")
+                combo.setEnabled(False)
+                self._party_combos[sc_key] = combo
+                chk.toggled.connect(combo.setEnabled)
+                chk.toggled.connect(self._on_changed)
+                combo.currentIndexChanged.connect(self._on_changed)
+                party_grid.addWidget(chk, row_i, 1)
+                party_grid.addWidget(combo, row_i, 2)
+
+        self._sub_party.add_content_widget(party_widget)
         self.add_content_widget(self._sub_party)
 
         # ── 3. Ground Effects (stub) ──────────────────────────────────────
@@ -215,6 +280,12 @@ class BuffsSection(Section):
             chk.blockSignals(True)
         for spin in self._sc_spins.values():
             spin.blockSignals(True)
+        for spin in self._party_spins.values():
+            spin.blockSignals(True)
+        for chk in self._party_checks.values():
+            chk.blockSignals(True)
+        for combo in self._party_combos.values():
+            combo.blockSignals(True)
 
         active = build.active_status_levels
         for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
@@ -226,10 +297,31 @@ class BuffsSection(Section):
                 spin.setValue(active.get(sc_key, min_lv))
                 spin.setEnabled(is_active)
 
+        support = build.support_buffs
+        for sc_key, _, wtype, *_ in _PARTY_BUFFS:
+            if wtype == "spin":
+                self._party_spins[sc_key].setValue(int(support.get(sc_key, 0)))
+            elif wtype == "check":
+                self._party_checks[sc_key].setChecked(bool(support.get(sc_key, False)))
+            elif wtype == "adrenaline":
+                val = int(support.get(sc_key, 0))
+                chk = self._party_checks[sc_key]
+                chk.setChecked(val != 0)
+                combo = self._party_combos[sc_key]
+                combo.setEnabled(val != 0)
+                # index 0 = Self (300), index 1 = Party (200)
+                combo.setCurrentIndex(0 if val != 200 else 1)
+
         for chk in self._sc_checks.values():
             chk.blockSignals(False)
         for spin in self._sc_spins.values():
             spin.blockSignals(False)
+        for spin in self._party_spins.values():
+            spin.blockSignals(False)
+        for chk in self._party_checks.values():
+            chk.blockSignals(False)
+        for combo in self._party_combos.values():
+            combo.blockSignals(False)
 
         self._current_job_id = build.job_id
         self.update_job(build.job_id)
@@ -252,3 +344,23 @@ class BuffsSection(Section):
                     active[sc_key] = min_lv
 
         build.active_status_levels = active
+
+        support: dict[str, object] = build.support_buffs.copy()
+        # Remove keys we own, then re-add active ones
+        for sc_key, *_ in _PARTY_BUFFS:
+            support.pop(sc_key, None)
+
+        for sc_key, _, wtype, *_ in _PARTY_BUFFS:
+            if wtype == "spin":
+                val = self._party_spins[sc_key].value()
+                if val > 0:
+                    support[sc_key] = val
+            elif wtype == "check":
+                if self._party_checks[sc_key].isChecked():
+                    support[sc_key] = 1
+            elif wtype == "adrenaline":
+                if self._party_checks[sc_key].isChecked():
+                    idx = self._party_combos[sc_key].currentIndex()
+                    support[sc_key] = _ADRENALINE_VALUES[idx]
+
+        build.support_buffs = support

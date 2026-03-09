@@ -369,23 +369,47 @@ class MainWindow(QMainWindow):
         build.equip_mdef = 0
         build.bonus_aspd_percent = 0
 
+    @staticmethod
+    def _sc_stat_bonuses(support_buffs: dict) -> dict[str, int]:
+        """Compute SC stat bonuses from support_buffs for display + bonus rollup.
+
+        Keys match the ai/ma stat key convention (str/agi/int/dex/luk).
+        SC_BLESSING: STR/INT/DEX += level  (status.c:8271-8275)
+        SC_INC_AGI:  AGI += 2+level        (status.c:7632)
+        SC_GLORIA:   LUK += 30             (status.c:4273-4274)
+        """
+        sc: dict[str, int] = {}
+        blessing_lv = int(support_buffs.get("SC_BLESSING", 0))
+        if blessing_lv:
+            sc["str"] = blessing_lv
+            sc["int"] = blessing_lv
+            sc["dex"] = blessing_lv
+        inc_agi_lv = int(support_buffs.get("SC_INC_AGI", 0))
+        if inc_agi_lv:
+            sc["agi"] = 2 + inc_agi_lv
+        if support_buffs.get("SC_GLORIA"):
+            sc["luk"] = sc.get("luk", 0) + 30
+        return sc
+
     def _apply_gear_bonuses(self, build: PlayerBuild) -> PlayerBuild:
         """Return a new PlayerBuild with all bonus sources stacked on top of base values.
 
-        Sources stacked: gear scripts (GearBonuses) + Active Items (G46) + Manual Adj (G47).
+        Sources stacked: gear scripts (GearBonuses) + Active Items (G46) + Manual Adj (G47)
+        + SC stat buffs from support_buffs (SC_BLESSING, SC_INC_AGI, SC_GLORIA).
         The original build is unchanged so save_build always writes clean values.
         """
         gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
         ai = build.active_items_bonuses
         ma = build.manual_adj_bonuses
+        sc = self._sc_stat_bonuses(build.support_buffs)
         return dataclasses.replace(
             build,
-            bonus_str=build.bonus_str + gb.str_ + ai.get("str", 0) + ma.get("str", 0),
-            bonus_agi=build.bonus_agi + gb.agi + ai.get("agi", 0) + ma.get("agi", 0),
+            bonus_str=build.bonus_str + gb.str_ + ai.get("str", 0) + ma.get("str", 0) + sc.get("str", 0),
+            bonus_agi=build.bonus_agi + gb.agi + ai.get("agi", 0) + ma.get("agi", 0) + sc.get("agi", 0),
             bonus_vit=build.bonus_vit + gb.vit + ai.get("vit", 0) + ma.get("vit", 0),
-            bonus_int=build.bonus_int + gb.int_ + ai.get("int", 0) + ma.get("int", 0),
-            bonus_dex=build.bonus_dex + gb.dex + ai.get("dex", 0) + ma.get("dex", 0),
-            bonus_luk=build.bonus_luk + gb.luk + ai.get("luk", 0) + ma.get("luk", 0),
+            bonus_int=build.bonus_int + gb.int_ + ai.get("int", 0) + ma.get("int", 0) + sc.get("int", 0),
+            bonus_dex=build.bonus_dex + gb.dex + ai.get("dex", 0) + ma.get("dex", 0) + sc.get("dex", 0),
+            bonus_luk=build.bonus_luk + gb.luk + ai.get("luk", 0) + ma.get("luk", 0) + sc.get("luk", 0),
             bonus_batk=build.bonus_batk + gb.batk + ai.get("batk", 0) + ma.get("batk", 0),
             bonus_hit=build.bonus_hit + gb.hit + ai.get("hit", 0) + ma.get("hit", 0),
             bonus_flee=build.bonus_flee + gb.flee + ai.get("flee", 0) + ma.get("flee", 0),
@@ -405,8 +429,9 @@ class MainWindow(QMainWindow):
             return
         # Compute gear bonuses separately so StatsSection can show the breakdown.
         gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
+        sc_bonuses = self._sc_stat_bonuses(build.support_buffs)
         self._stats_section.update_from_bonuses(
-            gb, build.active_items_bonuses, build.manual_adj_bonuses
+            gb, build.active_items_bonuses, build.manual_adj_bonuses, sc_bonuses
         )
         eff_build = self._apply_gear_bonuses(build)
         weapon = BuildManager.resolve_weapon(

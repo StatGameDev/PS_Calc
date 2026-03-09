@@ -43,6 +43,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | L | StepsBar tooltips + state persistence + inline dropdown + job ID system fix | G39, G40, G45 |
 | M0 | Buff/Debuff UI scaffolding: CollapsibleSubGroup widget, buffs_section (8 sub-groups, Self Buffs wired), player_debuffs_section, Manual Adj into build_header, passive_section strip | G49~ |
 | Design | Buff Architecture Q1–Q5 resolved; decisions written to core_architecture.md | — |
+| M | Party Buffs: SC_BLESSING/INC_AGI/GLORIA/ANGELUS/IMPOSITIO/ADRENALINE; def_percent chain; bonus display "Buffs" column | G49~ |
 
 ---
 
@@ -59,40 +60,11 @@ _Decisions written to `docs/core_architecture.md` — "Buff Integration Design �
 
 ---
 
-## Session M — Priest/Sage Party Buffs
+## Session M — Priest/Sage Party Buffs ✅ DONE (2026-03-10)
 
-**Goal**: Implement confirmed Priest/Sage party buff SCs in `StatusCalculator`;
-wire Party Buffs sub-group in the existing `buffs_section.py` skeleton.
-**Gap IDs**: G49 (partial — Party Buffs sub-group only)
-**Estimated tokens**: ~30–40k (multiple SC implementations + Hercules greps)
-
-**Prerequisite**: Session M0 (buffs_section skeleton must exist).
-
-**All confirmed Priest/Sage formulas are in `docs/buffs/support_buffs.md` — fill stubs
-with targeted Hercules greps at session start (1 grep per SC, status.c).**
-
-### Work items (in order):
-
-1. **SC_BLESSING** — STR/INT/DEX flat per level in StatusCalculator.
-   Hercules grep: `status.c SC_BLESSING`.
-
-2. **SC_INCREASEAGI** — AGI flat per level.
-
-3. **SC_GLORIA** — LUK +30 flat (no level).
-
-4. **SC_ANGELUS** — VIT-based DEF% (affects equip_def or vit_def component).
-   Hercules grep: confirm formula and application point.
-
-5. **SC_MAGNIFICAT** — SP regen rate. New `StatusData.sp_regen_rate_pct` field if needed.
-
-6. **SC_IMPOSITIOMANUS** — migrate from hardcoded `base_damage.py` to `support_buffs`
-   dict; wire via BaseDamage reading `build.support_buffs["SC_IMPOSITIOMANUS"]`.
-
-7. **SC_ADRENALINE** — ASPD; already in StatusCalculator (G9). Rewire from
-   `active_status_levels` to `support_buffs` per migration note above.
-
-8. **Wire Party Buffs sub-group** in `buffs_section.py` — add QCheckBox/QSpinBox rows
-   for all 7 SCs above; connect to `support_buffs` collect/load round-trip.
+| Session | Primary work | Key gaps closed |
+|---|---|---|
+| M | Party Buffs: SC_BLESSING/INC_AGI/GLORIA/ANGELUS/IMPOSITIO/ADRENALINE; def_percent field; bonus display pipeline | G49~ |
 
 ---
 

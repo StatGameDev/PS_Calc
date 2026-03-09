@@ -22,6 +22,12 @@ class StatusCalculator:
         status.dex = build.base_dex + build.bonus_dex
         status.luk = build.base_luk + build.bonus_luk
 
+        # === PARTY BUFF SCs (support_buffs) ===
+        # SC_BLESSING/SC_INC_AGI/SC_GLORIA stat bonuses are folded into build.bonus_*
+        # by _apply_gear_bonuses() in main_window.py before StatusCalculator is called.
+        # They therefore already appear in status.str/agi/etc. via base+bonus arithmetic.
+        support = build.support_buffs
+
         # === BASE ATK ===
         # Ranged weapons (W_BOW etc.) swap STR/DEX roles in BATK.
         # is_ranged_override overrides; otherwise derived from weapon_type.
@@ -36,6 +42,15 @@ class StatusCalculator:
         # === DEFENSE ===
         status.def_ = build.equip_def                    # Hard DEF (def1) = equipment only
         status.def2 = status.vit + build.bonus_def2      # Soft DEF (vit_def) = VIT + bonuses
+
+        # SC_ANGELUS: val2=5*level, pre-renewal (status.c:8320-8321, #ifndef RENEWAL at line 4426)
+        # Multiplies computed vit_def for PC targets: vit_def *= def_percent/100 (battle.c:1492)
+        # Hard DEF (def1) is NOT scaled for PC targets in pre-renewal (only for mob/pet targets).
+        angelus_lv = int(support.get("SC_ANGELUS", 0))
+        status.def_percent = 100 + 5 * angelus_lv
+        # Scale def2 for display (def2 is display-only; DefenseFix uses target.vit directly).
+        if angelus_lv:
+            status.def2 = status.def2 * status.def_percent // 100
 
         # === CRITICAL ===
         # status.c:3876 — cri in 0.1% units: base 1.0% (=10) + 0.333% per LUK
@@ -74,11 +89,14 @@ class StatusCalculator:
             if sc_key in active_sc:
                 sc_aspd_reduction = max(sc_aspd_reduction, 300)  # val2 = 300
 
-        # SC_ADRENALINE: val3 = 300 (self/Blacksmith) or 200 (party); using 300 (self assumed)
+        # SC_ADRENALINE: val3 = 300 (self) or 200 (party member) (status.c:7226-7232)
+        # support_buffs stores the actual val3 directly (300 or 200).
         # Weapon restriction (axe/mace only) not enforced here — user's responsibility.
-        # M0: SC_ADRENALINE migrated to support_buffs; check both for backward compat.
-        support = getattr(build, "support_buffs", {})
-        if "SC_ADRENALINE" in active_sc or support.get("SC_ADRENALINE"):
+        adrenaline_val = int(support.get("SC_ADRENALINE", 0))
+        if adrenaline_val:
+            sc_aspd_reduction = max(sc_aspd_reduction, adrenaline_val)
+        elif "SC_ADRENALINE" in active_sc:
+            # backward-compat: old saves that stored it in active_status_levels
             sc_aspd_reduction = max(sc_aspd_reduction, 300)
 
         # SC_SPEARQUICKEN: val2 = 200 + 10*val1 (status.c:7822 #ifndef RENEWAL_ASPD)

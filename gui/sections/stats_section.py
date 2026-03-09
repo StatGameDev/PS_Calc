@@ -42,7 +42,7 @@ def _fmt_bonus(v: int) -> str:
     return f"+{v}" if v > 0 else str(v)
 
 
-def _make_tooltip(gear: int, ai: int, ma: int) -> str:
+def _make_tooltip(gear: int, ai: int, ma: int, sc: int = 0) -> str:
     parts = []
     if gear:
         parts.append(f"Gear: {_fmt_bonus(gear)}")
@@ -50,6 +50,8 @@ def _make_tooltip(gear: int, ai: int, ma: int) -> str:
         parts.append(f"Active Items: {_fmt_bonus(ai)}")
     if ma:
         parts.append(f"Manual: {_fmt_bonus(ma)}")
+    if sc:
+        parts.append(f"Buffs: {_fmt_bonus(sc)}")
     return "  |  ".join(parts) if parts else "No bonuses"
 
 
@@ -239,21 +241,25 @@ class StatsSection(Section):
         gb: GearBonuses,
         ai: dict[str, int],
         ma: dict[str, int],
+        sc: dict[str, int] | None = None,
     ) -> None:
         """Refresh auto-computed bonus labels from all sources.
 
-        Called by MainWindow whenever the build changes (gear, active items, or
-        manual adjustments). SC stat effects not included yet (future G15 follow-up).
+        Called by MainWindow whenever the build changes (gear, active items,
+        manual adjustments, or SC buffs). sc keys match ai/ma key names.
         """
+        if sc is None:
+            sc = {}
         for _display, key_s, _base_attr, gb_attr in _STATS:
             gear_val = int(getattr(gb, gb_attr, 0)) if gb_attr else 0
             ai_val   = ai.get(key_s, 0)
             ma_val   = ma.get(key_s, 0)
-            total    = gear_val + ai_val + ma_val
+            sc_val   = sc.get(key_s, 0)
+            total    = gear_val + ai_val + ma_val + sc_val
             self._bonus_values[key_s] = total
             lbl = self._bonus_labels[key_s]
             lbl.setText(_fmt_bonus(total) if total else "0")
-            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val))
+            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val, sc_val))
 
         for _display, key_s, gb_attr, ai_key in _FLAT_BONUSES:
             gear_val = int(getattr(gb, gb_attr, 0)) if gb_attr else 0

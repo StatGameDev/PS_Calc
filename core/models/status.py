@@ -25,3 +25,6 @@ class StatusData:
     matk_max: int = 0  # Pre-renewal MATK max (status.c:3790 #else not RENEWAL)
     mdef: int = 0      # Hard MDEF (from bMdef scripts)
     mdef2: int = 0     # Soft MDEF = int_ + vit//2 (status.c:3867 #else not RENEWAL)
+
+    def_percent: int = 100  # st->def_percent: multiplier on vit_def for PC targets (status.c:3872, battle.c:1492)
+                            # SC_ANGELUS adds val2=5*level (pre-renewal); default 100 = no scaling

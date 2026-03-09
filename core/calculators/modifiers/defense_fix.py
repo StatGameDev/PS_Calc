@@ -102,6 +102,13 @@ class DefenseFix:
             vd_max = def2 // 2 + (variance_max - 1 if variance_max > 0 else 0)
             # avg of rnd()%n is (n-1)/2; n//2 rounds half-up (C1a fix)
             vd_avg = def2 // 2 + (variance_max // 2 if variance_max > 0 else 0)
+            # SC_ANGELUS: vit_def *= def_percent/100 (battle.c:1492, pre-renewal PC path only)
+            # Hard DEF (def1) is NOT scaled for PCs in pre-renewal (only mob/pet targets).
+            dp = getattr(target, "def_percent", 100)
+            if dp != 100:
+                vd_min = vd_min * dp // 100
+                vd_max = vd_max * dp // 100
+                vd_avg = vd_avg * dp // 100
             note_type = "PC"
         else:
             # battle.c: vit_def = (def2/20)*(def2/20);

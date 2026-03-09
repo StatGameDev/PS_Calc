@@ -47,7 +47,11 @@ class BaseDamage:
 
         # SC_IMPOSITIO: flat weapon ATK bonus per level (val2 = level * 5)
         # status.c #ifndef RENEWAL ~line 4562: watk += sc->data[SC_IMPOSITIO]->val2
-        imp_lv = build.active_status_levels.get("SC_IMPOSITIO", 0)
+        # Session M: reads from support_buffs; falls back to active_status_levels for old saves.
+        imp_lv = int(build.support_buffs.get(
+            "SC_IMPOSITIO",
+            build.active_status_levels.get("SC_IMPOSITIO", 0),
+        ))
         if imp_lv:
             atkmax += imp_lv * 5
             result.add_step(
