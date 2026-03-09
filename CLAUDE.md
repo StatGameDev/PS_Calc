@@ -257,7 +257,7 @@ sections of this file (rules, file structure, pipeline order).
 
 - `docs/gaps.md` — mark completed gaps [x], update [~] partials
 - `docs/completed_work.md` — append new session section with what was done
-- `docs/session_roadmap.md` — remove completed session section and mvoe to or update if not fully completed
+- `docs/session_roadmap.md` — remove completed session section and move to completed session reference list or update session section if not fully completed
 - `docs/data_models.md` — for each field implemented: move it from its [NEW] block into the [EXISTS] block of the same section, keeping the comment
 - `docs/core_architecture.md` — update if you changed core systems
 - `docs/pipeline_specs.md` — update if you changed the pipeline
