@@ -53,4 +53,11 @@
 446 //Note Soul Link required, model by allowing any job to use Berserk Potion with note
 459 //Note Soul Link required
 495 //Note Soul Link required
+500
+504
+505
+506
+517
+538 //Ground-based, modifier for 537
+543
 1005

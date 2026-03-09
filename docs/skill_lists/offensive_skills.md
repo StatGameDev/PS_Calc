@@ -6,7 +6,7 @@
 14
 15
 17
-18 //needs advanced combat model as it relies on target walking into skill effect
+18 //relevant for advanced combat modelling as it relies on target walking into skill effect
 19
 20
 21
@@ -76,6 +76,34 @@
 419
 421 //exceedingly complicated and convoluted skill
 499 //Note Soul Link required
+501
+502
+503
+507
+512
+514
+515
+516
+518
+519
+520
+521 //Trap-like, requires special handling in advanced combat modelling
+523
+524
+525
+526
+527 //Secondary ranged damage blocking effect, relevant for advanced combat modelling
+528
+530
+534
+535 //relevant for advanced combat modelling as it relies on target walking into skill effect
+536
+537
+539
+540
+541
+542
+544 //Model with Max HP or manually set HP
 1001 //Allow setting distance manually somewhere
 1004 //allows assassins to equip ammo
 1006 //Relevant for advanced combat modelling with traps and Fire Pillar due to push effect

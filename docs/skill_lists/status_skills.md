@@ -27,6 +27,11 @@
 326
 415
 417 //only relevant for advanced combat modelling, does not apply to target itself
+503 //Coma Status irrelevant
+508
+514
+519
+539
 1004
 1008 //changes target attribute, include under debuffs
 1010

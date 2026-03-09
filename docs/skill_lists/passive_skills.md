@@ -44,4 +44,9 @@
 422 //only useful for modelling sitting HP Regen
 423 //mostly useful for modelling sitting SP Regen, maybe just add tooltip about happy status
 424 //allow manual setting of party member count
+509
+510
+511
+522
+533
 1003

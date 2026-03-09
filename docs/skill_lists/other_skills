@@ -31,7 +31,7 @@
 106 //not relevant
 108 //not relevant
 115 //not relevant
-117 //mostly relevant for advanced combat modelling, show angle snare duration on target?
+117 //mostly relevant for advanced combat modelling, show ankle snare duration on target?
 118 //not relevant
 124 //not relevant
 125 //not relevant
@@ -77,6 +77,9 @@
 496 //creates an item, might be interesting to model uses/s as advanced feature
 497 //creates an item, might be interesting to model uses/s as advanced feature
 498 //creates an item, might be interesting to model uses/s as advanced feature
+529 //not relevant
+531 //prevents a certain number of hits, only relevant for advanced combat modelling feature
+532 //prevents a certain number of hits, only relevant for advanced combat modelling feature
 1002 //only relevant for advanced combat modelling
 1007 //creates an item, might be interesting to model uses/s as advanced feature
 1012 //not relevant
