@@ -88,9 +88,139 @@ Tradeoff: caster stat inputs are accurate and educational; manual sliders are fa
 
 ---
 
-## Deferred
+---
+
+## Planned Sessions (Post-J)
+
+> Skill coverage reference: `docs/skill_lists/`. Each session's prep step = fill relevant
+> docs/buffs/ stubs via targeted Hercules greps (1 per skill, at session start).
+
+---
+
+### Session M — Party Support Buffs
+
+**Goal**: Implement party-cast stat-modifying SCs (Priest/Sage group) in StatusCalculator.
+**Source file**: skill.c → `skill_castend_nodamage_id`; status.c for SC val formulas.
+**Skills (from buff_skills.md)**: ID 29, 33, 34, 45, 60, 74, 75, 111–114, 155, 157 and
+related (SC_BLESSING, SC_INCREASEAGI, SC_DECREASEAGI, SC_GLORIA, SC_MAGNIFICAT,
+SC_IMPOSITIOMANUS, SC_ANGELUS, PR_LEXAETERNA, etc.)
+**Architecture**: Extend Party Buffs UI from Session J. Add SCs to StatusCalculator
+(STR/DEX/INT/AGI/VIT/LUK flat and % modifiers). New `sp_regen_rate` StatusData field
+if SC_MAGNIFICAT is in scope.
+**stat_foods.md**: SC_FOOD_* / SC_INC* remain in G46 Active Items (already implemented).
+Revisit only if SC cap enforcement across food+skill is needed.
+**UI section**: "Party — Priest / Acolyte" sub-group inside Buffs section (see UI design below).
+**Estimated tokens**: 30–40k.
+
+---
+
+### Session N — Self-Buffs
+
+**Goal**: Self-cast active SCs from buff_skills.md not yet in the system.
+**Skills (from buff_skills.md)**: ID 66, 67, 135, 139, 146, 249, 252, 256–258, 261, 268,
+270, 309 (non-song entries), 411, 500, 504–506, 517, 543, 1005 and others.
+**Architecture**: Extend `active_status_levels` dict + StatusCalculator branches.
+ASPD SCs already done (Session C); focus on ATK/DEF/stat-modifying self-SCs.
+Self-buff UI: job-filtered toggle list (same pattern as Passives section).
+**UI section**: "Self Buffs" sub-group inside Buffs section (see UI design below).
+**Estimated tokens**: 25–35k.
+
+---
+
+### Session O — Weapon Endow + Ground Effects
+
+**Goal**: Properly document and integrate weapon endow + ground effect SCs.
+**Skills**: Weapon endow: ID 68, 138, 280–283, 425 (buff_skills.md).
+Ground effects: ID 285, 286, 287, 538 (buff_skills.md).
+**Prep**: Fill weapon_endow.md + ground_effects.md stubs (skill.c + item_db.json).
+**Weapon endow**: Already modelled via manual element override. Formalise SC→element
+mapping; may improve existing override UI by naming the SC source.
+**Ground effects**: SA_VOLCANO / SA_DELUGE / SA_VIOLENTGALE; AttrFix-adjacent.
+**Estimated tokens**: 20–30k.
+
+---
+
+### Session P — Passive Skills Completion
+
+**Goal**: Implement passive_skills.md entries not yet in StatusCalculator or mastery.
+**Source**: pc.c → `pc_calcstatus`.
+**Skills**: ~52 entries in passive_skills.md; subset already done (weapon masteries,
+ASC_KATAR, ASPD passives). Remaining = weapon-type stat bonuses, conditional stat
+passives, and any formula passives feeding StatusData.
+**Architecture**: Extend StatusCalculator; introduce `passive_calculator.py` if volume
+warrants a separate module.
+**Estimated tokens**: 30–40k.
+
+---
+
+### Session Q1 — Offensive Skill Ratios (Melee Classes)
+
+**Goal**: Complete skill_ratio.py for melee-class offensive skills.
+**Classes**: Swordsman, Crusader, Merchant, Blacksmith, Thief, Acolyte, Monk.
+**Source**: skill.c → `calc_skillratio` BF_WEAPON path.
+**Estimated tokens**: 35–45k.
+
+---
+
+### Session Q2 — Offensive Skill Ratios (Ranged / Magic Classes)
+
+**Goal**: Complete skill_ratio.py for ranged and magic offensive skills.
+**Classes**: Hunter, Wizard, Sage, Rogue, Bard/Dancer offensive skills, Ninja, Gunslinger.
+**Source**: skill.c → `calc_skillratio` BF_WEAPON / BF_MAGIC paths.
+**Estimated tokens**: 35–45k.
+
+---
+
+### Session R — Target Debuff System
+
+**Goal**: Allow debuffs from debuff_skills.md to be applied to the target before the
+damage pipeline runs, so they modify the target's effective stats.
+**Gap ID**: G48.
+**Architecture**: New `target_active_scs: dict[str, int]` on Target dataclass
+(mirrors `active_status_levels` on PlayerBuild). DefenseFix / a new
+`target_status_calculator.py` reads these SCs and adjusts target DEF, FLEE, element.
+**GUI**: "Target State" collapsible section near the target selector panel.
+Toggles per debuff (PROVOKE, AGIDISCOUNT, etc.) + level spinbox.
+**Estimated tokens**: 30–40k (new architecture + UI).
+
+---
+
+## UI Grouping Design (Buffs Section)
+
+Principle: group by **scenario role** (who provides the buff), not by mechanical effect.
+Users think "I have Blessing + Gloria + Bragi," not "I have a LUK+30 and a DEX% effect."
+
+**Player-side — Buffs collapsible section (builder/passive panel):**
+
+```
+Buffs
+├── Self Buffs          job-filtered; toggle + level per SC (same pattern as Passives)
+├── Party — Priest / Acolyte    SC_BLESSING, SC_GLORIA, SC_INCREASEAGI, SC_ANGELUS, …
+├── Party — Sage / Scholar      (SCs TBD after Session M Hercules lookups)
+├── Party — Bard (songs)        ← Session J
+└── Party — Dancer (dances)     ← Session J
+```
+
+**Target-side — Target State collapsible section (combat panel, near target selector):**
+
+```
+Target State
+├── Debuffs on target   SC_PROVOKE, etc. (Session R)
+└── Target Ailments     Freeze / Stone / Stun — deferred (advanced combat modelling)
+```
+
+**Consumables**: SC_FOOD_* / SC_INC* stay in G46 Active Items (already live). No migration
+unless SC-cap enforcement across food + skill sources becomes necessary.
+
+---
+
+## Deferred (Phase 5+ / Advanced Combat Modelling)
 
 | Item | Reason deferred |
 |---|---|
 | **G41 — PC VIT DEF discrepancy** | LOW PRIORITY. Hercules comment vs C code disagree. Investigate vs official server data before any fix. Currently following C implementation. |
+| **Status ailments** (status_skills.md) | Need turn-sequence / hit-count modelling. Phase 5+. |
+| **Combo system** (combo_skills.md) | Requires turn-sequence and stance-state modelling. |
+| **Healing calculator** (healing_skill.md) | Separate feature mode; 4 skills. |
+| **Rebirth / Star Gladiator / Soul Linker** | Not yet in skill_lists; to be added in a future extension session. |
 | **Phases 5–8** | Stat Planner, Comparison, Histogram, Config/Scale tabs. |

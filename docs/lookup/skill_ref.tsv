@@ -1,0 +1,1170 @@
+# Skill reference — generated from skills.json + skills_by_job.md
+# id	constant	description	category	notes
+1	NV_BASIC	Basic Skill	X	Not relevant
+2	SM_SWORD	Sword Mastery	P	
+3	SM_TWOHAND	Two-Handed Sword Mastery	P	
+4	SM_RECOVERY	Increase HP Recovery	P	
+5	SM_BASH	Bash	O, S	Status only via SM_FATALBLOW (145) on Bash lv 6+
+6	SM_PROVOKE	Provoke	B, D	Cannot be used on allies; treat as debuff unless applied by item
+7	SM_MAGNUM	Magnum Break	B, O	Fire element for 10 hits
+8	SM_ENDURE	Endure	B	
+9	MG_SRECOVERY	Increase SP Recovery	P	
+10	MG_SIGHT	Sight	X	Must be active for WZ_SIGHTRASHER (81)
+11	MG_NAPALMBEAT	Napalm Beat	O	
+12	MG_SAFETYWALL	Safety Wall	X	Prevents melee hits; advanced combat modelling
+13	MG_SOULSTRIKE	Soul Strike	O	
+14	MG_COLDBOLT	Cold Bolt	O	
+15	MG_FROSTDIVER	Frost Diver	O, S	
+16	MG_STONECURSE	Stone Curse	S	
+17	MG_FIREBALL	Fire Ball	O	
+18	MG_FIREWALL	Fire Wall	O	Requires target to walk into cells; advanced modelling
+19	MG_FIREBOLT	Fire Bolt	O	
+20	MG_LIGHTNINGBOLT	Lightning Bolt	O	
+21	MG_THUNDERSTORM	Thunderstorm	O	
+22	AL_DP	Divine Protection	P	
+23	AL_DEMONBANE	Demon Bane	P	
+24	AL_RUWACH	Ruwach	O	Requires target to be hiding or cloaked
+25	AL_PNEUMA	Pneuma	X	Blocks all ranged hits for duration; advanced modelling
+26	AL_TELEPORT	Teleport	X	No effect in calculator
+27	AL_WARP	Warp Portal	X	No effect in calculator
+28	AL_HEAL	Heal	H, O	Offensive vs Undead attribute
+29	AL_INCAGI	Increase AGI	B	
+30	AL_DECAGI	Decrease AGI	D	
+31	AL_HOLYWATER	Aqua Benedicta	X	Creates item
+32	AL_CRUCIS	Signum Crucis	D	Ground-based
+33	AL_ANGELUS	Angelus	B	
+34	AL_BLESSING	Blessing	B	Different effect on self vs party members
+35	AL_CURE	Cure	X	Removes some statuses
+36	MC_INCCARRY	Enlarge Weight Limit	P	Only useful for weight capacity modelling
+37	MC_DISCOUNT	Discount	P	Not relevant
+38	MC_OVERCHARGE	Overcharge	P	Not relevant
+39	MC_PUSHCART	Pushcart	P	Only useful for movement speed modelling
+40	MC_IDENTIFY	Item Appraisal	X	Not relevant
+41	MC_VENDING	Vending	X	Not relevant
+42	MC_MAMMONITE	Mammonite	O	
+43	AC_OWL	Owl's Eye	P	
+44	AC_VULTURE	Vulture's Eye	P	
+45	AC_CONCENTRATION	Improve Concentration	B	
+46	AC_DOUBLE	Double Strafe	O	
+47	AC_SHOWER	Arrow Shower	O	
+48	TF_DOUBLE	Double Attack	P	
+49	TF_MISS	Improve Dodge	P	
+50	TF_STEAL	Steal	X	Maybe add steal chance calculator as advanced feature
+51	TF_HIDING	Hiding	X	Hide status relevant for RG_RAID (214); advanced modelling
+52	TF_POISON	Envenom	O, S	
+53	TF_DETOXIFY	Detoxify	X	Removes poison status
+54	ALL_RESURRECTION	Resurrection	O, H	Offensive vs Undead (instant kill mechanic)
+55	KN_SPEARMASTERY	Spear Mastery	P	
+56	KN_PIERCE	Pierce	O	Hit count depends on target size
+57	KN_BRANDISHSPEAR	Brandish Spear	O	Bugged in vanilla; Payon Stories double-damage vs terrain
+58	KN_SPEARSTAB	Spear Stab	O	
+59	KN_SPEARBOOMERANG	Spear Boomerang	O	
+60	KN_TWOHANDQUICKEN	Twohand Quicken	B	
+61	KN_AUTOCOUNTER	Counter Attack	O	Check implementation; advanced combat modelling
+62	KN_BOWLINGBASH	Bowling Bash	O	
+63	KN_RIDING	Peco Peco Riding	P	Toggle Peco Peco mount
+64	KN_CAVALIERMASTERY	Cavalier Mastery	P	
+65	PR_MACEMASTERY	Mace Mastery	P	
+66	PR_IMPOSITIO	Impositio Manus	B	
+67	PR_SUFFRAGIUM	Suffragium	B	
+68	PR_ASPERSIO	Aspersio	B	Weapon endow → Holy; model via element override
+69	PR_BENEDICTIO	B.S. Sacramenti	B	Changes armor attribute; model via armor element override
+70	PR_SANCTUARY	Sanctuary	H, O	Healing ground; offensive vs Undead
+71	PR_SLOWPOISON	Slow Poison	X	Not directly relevant
+72	PR_STRECOVERY	Status Recovery	S, X	Removes some statuses; listed in status_skills (Undead attribute only)
+73	PR_KYRIE	Kyrie Eleison	X	Prevents hit count; advanced combat modelling
+74	PR_MAGNIFICAT	Magnificat	B	
+75	PR_GLORIA	Gloria	B, S	
+76	PR_LEXDIVINA	Lex Divina	S	
+77	PR_TURNUNDEAD	Turn Undead	O	
+78	PR_LEXAETERNA	Lex Aeterna	D	
+79	PR_MAGNUS	Magnus Exorcismus	O	
+80	WZ_FIREPILLAR	Fire Pillar	O	Requires special handling; Payon Stories push vs terrain
+81	WZ_SIGHTRASHER	Sightrasher	O	Requires MG_SIGHT (10) active
+83	WZ_METEOR	Meteor Storm	O	
+84	WZ_JUPITEL	Jupitel Thunder	O	
+85	WZ_VERMILION	Lord of Vermilion	O	
+86	WZ_WATERBALL	Water Ball	O	Allow manual setting of active water cells
+87	WZ_ICEWALL	Ice Wall	X	Relevant for ice wall prison advanced modelling
+88	WZ_FROSTNOVA	Frost Nova	O, S	
+89	WZ_STORMGUST	Storm Gust	O, S	
+90	WZ_EARTHSPIKE	Earth Spike	O	
+91	WZ_HEAVENDRIVE	Heaven's Drive	O	
+92	WZ_QUAGMIRE	Quagmire	D, O	Ground-based; modifier for incoming
+93	WZ_ESTIMATION	Sense	X	Not relevant
+94	BS_IRON	Iron Tempering		
+95	BS_STEEL	Steel Tempering		
+96	BS_ENCHANTEDSTONE	Enchanted Stone Craft		
+97	BS_ORIDEOCON	Oridecon Research		
+98	BS_DAGGER	Smith Dagger		
+99	BS_SWORD	Smith Sword		
+100	BS_TWOHANDSWORD	Smith Two-handed Sword		
+101	BS_AXE	Smith Axe		
+102	BS_MACE	Smith Mace		
+103	BS_KNUCKLE	Smith Knucklebrace		
+104	BS_SPEAR	Smith Spear		
+105	BS_HILTBINDING	Hilt Binding	P	
+106	BS_FINDINGORE	Ore Discovery	X	Not relevant
+107	BS_WEAPONRESEARCH	Weaponry Research	P	
+108	BS_REPAIRWEAPON	Weapon Repair	X	Not relevant
+109	BS_SKINTEMPER	Skin Tempering	P	
+110	BS_HAMMERFALL	Hammer Fall	S	
+111	BS_ADRENALINE	Adrenaline Rush	B	
+112	BS_WEAPONPERFECT	Weapon Perfection	B	
+113	BS_OVERTHRUST	Power-Thrust	B	
+114	BS_MAXIMIZE	Maximize Power	B	
+115	HT_SKIDTRAP	Skid Trap	X	Trap; not relevant
+116	HT_LANDMINE	Land Mine	O	Trap
+117	HT_ANKLESNARE	Ankle Snare	X	Trap; maybe show duration on target
+118	HT_SHOCKWAVE	Shockwave Trap	X	Trap; not relevant
+119	HT_SANDMAN	Sandman	S	Trap
+120	HT_FLASHER	Flasher	S	Trap
+121	HT_FREEZINGTRAP	Freezing Trap	O, S	Trap
+122	HT_BLASTMINE	Blast Mine	O	Trap
+123	HT_CLAYMORETRAP	Claymore Trap	O	Trap
+124	HT_REMOVETRAP	Remove Trap	X	Not relevant
+125	HT_TALKIEBOX	Talkie Box	X	Not relevant
+126	HT_BEASTBANE	Beast Bane	P	
+127	HT_FALCON	Falconry Mastery	P	Toggle Falcon
+128	HT_STEELCROW	Steel Crow	P	
+129	HT_BLITZBEAT	Blitz Beat	P	Auto-proc; requires auto spell system to model
+130	HT_DETECTING	Detect	X	Not relevant
+131	HT_SPRINGTRAP	Spring Trap	X	Not relevant
+132	AS_RIGHT	Righthand Mastery	P	
+133	AS_LEFT	Lefthand Mastery	P	
+134	AS_KATAR	Katar Mastery	P	
+135	AS_CLOAKING	Cloaking	B	Mostly relevant for advanced combat modelling
+136	AS_SONICBLOW	Sonic Blow	O, S	
+137	AS_GRIMTOOTH	Grimtooth	O	
+138	AS_ENCHANTPOISON	Enchant Poison	B	Weapon endow → Poison; model via element override; also poison %
+139	AS_POISONREACT	Poison React	B	Mostly relevant for advanced combat modelling
+140	AS_VENOMDUST	Venom Dust	S	Ground effect causing Poison status
+141	AS_SPLASHER	Venom Splasher	O	
+142	NV_FIRSTAID	First Aid		
+143	NV_TRICKDEAD	Play Dead		
+144	SM_MOVINGRECOVERY	Moving HP-Recovery	M	HP regen while walking; unaffected by SM_RECOVERY (4)
+145	SM_FATALBLOW	Fatal Blow	M	Adds stun to Bash lv 6+; base 5%*(lv-5), modified by BaseLV
+146	SM_AUTOBERSERK	Auto Berserk	B	Applies Provoke (6) to user when HP < 25%; model as toggle
+147	AC_MAKINGARROW	Arrow Crafting	X	Creates items; maybe list arrow crafting recipes
+148	AC_CHARGEARROW	Arrow Repel	O	
+149	TF_SPRINKLESAND	Sand Attack	O, S	
+150	TF_BACKSLIDING	Back Slide	X	Not relevant
+151	TF_PICKSTONE	Find Stone	X	Creates item
+152	TF_THROWSTONE	Stone Fling	O	
+153	MC_CARTREVOLUTION	Cart Revolution	O	Damage depends on cart weight; allow manual weight input
+154	MC_CHANGECART	Change Cart	X	Not relevant
+155	MC_LOUD	Crazy Uproar	B	
+156	AL_HOLYLIGHT	Holy Light	O	
+157	MG_ENERGYCOAT	Energy Coat	B	
+158	NPC_PIERCINGATT	Piercing Attack		
+159	NPC_MENTALBREAKER	Spirit Destruction		
+160	NPC_RANGEATTACK	Stand off attack		
+161	NPC_ATTRICHANGE	Attribute Change		
+162	NPC_CHANGEWATER	Water Attribute Change		
+163	NPC_CHANGEGROUND	Earth Attribute Change		
+164	NPC_CHANGEFIRE	Fire Attribute Change		
+165	NPC_CHANGEWIND	Wind Attribute Change		
+166	NPC_CHANGEPOISON	Poison Attribute Change		
+167	NPC_CHANGEHOLY	Holy Attribute Change		
+168	NPC_CHANGEDARKNESS	Shadow Attribute Change		
+169	NPC_CHANGETELEKINESIS	Ghost Attribute Change		
+170	NPC_CRITICALSLASH	Defense disregard attack		
+171	NPC_COMBOATTACK	Multi-stage Attack		
+172	NPC_GUIDEDATTACK	Guided Attack		
+173	NPC_SELFDESTRUCTION	Suicide bombing		
+174	NPC_SPLASHATTACK	Splash attack		
+175	NPC_SUICIDE	Suicide		
+176	NPC_POISON	Poison Attack		
+177	NPC_BLINDATTACK	Blind Attack		
+178	NPC_SILENCEATTACK	Silence Attack		
+179	NPC_STUNATTACK	Stun Attack		
+180	NPC_PETRIFYATTACK	Petrify Attack		
+181	NPC_CURSEATTACK	Curse Attack		
+182	NPC_SLEEPATTACK	Sleep attack		
+183	NPC_RANDOMATTACK	Random Attack		
+184	NPC_WATERATTACK	Water Attribute Attack		
+185	NPC_GROUNDATTACK	Earth Attribute Attack		
+186	NPC_FIREATTACK	Fire Attribute Attack		
+187	NPC_WINDATTACK	Wind Attribute Attack		
+188	NPC_POISONATTACK	Poison Attribute Attack		
+189	NPC_HOLYATTACK	Holy Attribute Attack		
+190	NPC_DARKNESSATTACK	Shadow Attribute Attack		
+191	NPC_TELEKINESISATTACK	Ghost Attribute Attack		
+192	NPC_MAGICALATTACK	Demon Shock Attack		
+193	NPC_METAMORPHOSIS	Metamorphosis		
+194	NPC_PROVOCATION	Provocation		
+195	NPC_SMOKING	Smoking		
+196	NPC_SUMMONSLAVE	Follower Summons		
+197	NPC_EMOTION	Emotion		
+198	NPC_TRANSFORMATION	Transformation		
+199	NPC_BLOODDRAIN	Sucking Blood		
+200	NPC_ENERGYDRAIN	Energy Drain		
+201	NPC_KEEPING	Keeping		
+202	NPC_DARKBREATH	Dark Breath		
+203	NPC_DARKBLESSING	Dark Blessing		
+204	NPC_BARRIER	Barrier		
+205	NPC_DEFENDER	Defender		
+206	NPC_LICK	Lick		
+207	NPC_HALLUCINATION	Hallucination		
+208	NPC_REBIRTH	Rebirth		
+209	NPC_SUMMONMONSTER	Monster Summons		
+210	RG_SNATCHER	Gank	P	
+211	RG_STEALCOIN	Mug	X	Not relevant
+212	RG_BACKSTAP	Back Stab	O	
+213	RG_TUNNELDRIVE	Stalk	X	Not relevant
+214	RG_RAID	Sightless Mind	O, S	Requires hiding status
+215	RG_STRIPWEAPON	Divest Weapon	D	
+216	RG_STRIPSHIELD	Divest Shield	D	
+217	RG_STRIPARMOR	Divest Armor	D	
+218	RG_STRIPHELM	Divest Helm	D	
+219	RG_INTIMIDATE	Snatch	O	
+220	RG_GRAFFITI	Scribble		
+221	RG_FLAGGRAFFITI	Piece		
+222	RG_CLEANER	Remover		
+223	RG_GANGSTER	Slyness		
+224	RG_COMPULSION	Haggle		
+225	RG_PLAGIARISM	Intimidate	M	Allows use of any skill with relevant flag
+226	AM_AXEMASTERY	Axe Mastery	P	
+227	AM_LEARNINGPOTION	Potion Research	P	
+228	AM_PHARMACY	Prepare Potion	X	Creates item
+229	AM_DEMONSTRATION	Bomb	O	
+230	AM_ACIDTERROR	Acid Terror	O, S	
+231	AM_POTIONPITCHER	Aid Potion	H	
+232	AM_CANNIBALIZE	Summon Flora	X	Summons mobs; maybe model Geographer heal
+233	AM_SPHEREMINE	Summon Marine Sphere	X	Summons self-destruct mob; model summon HP and damage
+234	AM_CP_WEAPON	Alchemical Weapon		
+235	AM_CP_SHIELD	Synthesized Shield		
+236	AM_CP_ARMOR	Synthetic Armor		
+237	AM_CP_HELM	Biochemical Helm		
+238	AM_BIOETHICS	Bioethics		
+243	AM_CALLHOMUN	Call Homunculus		
+244	AM_REST	Vaporize		
+247	AM_RESURRECTHOMUN	Homunculus Resurrection	X	Not relevant
+248	CR_TRUST	Faith	P	
+249	CR_AUTOGUARD	Guard	B	Relevant for incoming damage modelling; advanced multi-hit
+250	CR_SHIELDCHARGE	Smite	O, S	
+251	CR_SHIELDBOOMERANG	Shield Boomerang	O	
+252	CR_REFLECTSHIELD	Shield Reflect	B	Reflect damage; advanced combat modelling
+253	CR_HOLYCROSS	Holy Cross	O, S	
+254	CR_GRANDCROSS	Grand Cross	O	Exceedingly complicated; likely requires entire session
+255	CR_DEVOTION	Sacrifice	X	Allows transfer of some Crusader buffs; separate section if implemented
+256	CR_PROVIDENCE	Resistant Souls	B	
+257	CR_DEFENDER	Defending Aura	B	Has debuff side-effect (slows movement/ranged)
+258	CR_SPEARQUICKEN	Spear Quicken	B	
+259	MO_IRONHAND	Iron Fists	P	
+260	MO_SPIRITSRECOVERY	Spiritual Cadence	P	Primarily useful for sitting SP Regen
+261	MO_CALLSPIRITS	Summon Spirit Sphere	B	With 1015 allows any build to obtain spirit sphere buff
+262	MO_ABSORBSPIRITS	Absorb Spirit Sphere	X	Not relevant
+263	MO_TRIPLEATTACK	Raging Trifecta Blow	P, C	Passive; causes distinct attack delay depending on MO_CHAINCOMBO (272)
+264	MO_BODYRELOCATION	Snap	X	Not relevant
+265	MO_DODGE	Dodge	P	
+266	MO_INVESTIGATE	Occult Impaction	O	
+267	MO_FINGEROFFENSIVE	Throw Spirit Sphere	O	
+268	MO_STEELBODY	Mental Strength	B	
+269	MO_BLADESTOP	Root	C	Technically a status; effectively for combos
+270	MO_EXPLOSIONSPIRITS	Fury	B	
+271	MO_EXTREMITYFIST	Asura Strike	O, C	Allowed after 269 or 273, or standalone via 1015
+272	MO_CHAINCOMBO	Raging Quadruple Blow	O, C	Requires 263 or 269; leads into 273
+273	MO_COMBOFINISH	Raging Thrust	O, C	Requires 272; leads into 271
+274	SA_ADVANCEDBOOK	Study	P	
+275	SA_CASTCANCEL	Cast Cancel	X	Not relevant
+276	SA_MAGICROD	Magic Rod	X	Not relevant for basic calc
+277	SA_SPELLBREAKER	Spell Breaker	O	Mostly relevant for advanced combat modelling
+278	SA_FREECAST	Free Cast	P	
+279	SA_AUTOSPELL	Hindsight	P, M	Requires auto spell system to model
+280	SA_FLAMELAUNCHER	Endow Blaze	B	Weapon endow → Fire; model via element override
+281	SA_FROSTWEAPON	Endow Tsunami	B	Weapon endow → Water; model via element override
+282	SA_LIGHTNINGLOADER	Endow Tornado	B	Weapon endow → Wind; model via element override
+283	SA_SEISMICWEAPON	Endow Quake	B	Weapon endow → Earth; model via element override
+284	SA_DRAGONOLOGY	Dragonology	P	
+285	SA_VOLCANO	Volcano	B	Ground effect (AttrFix-adjacent)
+286	SA_DELUGE	Deluge	B	Ground effect
+287	SA_VIOLENTGALE	Whirlwind	B	Ground effect
+288	SA_LANDPROTECTOR	Magnetic Earth	X	Not relevant
+289	SA_DISPELL	Dispell	X	Removes most buffs and debuffs
+290	SA_ABRACADABRA	Hocus-pocus	X	Not relevant
+291	SA_MONOCELL	Monocell		
+292	SA_CLASSCHANGE	Class Change		
+293	SA_SUMMONMONSTER	Monster Chant		
+294	SA_REVERSEORCISH	Grampus Morph		
+295	SA_DEATH	Grim Reaper		
+296	SA_FORTUNE	Gold Digger		
+297	SA_TAMINGMONSTER	Beastly Hypnosis		
+298	SA_QUESTION	Questioning		
+299	SA_GRAVITY	Gravity		
+300	SA_LEVELUP	Leveling		
+301	SA_INSTANTDEATH	Suicide		
+302	SA_FULLRECOVERY	Rejuvenation		
+303	SA_COMA	Coma		
+304	BD_ADAPTATION	Amp	X	Only useful for modelling SP usage
+305	BD_ENCORE	Encore	X	SP usage
+306	BD_LULLABY	Lullaby	S	Duet (Bard + Dancer)
+307	BD_RICHMANKIM	Mental Sensing	X	Not relevant for damage
+308	BD_ETERNALCHAOS	Down Tempo	D	Duet
+309	BD_DRUMBATTLEFIELD	Battle Theme	B	Duet
+310	BD_RINGNIBELUNGEN	Harmonic Lick	B	Duet
+311	BD_ROKISWEIL	Classical Pluck	X	Not relevant
+312	BD_INTOABYSS	Power Chord	X	Not relevant
+313	BD_SIEGFRIED	Acoustic Rhythm	B	Duet
+315	BA_MUSICALLESSON	Music Lessons	P	
+316	BA_MUSICALSTRIKE	Melody Strike	O	
+317	BA_DISSONANCE	Unchained Serenade	S, O	
+318	BA_FROSTJOKE	Unbarring Octave	S	
+319	BA_WHISTLE	Perfect Tablature	B	
+320	BA_ASSASSINCROSS	Impressive Riff	B	SC_ASSNCROS
+321	BA_POEMBRAGI	Magic Strings	B	SC_POEMBRAGI; cast time + after-cast delay
+322	BA_APPLEIDUN	Song of Lutie	B	SC_APPLEIDUN; MaxHP%
+323	DC_DANCINGLESSON	Dance Lessons	P	
+324	DC_THROWARROW	Slinging Arrow	O	
+325	DC_UGLYDANCE	Hip Shaker	D	SP drain debuff
+326	DC_SCREAM	Dazzler	S	
+327	DC_HUMMING	Focus Ballet	B	
+328	DC_DONTFORGETME	Slow Grace	D	Slows movement and attack speed
+329	DC_FORTUNEKISS	Lady Luck	B	
+330	DC_SERVICEFORYOU	Gypsy's Kiss	B	MaxSP% + SP cost reduction
+331	NPC_RANDOMMOVE	Random Move		
+332	NPC_SPEEDUP	Speed UP		
+333	NPC_REVENGE	Revenge		
+334	WE_MALE	I Will Protect You		
+335	WE_FEMALE	I Look up to You		
+336	WE_CALLPARTNER	I miss You		
+337	ITM_TOMAHAWK	Throw Tomahawk		
+338	NPC_DARKCROSS	Cross of Darkness		
+339	NPC_GRANDDARKNESS	Grand cross of Darkness		
+340	NPC_DARKSTRIKE	Soul Strike of Darkness		
+341	NPC_DARKTHUNDER	Darkness Jupitel		
+342	NPC_STOP	Stop		
+343	NPC_WEAPONBRAKER	Break weapon		
+344	NPC_ARMORBRAKE	Break armor		
+345	NPC_HELMBRAKE	Break helm		
+346	NPC_SHIELDBRAKE	Break shield		
+347	NPC_UNDEADATTACK	Undead Element Attack		
+348	NPC_CHANGEUNDEAD	Undead Attribute Change		
+349	NPC_POWERUP	Power Up		
+350	NPC_AGIUP	Agility UP		
+351	NPC_SIEGEMODE	Siege Mode		
+352	NPC_CALLSLAVE	Recall Slaves		
+353	NPC_INVISIBLE	Invisible		
+354	NPC_RUN	Run		
+355	LK_AURABLADE	Aura Blade		
+356	LK_PARRYING	Parrying		
+357	LK_CONCENTRATION	Concentration		
+358	LK_TENSIONRELAX	Relax		
+359	LK_BERSERK	Frenzy		
+361	HP_ASSUMPTIO	Assumptio		
+362	HP_BASILICA	Basilica		
+363	HP_MEDITATIO	Meditatio		
+364	HW_SOULDRAIN	Soul Drain		
+365	HW_MAGICCRASHER	Stave Crasher		
+366	HW_MAGICPOWER	Mystical Amplification		
+367	PA_PRESSURE	Gloria Domini		
+368	PA_SACRIFICE	Martyr's Reckoning		
+369	PA_GOSPEL	Battle Chant		
+370	CH_PALMSTRIKE	Raging Palm Strike		
+371	CH_TIGERFIST	Glacier Fist		
+372	CH_CHAINCRUSH	Chain Crush Combo		
+373	PF_HPCONVERSION	Indulge		
+374	PF_SOULCHANGE	Soul Exhale		
+375	PF_SOULBURN	Soul Siphon		
+376	ASC_KATAR	Advanced Katar Mastery		
+378	ASC_EDP	Enchant Deadly Poison		
+379	ASC_BREAKER	Soul Destroyer		
+380	SN_SIGHT	Falcon Eyes		
+381	SN_FALCONASSAULT	Falcon Assault		
+382	SN_SHARPSHOOTING	Focused Arrow Strike		
+383	SN_WINDWALK	Wind Walker		
+384	WS_MELTDOWN	Shattering Strike		
+387	WS_CARTBOOST	Cart Boost		
+389	ST_CHASEWALK	Stealth		
+390	ST_REJECTSWORD	Counter Instinct		
+392	CR_ALCHEMY	Alchemy		
+393	CR_SYNTHESISPOTION	Potion Synthesis		
+394	CG_ARROWVULCAN	Vulcan Arrow		
+395	CG_MOONLIT	Sheltering Bliss		
+396	CG_MARIONETTE	Marionette Control		
+397	LK_SPIRALPIERCE	Spiral Pierce		
+398	LK_HEADCRUSH	Traumatic Blow		
+399	LK_JOINTBEAT	Vital Strike		
+400	HW_NAPALMVULCAN	Napalm Vulcan		
+401	CH_SOULCOLLECT	Zen		
+402	PF_MINDBREAKER	Mind Breaker		
+403	PF_MEMORIZE	Foresight		
+404	PF_FOGWALL	Blinding Mist		
+405	PF_SPIDERWEB	Fiber Lock		
+406	ASC_METEORASSAULT	Meteor Assault		
+407	ASC_CDP	Create Deadly Poison		
+408	WE_BABY	Baby		
+409	WE_CALLPARENT	Call Parent		
+410	WE_CALLBABY	Call Baby		
+411	TK_RUN	Running	B	
+412	TK_READYSTORM	Tornado Stance	C	Tornado Stance
+413	TK_STORMKICK	Tornado Kick	O, C	
+414	TK_READYDOWN	Heel Drop Stance	C	Heel Drop Stance
+415	TK_DOWNKICK	Heel Drop	O, C, S	
+416	TK_READYTURN	Roundhouse Stance	C	Roundhouse Stance
+417	TK_TURNKICK	Roundhouse Kick	O, C, S	
+418	TK_READYCOUNTER	Counter Kick Stance	C	Counter Kick Stance
+419	TK_COUNTER	Counter Kick	O, C	
+420	TK_DODGE	Tumbling	P	
+421	TK_JUMPKICK	Flying Kick	O	Exceedingly complicated; model with current SP
+422	TK_HPTIME	Peaceful Break	P	Sitting HP regen modelling
+423	TK_SPTIME	Happy Break	P	Sitting SP regen; maybe add tooltip for happy status
+424	TK_POWER	Kihop	P	Allow manual setting of party member count
+425	TK_SEVENWIND	Mild Wind	B	Weapon endow → element (7 choices); model via element override
+426	TK_HIGHJUMP	Taekwon Jump	X	Not relevant
+427	SG_FEEL	Feeling the Sun Moon and Stars		
+428	SG_SUN_WARM	Warmth of the Sun		
+429	SG_MOON_WARM	Warmth of the Moon		
+430	SG_STAR_WARM	Warmth of the Stars		
+431	SG_SUN_COMFORT	Comfort of the Sun		
+432	SG_MOON_COMFORT	Comfort of the Moon		
+433	SG_STAR_COMFORT	Comfort of the Stars		
+434	SG_HATE	Hatred of the Sun Moon and Stars		
+435	SG_SUN_ANGER	Anger of the Sun		
+436	SG_MOON_ANGER	Anger of the Moon		
+437	SG_STAR_ANGER	Anger of the Stars		
+438	SG_SUN_BLESS	Blessing of the Sun		
+439	SG_MOON_BLESS	Blessing of the Moon		
+440	SG_STAR_BLESS	Blessing of the Stars		
+441	SG_DEVIL	Demon of the Sun Moon and Stars		
+442	SG_FRIEND	Friend of the Sun Moon and Stars		
+443	SG_KNOWLEDGE	Knowledge of the Sun Moon and Stars		
+444	SG_FUSION	Union of the Sun Moon and Stars		
+445	SL_ALCHEMIST	Spirit of the Alchemist		
+446	AM_BERSERKPITCHER	Aid Berserk Potion	B	Soul Link required for non-Alchemist use
+447	SL_MONK	Spirit of the Monk		
+448	SL_STAR	Spirit of the Star Gladiator		
+449	SL_SAGE	Spirit of the Sage		
+450	SL_CRUSADER	Spirit of the Crusader		
+451	SL_SUPERNOVICE	Spirit of the Supernovice		
+452	SL_KNIGHT	Spirit of the Knight		
+453	SL_WIZARD	Spirit of the Wizard		
+454	SL_PRIEST	Spirit of the Priest		
+455	SL_BARDDANCER	Spirit of the Artist		
+456	SL_ROGUE	Spirit of the Rogue		
+457	SL_ASSASIN	Spirit of the Assasin		
+458	SL_BLACKSMITH	Spirit of the Blacksmith		
+459	BS_ADRENALINE2	Advanced Adrenaline Rush	B	Soul Link required for non-Blacksmith use
+460	SL_HUNTER	Spirit of the Hunter		
+461	SL_SOULLINKER	Spirit of the Soul Linker		
+462	SL_KAIZEL	Kaizel		
+463	SL_KAAHI	Kaahi		
+464	SL_KAUPE	Kaupe		
+465	SL_KAITE	Kaite		
+466	SL_KAINA	Kaina		
+467	SL_STIN	Estin		
+468	SL_STUN	Estun		
+469	SL_SMA	Esma		
+470	SL_SWOO	Eswoo		
+471	SL_SKE	Eske		
+472	SL_SKA	Eska		
+473	SM_SELFPROVOKE	Provoke Self		
+474	NPC_EMOTION_ON	Emotion ON		
+475	ST_PRESERVE	Preserve		
+476	ST_FULLSTRIP	Divest All		
+477	WS_WEAPONREFINE	Upgrade Weapon		
+478	CR_SLIMPITCHER	Aid Condensed Potion		
+479	CR_FULLPROTECTION	Full Protection		
+480	PA_SHIELDCHAIN	Shield Chain		
+481	HP_MANARECHARGE	Mana Recharge		
+482	PF_DOUBLECASTING	Double Casting		
+483	HW_GANBANTEIN	Ganbantein		
+484	HW_GRAVITATION	Gravitation Field		
+485	WS_CARTTERMINATION	Cart Termination		
+486	WS_OVERTHRUSTMAX	Maximum Power Thrust		
+487	CG_LONGINGFREEDOM	Longing for Freedom		
+488	CG_HERMODE	Wand of Hermode		
+489	CG_TAROTCARD	Tarot Card of Fate		
+490	CR_ACIDDEMONSTRATION	Acid Demonstration		
+491	CR_CULTIVATION	Plant Cultivation		
+492	ITEM_ENCHANTARMS	Weapon Enchantment		
+493	TK_MISSION	Taekwon Mission	X	Ranker status; not relevant for basic; advanced only
+494	SL_HIGH	Spirit of Rebirth		
+495	KN_ONEHAND	Onehand Quicken	B	Soul Link required for non-Knight builds
+496	AM_TWILIGHT1	Twilight Alchemy 1		
+497	AM_TWILIGHT2	Twilight Alchemy 2		
+498	AM_TWILIGHT3	Twilight Alchemy 3		
+499	HT_POWER	Beast Strafing		
+500	GS_GLITTERING	Flip the Coin	B	
+501	GS_FLING	Fling	O, D	
+502	GS_TRIPLEACTION	Triple Action	O	
+503	GS_BULLSEYE	Bulls Eye	O, S	Coma status irrelevant; other statuses apply
+504	GS_MADNESSCANCEL	Madness Canceller	B	
+505	GS_ADJUSTMENT	AdJustment	B	
+506	GS_INCREASING	Increasing Accuracy	B	
+507	GS_MAGICALBULLET	Magical Bullet	O	
+508	GS_CRACKER	Cracker	S	
+509	GS_SINGLEACTION	Single Action	P	
+510	GS_SNAKEEYE	Snake Eye	P	
+511	GS_CHAINACTION	Chain Action	P	
+512	GS_TRACKING	Tracking	O	
+513	GS_DISARM	Disarm	D	
+514	GS_PIERCINGSHOT	Piercing Shot	O, S	
+515	GS_RAPIDSHOWER	Rapid Shower	O	
+516	GS_DESPERADO	Desperado	O	
+517	GS_GATLINGFEVER	Gatling Fever	B	
+518	GS_DUST	Dust	O	
+519	GS_FULLBUSTER	Full Buster	O, S	
+520	GS_SPREADATTACK	Spread Attack	O	
+521	GS_GROUNDDRIFT	Ground Drift	O	Trap-like; special handling for advanced modelling
+522	NJ_TOBIDOUGU	Shuriken Training	P	
+523	NJ_SYURIKEN	Throw Shuriken	O	
+524	NJ_KUNAI	Throw Kunai	O	
+525	NJ_HUUMA	Throw Huuma Shuriken	O	
+526	NJ_ZENYNAGE	Throw Zeny	O	
+527	NJ_TATAMIGAESHI	Improvised Defense	O	Secondary ranged damage blocking; advanced
+528	NJ_KASUMIKIRI	Vanishing Slash	O	
+529	NJ_SHADOWJUMP	Shadow Leap		
+530	NJ_KIRIKAGE	Shadow Slash	O	
+531	NJ_UTSUSEMI	Cicada Skin Sheeding	X	Prevents hits; advanced combat modelling
+532	NJ_BUNSINJYUTSU	Mirror Image	X	Prevents hits; advanced combat modelling
+533	NJ_NINPOU	Spirit of the Blade	P	
+534	NJ_KOUENKA	Crimson Fire Petal	O	
+535	NJ_KAENSIN	Crimson Fire Formation	O	Ground fire; relevant for target walking into effect
+536	NJ_BAKUENRYU	Raging Fire Dragon	O	
+537	NJ_HYOUSENSOU	Spear of Ice	O	
+538	NJ_SUITON	Hidden Water	B	Ground-based; required for NJ_HYOUSENSOU (537) water bonus
+539	NJ_HYOUSYOURAKU	Ice Meteor	O, S	
+540	NJ_HUUJIN	Wind Blade	O	
+541	NJ_RAIGEKISAI	Lightning Strike of Destruction	O	
+542	NJ_KAMAITACHI	Kamaitachi	O	
+543	NJ_NEN	Soul	B	
+544	NJ_ISSEN	Final Strike	O	Model with Max HP or manually set HP
+653	NPC_EARTHQUAKE	Earthquake		
+654	NPC_FIREBREATH	Fire Breath		
+655	NPC_ICEBREATH	Ice Breath		
+656	NPC_THUNDERBREATH	Thunder Breath		
+657	NPC_ACIDBREATH	Acid Breath		
+658	NPC_DARKNESSBREATH	Darkness Breath		
+659	NPC_DRAGONFEAR	Dragon Fear		
+660	NPC_BLEEDING	Bleeding		
+661	NPC_PULSESTRIKE	Pulse Strike		
+662	NPC_HELLJUDGEMENT	Hell's Judgement		
+663	NPC_WIDESILENCE	Wide Silence		
+664	NPC_WIDEFREEZE	Wide Freeze		
+665	NPC_WIDEBLEEDING	Wide Bleeding		
+666	NPC_WIDESTONE	Wide Petrify		
+667	NPC_WIDECONFUSE	Wide Confusion		
+668	NPC_WIDESLEEP	Wide Sleep		
+669	NPC_WIDESIGHT	Wide Sight		
+670	NPC_EVILLAND	Evil Land		
+671	NPC_MAGICMIRROR	Magic Mirror		
+672	NPC_SLOWCAST	Slow Cast		
+673	NPC_CRITICALWOUND	Critical Wounds		
+674	NPC_EXPULSION	Expulsion		
+675	NPC_STONESKIN	Stone Skin		
+676	NPC_ANTIMAGIC	Anti Magic		
+677	NPC_WIDECURSE	Wide Curse		
+678	NPC_WIDESTUN	Wide Stun		
+679	NPC_VAMPIRE_GIFT	Vampire Gift		
+680	NPC_WIDESOULDRAIN	Wide Soul Drain		
+681	ALL_INCCARRY	Increase Weight Limit R		
+682	NPC_TALK	Talk		
+683	NPC_HELLPOWER	Hell Power		
+684	NPC_WIDEHELLDIGNITY	Hell Dignity		
+685	NPC_INVINCIBLE	Invincible		
+686	NPC_INVINCIBLEOFF	Invincible off		
+687	NPC_ALLHEAL	Full Heal		
+688	GM_SANDMAN	GM Sandman		
+689	CASH_BLESSING	Party Blessing		
+690	CASH_INCAGI	Party Increase AGI		
+691	CASH_ASSUMPTIO	Party Assumptio		
+693	ALL_PARTYFLEE	Party Flee		
+694	ALL_ANGEL_PROTECT	Angel's Protection		
+695	ALL_DREAM_SUMMERNIGHT	Summer Night Dream		
+697	ALL_REVERSEORCISH	Reverse Orcish		
+698	ALL_WEWISH	Christmas Carol		
+700	NPC_WIDEHEALTHFEAR	Wide Fear		
+701	NPC_WIDEBODYBURNNING	Wide Burning		
+702	NPC_WIDEFROSTMISTY	Wide Freezing		
+703	NPC_WIDECOLD	Wide Frozen		
+704	NPC_WIDE_DEEP_SLEEP	Wide Deep Sleep		
+705	NPC_WIDESIREN	Wide Charm		
+1001	KN_CHARGEATK	Charge Attack	O	Allow manual distance setting
+1002	CR_SHRINK	Shrink	X	Only for advanced combat modelling
+1003	AS_SONICACCEL	Sonic Acceleration	P	
+1004	AS_VENOMKNIFE	Throw Venom Knife	O, S	Allows Assassins to equip ammo
+1005	RG_CLOSECONFINE	Close Confine	B	
+1006	WZ_SIGHTBLASTER	Sight Blaster	O	Relevant for trap + fire pillar push; advanced modelling
+1007	SA_CREATECON	Create Elemental Converter	X	Creates Elemental Converter; advanced uses/s modelling
+1008	SA_ELEMENTWATER	Elemental Change Water	S	Changes target attribute; treat as debuff
+1009	HT_PHANTASMIC	Phantasmic Arrow	O	
+1010	BA_PANGVOICE	Pang Voice		
+1011	DC_WINKCHARM	Wink of Charm		
+1012	BS_UNFAIRLYTRICK	Unfair Trick		
+1013	BS_GREED	Greed		
+1014	PR_REDEMPTIO	Redemptio	X	Not relevant
+1015	MO_KITRANSLATION	Ki Translation	X	Allow manual spirit sphere count for any build
+1016	MO_BALKYOUNG	Ki Explosion	O, S	
+1017	SA_ELEMENTGROUND	Elemental Change Earth	S	Changes target attribute; treat as debuff
+1018	SA_ELEMENTFIRE	Elemental Change Fire	S	Changes target attribute; treat as debuff
+1019	SA_ELEMENTWIND	Elemental Change Wind	S	Changes target attribute; treat as debuff
+2001	RK_ENCHANTBLADE	Enchant Blade		
+2002	RK_SONICWAVE	Sonic Wave		
+2003	RK_DEATHBOUND	Death Bound		
+2004	RK_HUNDREDSPEAR	Hundred Spear		
+2005	RK_WINDCUTTER	Wind Cutter		
+2006	RK_IGNITIONBREAK	Ignition Break		
+2007	RK_DRAGONTRAINING	Dragon Training		
+2008	RK_DRAGONBREATH	Dragon Breath		
+2009	RK_DRAGONHOWLING	Dragon Howling		
+2010	RK_RUNEMASTERY	Rune Mastery		
+2011	RK_MILLENNIUMSHIELD	Millenium Shield		
+2012	RK_CRUSHSTRIKE	Crush Strike		
+2013	RK_REFRESH	Refresh		
+2014	RK_GIANTGROWTH	Giant Growth		
+2015	RK_STONEHARDSKIN	Stone Hard Skin		
+2016	RK_VITALITYACTIVATION	Vitality Activation		
+2017	RK_STORMBLAST	Storm Blast		
+2018	RK_FIGHTINGSPIRIT	Fighting Spirit		
+2019	RK_ABUNDANCE	Abundance		
+2020	RK_PHANTOMTHRUST	Phantom Thrust		
+2021	GC_VENOMIMPRESS	Venom Impress		
+2022	GC_CROSSIMPACT	Cross Impact		
+2023	GC_DARKILLUSION	Dark Illusion		
+2024	GC_RESEARCHNEWPOISON	Research New Poison		
+2025	GC_CREATENEWPOISON	Create New Poison		
+2026	GC_ANTIDOTE	Antidote		
+2027	GC_POISONINGWEAPON	Poisoning Weapon		
+2028	GC_WEAPONBLOCKING	Weapon Blocking		
+2029	GC_COUNTERSLASH	Counter Slash		
+2030	GC_WEAPONCRUSH	Weapon Crush		
+2031	GC_VENOMPRESSURE	Venom Pressure		
+2032	GC_POISONSMOKE	Poison Smoke		
+2033	GC_CLOAKINGEXCEED	Cloaking Exceed		
+2034	GC_PHANTOMMENACE	Phantom Menace		
+2035	GC_HALLUCINATIONWALK	Hallucination Walk		
+2036	GC_ROLLINGCUTTER	Rolling Cutter		
+2037	GC_CROSSRIPPERSLASHER	Cross Ripper Slasher		
+2038	AB_JUDEX	Judex		
+2039	AB_ANCILLA	Ancilla		
+2040	AB_ADORAMUS	Adoramus		
+2041	AB_CLEMENTIA	Crementia		
+2042	AB_CANTO	Canto Candidus		
+2043	AB_CHEAL	Coluceo Heal		
+2044	AB_EPICLESIS	Epiclesis		
+2045	AB_PRAEFATIO	Praefatio		
+2046	AB_ORATIO	Oratio		
+2047	AB_LAUDAAGNUS	Lauda Agnus		
+2048	AB_LAUDARAMUS	Lauda Ramus		
+2049	AB_EUCHARISTICA	Eucharistica		
+2050	AB_RENOVATIO	Renovatio		
+2051	AB_HIGHNESSHEAL	Highness Heal		
+2052	AB_CLEARANCE	Clearance		
+2053	AB_EXPIATIO	Expiatio		
+2054	AB_DUPLELIGHT	Duple Light		
+2055	AB_DUPLELIGHT_MELEE	Duple Light Melee		
+2056	AB_DUPLELIGHT_MAGIC	Duple Light Magic		
+2057	AB_SILENTIUM	Silentium		
+2201	WL_WHITEIMPRISON	White Imprison		
+2202	WL_SOULEXPANSION	Soul Expansion		
+2203	WL_FROSTMISTY	Frosty Misty		
+2204	WL_JACKFROST	Jack Frost		
+2205	WL_MARSHOFABYSS	Marsh of Abyss		
+2206	WL_RECOGNIZEDSPELL	Recognized Spell		
+2207	WL_SIENNAEXECRATE	Sienna Execrate		
+2208	WL_RADIUS	Radius		
+2209	WL_STASIS	Stasis		
+2210	WL_DRAINLIFE	Drain Life		
+2211	WL_CRIMSONROCK	Crimson Rock		
+2212	WL_HELLINFERNO	Hell Inferno		
+2213	WL_COMET	Comet		
+2214	WL_CHAINLIGHTNING	Chain Lightning		
+2215	WL_CHAINLIGHTNING_ATK	Chain Lightning Attack		
+2216	WL_EARTHSTRAIN	Earth Strain		
+2217	WL_TETRAVORTEX	Tetra Vortex		
+2218	WL_TETRAVORTEX_FIRE	Tetra Vortex Fire		
+2219	WL_TETRAVORTEX_WATER	Tetra Vortex Water		
+2220	WL_TETRAVORTEX_WIND	Tetra Vortex Wind		
+2221	WL_TETRAVORTEX_GROUND	Tetra Vortex Earth		
+2222	WL_SUMMONFB	Summon Fire Ball		
+2223	WL_SUMMONBL	Summon Lightning Ball		
+2224	WL_SUMMONWB	Summon Water Ball		
+2225	WL_SUMMON_ATK_FIRE	Summon Attack Fire		
+2226	WL_SUMMON_ATK_WIND	Summon Attack Wind		
+2227	WL_SUMMON_ATK_WATER	Summon Attack Water		
+2228	WL_SUMMON_ATK_GROUND	Summon Attack Earth		
+2229	WL_SUMMONSTONE	Summon Stone		
+2230	WL_RELEASE	Release		
+2231	WL_READING_SB	Reading Spellbook		
+2232	WL_FREEZE_SP	Freeze Spell		
+2233	RA_ARROWSTORM	Arrow Storm		
+2234	RA_FEARBREEZE	Fear Breeze		
+2235	RA_RANGERMAIN	Ranger Main		
+2236	RA_AIMEDBOLT	Aimed Bolt		
+2237	RA_DETONATOR	Detonator		
+2238	RA_ELECTRICSHOCKER	Electric Shocker		
+2239	RA_CLUSTERBOMB	Cluster Bomb		
+2240	RA_WUGMASTERY	Warg Mastery		
+2241	RA_WUGRIDER	Warg Rider		
+2242	RA_WUGDASH	Warg Dash		
+2243	RA_WUGSTRIKE	Warg Strike		
+2244	RA_WUGBITE	Warg Bite		
+2245	RA_TOOTHOFWUG	Tooth of Warg		
+2246	RA_SENSITIVEKEEN	Sensitive Keen		
+2247	RA_CAMOUFLAGE	Camouflage		
+2248	RA_RESEARCHTRAP	Research Trap		
+2249	RA_MAGENTATRAP	Magenta Trap		
+2250	RA_COBALTTRAP	Cobalt Trap		
+2251	RA_MAIZETRAP	Maize Trap		
+2252	RA_VERDURETRAP	Verdure Trap		
+2253	RA_FIRINGTRAP	Firing Trap		
+2254	RA_ICEBOUNDTRAP	Icebound Trap		
+2255	NC_MADOLICENCE	Mado License		
+2256	NC_BOOSTKNUCKLE	Boost Knuckle		
+2257	NC_PILEBUNKER	Pile Bunker		
+2258	NC_VULCANARM	Vulcan Arm		
+2259	NC_FLAMELAUNCHER	Flame Launcher		
+2260	NC_COLDSLOWER	Cold Slower		
+2261	NC_ARMSCANNON	Arm Cannon		
+2262	NC_ACCELERATION	Acceleration		
+2263	NC_HOVERING	Hovering		
+2264	NC_F_SIDESLIDE	Front-Side Slide		
+2265	NC_B_SIDESLIDE	Back-Side Slide		
+2266	NC_MAINFRAME	Mainframe Restructure		
+2267	NC_SELFDESTRUCTION	Self Destruction		
+2268	NC_SHAPESHIFT	Shape Shift		
+2269	NC_EMERGENCYCOOL	Emergency Cool		
+2270	NC_INFRAREDSCAN	Infrared Scan		
+2271	NC_ANALYZE	Analyze		
+2272	NC_MAGNETICFIELD	Magnetic Field		
+2273	NC_NEUTRALBARRIER	Neutral Barrier		
+2274	NC_STEALTHFIELD	Stealth Field		
+2275	NC_REPAIR	Repair		
+2276	NC_TRAININGAXE	Axe Training		
+2277	NC_RESEARCHFE	Research Fire/Earth		
+2278	NC_AXEBOOMERANG	Axe Boomerang		
+2279	NC_POWERSWING	Power Swing		
+2280	NC_AXETORNADO	Axe Tornado		
+2281	NC_SILVERSNIPER	FAW - Silver Sniper		
+2282	NC_MAGICDECOY	FAW - Magic Decoy		
+2283	NC_DISJOINT	FAW Removal		
+2284	SC_FATALMENACE	Fatal Menace		
+2285	SC_REPRODUCE	Reproduce		
+2286	SC_AUTOSHADOWSPELL	Auto Shadow Spell		
+2287	SC_SHADOWFORM	Shadow Form		
+2288	SC_TRIANGLESHOT	Triangle Shot		
+2289	SC_BODYPAINT	Body Painting		
+2290	SC_INVISIBILITY	Invisibility		
+2291	SC_DEADLYINFECT	Deadly Infect		
+2292	SC_ENERVATION	Masquerade - Enervation		
+2293	SC_GROOMY	Masquerade - Gloomy		
+2294	SC_IGNORANCE	Masquerade - Ignorance		
+2295	SC_LAZINESS	Masquerade - Laziness		
+2296	SC_UNLUCKY	Masquerade - Unlucky		
+2297	SC_WEAKNESS	Masquerade - Weakness		
+2298	SC_STRIPACCESSARY	Strip Accessory		
+2299	SC_MANHOLE	Man Hole		
+2300	SC_DIMENSIONDOOR	Dimension Door		
+2301	SC_CHAOSPANIC	Chaos Panic		
+2302	SC_MAELSTROM	Maelstrom		
+2303	SC_BLOODYLUST	Bloody Lust		
+2304	SC_FEINTBOMB	Feint Bomb		
+2307	LG_CANNONSPEAR	Cannon Spear		
+2308	LG_BANISHINGPOINT	Banishing Point		
+2309	LG_TRAMPLE	Trample		
+2310	LG_SHIELDPRESS	Shield Press		
+2311	LG_REFLECTDAMAGE	Reflect Damage		
+2312	LG_PINPOINTATTACK	Pinpoint Attack		
+2313	LG_FORCEOFVANGUARD	Force of Vanguard		
+2314	LG_RAGEBURST	Rage Burst		
+2315	LG_SHIELDSPELL	Shield Spell		
+2316	LG_EXEEDBREAK	Exceed Break		
+2317	LG_OVERBRAND	Over Brand		
+2318	LG_PRESTIGE	Prestige		
+2319	LG_BANDING	Banding		
+2320	LG_MOONSLASHER	Moon Slasher		
+2321	LG_RAYOFGENESIS	Ray of Genesis		
+2322	LG_PIETY	Piety		
+2323	LG_EARTHDRIVE	Earth Drive		
+2324	LG_HESPERUSLIT	Hesperus Lit		
+2325	LG_INSPIRATION	Inspiration		
+2326	SR_DRAGONCOMBO	Dragon Combo		
+2327	SR_SKYNETBLOW	Sky Net Blow		
+2328	SR_EARTHSHAKER	Earth Shaker		
+2329	SR_FALLENEMPIRE	Fallen Empire		
+2330	SR_TIGERCANNON	Tiger Cannon		
+2331	SR_HELLGATE	Hell Gate		
+2332	SR_RAMPAGEBLASTER	Rampage Blaster		
+2333	SR_CRESCENTELBOW	Crescent Elbow		
+2334	SR_CURSEDCIRCLE	Cursed Circle		
+2335	SR_LIGHTNINGWALK	Lightning Walk		
+2336	SR_KNUCKLEARROW	Knuckle Arrow		
+2337	SR_WINDMILL	Windmill		
+2338	SR_RAISINGDRAGON	Raising Dragon		
+2339	SR_GENTLETOUCH	Gentle Touch		
+2340	SR_ASSIMILATEPOWER	Assimilate Power		
+2341	SR_POWERVELOCITY	Power Velocity		
+2342	SR_CRESCENTELBOW_AUTOSPELL	Crescent Elbow Autospell		
+2343	SR_GATEOFHELL	Gate of Hell		
+2344	SR_GENTLETOUCH_QUIET	Gentle Touch - Quiet		
+2345	SR_GENTLETOUCH_CURE	Gentle Touch - Cure		
+2346	SR_GENTLETOUCH_ENERGYGAIN	Gentle Touch - Energy Gain		
+2347	SR_GENTLETOUCH_CHANGE	Gentle Touch - Change		
+2348	SR_GENTLETOUCH_REVITALIZE	Gentle Touch - Revitalize		
+2350	WA_SWING_DANCE	Swing Dance		
+2351	WA_SYMPHONY_OF_LOVER	Symphony of Lovers		
+2352	WA_MOONLIT_SERENADE	Moonlit Serenade		
+2381	MI_RUSH_WINDMILL	Windmill Rush Attack		
+2382	MI_ECHOSONG	Echo Song		
+2383	MI_HARMONIZE	Harmonize		
+2412	WM_LESSON	Lesson		
+2413	WM_METALICSOUND	Metallic Sound		
+2414	WM_REVERBERATION	Reverberation		
+2415	WM_REVERBERATION_MELEE	Reverberation Melee		
+2416	WM_REVERBERATION_MAGIC	Reverberation Magic		
+2417	WM_DOMINION_IMPULSE	Dominion Impulse		
+2418	WM_SEVERE_RAINSTORM	Severe Rainstorm		
+2419	WM_POEMOFNETHERWORLD	Poem of The Netherworld		
+2420	WM_VOICEOFSIREN	Voice of Siren		
+2421	WM_DEADHILLHERE	Valley of Death		
+2422	WM_LULLABY_DEEPSLEEP	Deep Sleep Lullaby		
+2423	WM_SIRCLEOFNATURE	Circle of Nature's Sound		
+2424	WM_RANDOMIZESPELL	Improvised Song		
+2425	WM_GLOOMYDAY	Gloomy Day		
+2426	WM_GREAT_ECHO	Great Echo		
+2427	WM_SONG_OF_MANA	Song of Mana		
+2428	WM_DANCE_WITH_WUG	Dance With A Warg		
+2429	WM_SOUND_OF_DESTRUCTION	Sound of Destruction		
+2430	WM_SATURDAY_NIGHT_FEVER	Saturday Night Fever		
+2431	WM_LERADS_DEW	Lerad's Dew		
+2432	WM_MELODYOFSINK	Melody of Sink		
+2433	WM_BEYOND_OF_WARCRY	Warcry of Beyond		
+2434	WM_UNLIMITED_HUMMING_VOICE	Unlimited Humming Voice		
+2443	SO_FIREWALK	Fire Walk		
+2444	SO_ELECTRICWALK	Electric Walk		
+2445	SO_SPELLFIST	Spell Fist		
+2446	SO_EARTHGRAVE	Earth Grave		
+2447	SO_DIAMONDDUST	Diamond Dust		
+2448	SO_POISON_BUSTER	Poison Buster		
+2449	SO_PSYCHIC_WAVE	Psychic Wave		
+2450	SO_CLOUD_KILL	Cloud Kill		
+2451	SO_STRIKING	Striking		
+2452	SO_WARMER	Warmer		
+2453	SO_VACUUM_EXTREME	Vacuum Extreme		
+2454	SO_VARETYR_SPEAR	Varetyr Spear		
+2455	SO_ARRULLO	Arrullo		
+2456	SO_EL_CONTROL	Spirit Control		
+2457	SO_SUMMON_AGNI	Summon Fire Spirit Agni		
+2458	SO_SUMMON_AQUA	Summon Water Spirit Aqua		
+2459	SO_SUMMON_VENTUS	Summon Wind Spirit Ventus		
+2460	SO_SUMMON_TERA	Summon Earth Spirit Tera		
+2461	SO_EL_ACTION	Elemental Action		
+2462	SO_EL_ANALYSIS	Four Spirit Analysis		
+2463	SO_EL_SYMPATHY	Spirit Sympathy		
+2464	SO_EL_CURE	Spirit Recovery		
+2465	SO_FIRE_INSIGNIA	Fire Insignia		
+2466	SO_WATER_INSIGNIA	Water Insignia		
+2467	SO_WIND_INSIGNIA	Wind Insignia		
+2468	SO_EARTH_INSIGNIA	Earth Insignia		
+2474	GN_TRAINING_SWORD	Sword Training		
+2475	GN_REMODELING_CART	Cart Remodeling		
+2476	GN_CART_TORNADO	Cart Tornado		
+2477	GN_CARTCANNON	Cart Cannon		
+2478	GN_CARTBOOST	Cart Boost		
+2479	GN_THORNS_TRAP	Thorn Trap		
+2480	GN_BLOOD_SUCKER	Blood Sucker		
+2481	GN_SPORE_EXPLOSION	Spore Explosion		
+2482	GN_WALLOFTHORN	Wall of Thorns		
+2483	GN_CRAZYWEED	Crazy Weed		
+2484	GN_CRAZYWEED_ATK	Crazy Weed Attack		
+2485	GN_DEMONIC_FIRE	Demonic Fire		
+2486	GN_FIRE_EXPANSION	Fire Expansion		
+2487	GN_FIRE_EXPANSION_SMOKE_POWDER	Fire Expansion Smoke Powder		
+2488	GN_FIRE_EXPANSION_TEAR_GAS	Fire Expansion Tear Gas		
+2489	GN_FIRE_EXPANSION_ACID	Fire Expansion Acid		
+2490	GN_HELLS_PLANT	Hell's Plant		
+2491	GN_HELLS_PLANT_ATK	Hell's Plant Attack		
+2492	GN_MANDRAGORA	Howling of Mandragora		
+2493	GN_SLINGITEM	Sling Item		
+2494	GN_CHANGEMATERIAL	Change Material		
+2495	GN_MIX_COOKING	Mix Cooking		
+2496	GN_MAKEBOMB	Create Bomb		
+2497	GN_S_PHARMACY	Special Pharmacy		
+2498	GN_SLINGITEM_RANGEMELEEATK	Sling Item Attack		
+2515	AB_SECRAMENT	Secrament		
+2516	WM_SEVERE_RAINSTORM_MELEE	Severe Rainstorm Melee		
+2517	SR_HOWLINGOFLION	Howling of Lion		
+2518	SR_RIDEINLIGHTNING	Ride In Lightening		
+2519	LG_OVERBRAND_BRANDISH	Over Brand		
+2534	RETURN_TO_ELDICASTES	Return To Eldicastes		
+2535	ALL_BUYING_STORE	Open Buying Store	X	Not relevant
+2536	ALL_GUARDIAN_RECALL	Guardian's Recall		
+2537	ALL_ODINS_POWER	Odin's Power		
+2544	MC_CARTDECORATE	Change Cart 2	X	Not relevant
+2551	RL_GLITTERING_GREED	Flip The Coin Greed		
+2552	RL_RICHS_COIN	Rich's Coin		
+2553	RL_MASS_SPIRAL	Mass Spiral		
+2554	RL_BANISHING_BUSTER	Banishing Buster		
+2555	RL_B_TRAP	Bind Trap		
+2556	RL_FLICKER	Flicker		
+2557	RL_S_STORM	Shatter Storm		
+2558	RL_E_CHAIN	Eternal Chain		
+2559	RL_QD_SHOT	Quick Draw Shot		
+2560	RL_C_MARKER	Crimson Marker		
+2561	RL_FIREDANCE	Fire Dance		
+2562	RL_H_MINE	Howling Mine		
+2563	RL_P_ALTER	Platinum Alter		
+2564	RL_FALLEN_ANGEL	Fallen Angel		
+2565	RL_R_TRIP	Round Trip		
+2566	RL_D_TAIL	Dragon Tail		
+2567	RL_FIRE_RAIN	Fire Rain		
+2568	RL_HEAT_BARREL	Heat Barrel		
+2569	RL_AM_BLAST	Anti-Material Blast		
+2570	RL_SLUGSHOT	Slug Shot		
+2571	RL_HAMMER_OF_GOD	Hammer of God		
+2572	RL_R_TRIP_PLUSATK	Round Trip Plus Attack		
+2573	RL_B_FLICKER_ATK	Bind Flicker Attack		
+2574	SJ_LIGHTOFMOON	Light Of Moon		
+2575	SJ_LUNARSTANCE	Lunar Stance		
+2576	SJ_FULLMOONKICK	Full Moon Kick		
+2577	SJ_LIGHTOFSTAR	Light Of Star		
+2578	SJ_STARSTANCE	Star Stance		
+2579	SJ_NEWMOONKICK	New Moon Kick		
+2580	SJ_FLASHKICK	Flash Kick		
+2581	SJ_STAREMPEROR	Advent of the Star Emperor		
+2582	SJ_NOVAEXPLOSING	Nova Explosing		
+2583	SJ_UNIVERSESTANCE	Universe Stance		
+2584	SJ_FALLINGSTAR	Falling Star		
+2585	SJ_GRAVITYCONTROL	Gravity Control		
+2586	SJ_BOOKOFDIMENSION	Book Of Dimension		
+2587	SJ_BOOKOFCREATINGSTAR	Book Of Creating Star		
+2588	SJ_DOCUMENT	Document		
+2589	SJ_PURIFY	Purify		
+2590	SJ_LIGHTOFSUN	Light Of Sun		
+2591	SJ_SUNSTANCE	Sun Stance		
+2592	SJ_SOLARBURST	Solar Burst		
+2593	SJ_PROMINENCEKICK	Prominence Kick		
+2594	SJ_FALLINGSTAR_ATK	Falling Star Attack		
+2595	SJ_FALLINGSTAR_ATK2	Falling Star Attack2		
+2596	SP_SOULGOLEM	Golem's Soul		
+2597	SP_SOULSHADOW	Soul Shadow		
+2598	SP_SOULFALCON	Soul Falcon		
+2599	SP_SOULFAIRY	Soul Fairy		
+2600	SP_CURSEEXPLOSION	Curse Explosion		
+2601	SP_SOULCURSE	Soul Curse		
+2602	SP_SPA	Spa		
+2603	SP_SHA	Sha		
+2604	SP_SWHOO	Shoo		
+2605	SP_SOULUNITY	Soul Unity		
+2606	SP_SOULDIVISION	Soul Division		
+2607	SP_SOULREAPER	Soul Reaper		
+2608	SP_SOULREVOLVE	Soul Revolve		
+2609	SP_SOULCOLLECT	Soul Collect		
+2610	SP_SOULEXPLOSION	Soul Explosion		
+2611	SP_SOULENERGY	Soul Energy Research		
+2612	SP_KAUTE	Kaute		
+3001	KO_YAMIKUMO	Yamikumo		
+3002	KO_RIGHT	Right Hand Mastery		
+3003	KO_LEFT	Left Hand Mastery		
+3004	KO_JYUMONJIKIRI	Cross Strike		
+3005	KO_SETSUDAN	Soul Sever		
+3006	KO_BAKURETSU	Bakuretsu Kunai		
+3007	KO_HAPPOKUNAI	Happo Kunai		
+3008	KO_MUCHANAGE	Mucha Nage		
+3009	KO_HUUMARANKA	Huuma Shuriken Ranka		
+3010	KO_MAKIBISHI	Makibishi		
+3011	KO_MEIKYOUSISUI	Meikyo Shisui		
+3012	KO_ZANZOU	Zanzou		
+3013	KO_KYOUGAKU	Kyougaku		
+3014	KO_JYUSATSU	Jyusatsu		
+3015	KO_KAHU_ENTEN	Kahu Enten		
+3016	KO_HYOUHU_HUBUKI	Hyouhu Hubuki		
+3017	KO_KAZEHU_SEIRAN	Kazehu Seiran		
+3018	KO_DOHU_KOUKAI	Dohu Koukai		
+3019	KO_KAIHOU	Technique Kaihou		
+3020	KO_ZENKAI	Zenkai		
+3021	KO_GENWAKU	Genwaku		
+3022	KO_IZAYOI	Izayoi		
+3023	KG_KAGEHUMI	Kagehumi		
+3024	KG_KYOMU	Kyomu		
+3025	KG_KAGEMUSYA	Kagemusha		
+3026	OB_ZANGETSU	Zangetsu		
+3027	OB_OBOROGENSOU	Oboro Gensou		
+3028	OB_OBOROGENSOU_TRANSITION_ATK	Hazy Moonlight Illusion Transition Attack		
+3029	OB_AKAITSUKI	Akaitsuki		
+3031	ECL_SNOWFLIP	Snow Flip		
+3032	ECL_PEONYMAMY	Peony Mamy		
+3033	ECL_SADAGUI	Sadagui		
+3034	ECL_SEQUOIADUST	Sequoia Dust		
+3035	ECLAGE_RECALL	Return To Eclage		
+5001	GC_DARKCROW	Dark Claw		
+5002	RA_UNLIMIT	Unlimited		
+5003	GN_ILLUSIONDOPING	Illusion Doping		
+5004	RK_DRAGONBREATH_WATER	Dragon Breath - Water		
+5005	RK_LUXANIMA	Lux Anima		
+5006	NC_MAGMA_ERUPTION	Magma Eruption		
+5007	WM_FRIGG_SONG	Frigg's Song		
+5008	SO_ELEMENTAL_SHIELD	Elemental Shield		
+5009	SR_FLASHCOMBO	Flash Combo		
+5010	SC_ESCAPE	Emergency Escape		
+5011	AB_OFFERTORIUM	Offertorium		
+5012	WL_TELEKINESIS_INTENSE	Intense Telekinesis		
+5013	LG_KINGS_GRACE	King's Grace		
+5014	ALL_FULL_THROTTLE	Full Throttle		
+5018	SU_BASIC_SKILL	New Basic Skill		
+5019	SU_BITE	Bite		
+5020	SU_HIDE	Hide		
+5021	SU_SCRATCH	Scratch		
+5022	SU_STOOP	Stoop		
+5023	SU_LOPE	Lope		
+5024	SU_SPRITEMABLE	Spirit Marble		
+5025	SU_POWEROFLAND	Power of Land		
+5026	SU_SV_STEMSPEAR	Silvervine Stem Spear		
+5027	SU_CN_POWDERING	Catnip Powdering		
+5028	SU_CN_METEOR	Catnip Meteor		
+5029	SU_SV_ROOTTWIST	Silvervine Root Twist		
+5030	SU_SV_ROOTTWIST_ATK	Silver Vine Root Twist Attack		
+5031	SU_POWEROFLIFE	Power of Life		
+5032	SU_SCAROFTAROU	Scar of Tarou		
+5033	SU_PICKYPECK	Picky Peck		
+5034	SU_PICKYPECK_DOUBLE_ATK	Picky Peck Double Attack		
+5035	SU_ARCLOUSEDASH	Arclouse Dash		
+5036	SU_LUNATICCARROTBEAT	Lunatic Carrot Beat		
+5037	SU_POWEROFSEA	Power of Sea		
+5038	SU_TUNABELLY	Tuna Belly		
+5039	SU_TUNAPARTY	Tuna Party		
+5040	SU_BUNCHOFSHRIMP	Bunch of Shrimp		
+5041	SU_FRESHSHRIMP	Fresh Shrimp		
+5042	SU_CN_METEOR_ATK			
+5043	SU_LUNATICCARROTBEAT2	Lunatic Carrot Beat 2		
+8001	HLIF_HEAL	Healing Touch		
+8002	HLIF_AVOID	Avoid		
+8003	HLIF_BRAIN	Brain Surgery		
+8004	HLIF_CHANGE	Change		
+8005	HAMI_CASTLE	Castling		
+8006	HAMI_DEFENCE	Defense		
+8007	HAMI_SKIN	Adamantium Skin		
+8008	HAMI_BLOODLUST	Bloodlust		
+8009	HFLI_MOON	Moonlight		
+8010	HFLI_FLEET	Fleeting Move		
+8011	HFLI_SPEED	Speed		
+8012	HFLI_SBR44	S.B.R.44		
+8013	HVAN_CAPRICE	Caprice		
+8014	HVAN_CHAOTIC	Benediction of Chaos		
+8015	HVAN_INSTRUCT	Instruct		
+8016	HVAN_EXPLOSION	Bio Explosion		
+8018	MH_SUMMON_LEGION	Summon Legion		
+8019	MH_NEEDLE_OF_PARALYZE	Needle of Paralyze		
+8020	MH_POISON_MIST	Poison Mist		
+8021	MH_PAIN_KILLER	Pain Killer		
+8022	MH_LIGHT_OF_REGENE	Light of Regene		
+8023	MH_OVERED_BOOST	Overed Boost		
+8024	MH_ERASER_CUTTER	Eraser Cutter		
+8025	MH_XENO_SLASHER	Xeno Slasher		
+8026	MH_SILENT_BREEZE	Silent Breeze		
+8027	MH_STYLE_CHANGE	Style Change		
+8028	MH_SONIC_CRAW	Sonic Claw		
+8029	MH_SILVERVEIN_RUSH	Silver Bain Rush		
+8030	MH_MIDNIGHT_FRENZY	Midnight Frenzy		
+8031	MH_STAHL_HORN	Steel Horn		
+8032	MH_GOLDENE_FERSE	Golden Heel		
+8033	MH_STEINWAND	Stone Wall		
+8034	MH_HEILIGE_STANGE	Holy Pole		
+8035	MH_ANGRIFFS_MODUS	Attack Mode		
+8036	MH_TINDER_BREAKER	Tinder Breaker		
+8037	MH_CBC	Continual Break Combo		
+8038	MH_EQC	Eternal Quick Combo		
+8039	MH_MAGMA_FLOW	Magma Flow		
+8040	MH_GRANITIC_ARMOR	Granitic Armor		
+8041	MH_LAVA_SLIDE	Lava Slide		
+8042	MH_PYROCLASTIC	Pyroclastic		
+8043	MH_VOLCANIC_ASH	Volcanic Ash		
+8201	MS_BASH	Bash		
+8202	MS_MAGNUM	Magnum_Break		
+8203	MS_BOWLINGBASH	Bowling_Bash		
+8204	MS_PARRYING	Parry		
+8205	MS_REFLECTSHIELD	Shield_Reflect		
+8206	MS_BERSERK	Frenzy		
+8207	MA_DOUBLE	Double_Strafe		
+8208	MA_SHOWER	Arrow_Shower		
+8209	MA_SKIDTRAP	Skid_Trap		
+8210	MA_LANDMINE	Land_Mine		
+8211	MA_SANDMAN	Sandman		
+8212	MA_FREEZINGTRAP	Freezing_Trap		
+8213	MA_REMOVETRAP	Remove_Trap		
+8214	MA_CHARGEARROW	Arrow_Repel		
+8215	MA_SHARPSHOOTING	Focused_Arrow_Strike		
+8216	ML_PIERCE	Pierce		
+8217	ML_BRANDISH	Brandish_Spear		
+8218	ML_SPIRALPIERCE	Spiral_Pierce		
+8219	ML_DEFENDER	Defending_Aura		
+8220	ML_AUTOGUARD	Guard		
+8221	ML_DEVOTION	Sacrifice		
+8222	MER_MAGNIFICAT	Magnificat		
+8223	MER_QUICKEN	Two-Hand_Quicken		
+8224	MER_SIGHT	Sight		
+8225	MER_CRASH	Crash		
+8226	MER_REGAIN	Regain		
+8227	MER_TENDER	Tender		
+8228	MER_BENEDICTION	Benediction		
+8229	MER_RECUPERATE	Recuperate		
+8230	MER_MENTALCURE	Mental_Cure		
+8231	MER_COMPRESS	Compress		
+8232	MER_PROVOKE	Provoke		
+8233	MER_AUTOBERSERK	Berserk		
+8234	MER_DECAGI	Decrease_AGI		
+8235	MER_SCAPEGOAT	Scapegoat		
+8236	MER_LEXDIVINA	Lex_Divina		
+8237	MER_ESTIMATION	Sense		
+8238	MER_KYRIE	Kyrie Eleison		
+8239	MER_BLESSING	Blessing		
+8240	MER_INCAGI	Increase Agility		
+8401	EL_CIRCLE_OF_FIRE	Circle of Fire		
+8402	EL_FIRE_CLOAK	Fire Cloak		
+8403	EL_FIRE_MANTLE	Fire Mantle		
+8404	EL_WATER_SCREEN	Water Screen		
+8405	EL_WATER_DROP	Water Drop		
+8406	EL_WATER_BARRIER	Water Barrier		
+8407	EL_WIND_STEP	Wind Step		
+8408	EL_WIND_CURTAIN	Wind Curtain		
+8409	EL_ZEPHYR	Zephyr		
+8410	EL_SOLID_SKIN	Solid Skin		
+8411	EL_STONE_SHIELD	Stone Shield		
+8412	EL_POWER_OF_GAIA	Power of Gaia		
+8413	EL_PYROTECHNIC	Pyrotechnic		
+8414	EL_HEATER	Heater		
+8415	EL_TROPIC	Tropic		
+8416	EL_AQUAPLAY	Aqua Play		
+8417	EL_COOLER	Cooler		
+8418	EL_CHILLY_AIR	Cool Air		
+8419	EL_GUST	Gust		
+8420	EL_BLAST	Blast		
+8421	EL_WILD_STORM	Wild Storm		
+8422	EL_PETROLOGY	Petrology		
+8423	EL_CURSED_SOIL	Cursed Soil		
+8424	EL_UPHEAVAL	Upheaval		
+8425	EL_FIRE_ARROW	Fire Arrow		
+8426	EL_FIRE_BOMB	Fire Bomb		
+8427	EL_FIRE_BOMB_ATK	Fire Bomb Attack		
+8428	EL_FIRE_WAVE	Fire Wave		
+8429	EL_FIRE_WAVE_ATK	Fire Wave Attack		
+8430	EL_ICE_NEEDLE	Ice Needle		
+8431	EL_WATER_SCREW	Water Screw		
+8432	EL_WATER_SCREW_ATK	Water Screw Attack		
+8433	EL_TIDAL_WEAPON	Tidal Weapon		
+8434	EL_WIND_SLASH	Wind Slasher		
+8435	EL_HURRICANE	Hurricane Rage		
+8436	EL_HURRICANE_ATK	Hurricane Rage Attack		
+8437	EL_TYPOON_MIS	Typhoon Missile		
+8438	EL_TYPOON_MIS_ATK	Typhoon Missile Attack		
+8439	EL_STONE_HAMMER	Stone Hammer		
+8440	EL_ROCK_CRUSHER	Rock Launcher		
+8441	EL_ROCK_CRUSHER_ATK	Rock Launcher Attack		
+8442	EL_STONE_RAIN	Stone Rain		
+10000	GD_APPROVAL	Official Guild Approval		
+10001	GD_KAFRACONTRACT	Kafra Contract		
+10002	GD_GUARDRESEARCH	Guardian Research		
+10003	GD_GUARDUP	Strengthen Guardians		
+10004	GD_EXTENSION	Guild Extension		
+10005	GD_GLORYGUILD	Guild's Glory		
+10006	GD_LEADERSHIP	Great Leadership		
+10007	GD_GLORYWOUNDS	Glorious Wounds		
+10008	GD_SOULCOLD	Cold Heart		
+10009	GD_HAWKEYES	Sharp Gaze		
+10010	GD_BATTLEORDER	Battle Orders		
+10011	GD_REGENERATION	Regeneration		
+10012	GD_RESTORE	Restoration		
+10013	GD_EMERGENCYCALL	Urgent Call		
+10014	GD_DEVELOPMENT	Permanent Development		
+10016	GD_GUILD_STORAGE	Guild Storage Expansion		

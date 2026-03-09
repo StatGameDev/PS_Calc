@@ -92,6 +92,16 @@ _Status: [ ] open, [x] done, [~] partial_
 
 ---
 
+## Planned (Post-Session J)
+
+| ID | Status | Description | Session |
+|---|---|---|---|
+| G48 | [ ] | Target debuff system: `target_active_scs: dict[str,int]` on Target; new target-side status calculator; "Target State" UI section with debuff toggles + level spinboxes. | R |
+| G49 | [ ] | Buffs section UI: role-grouped collapsible panel (Self Buffs / Party-Priest / Party-Sage / Bard songs / Dancer dances). Job-filter on self-buffs; party sub-groups always visible. | M–N |
+| G50 | [ ] | Passive skills completion: implement passive_skills.md entries not yet in StatusCalculator or mastery (weapon-type stat bonuses, conditional stat passives). Source: pc.c pc_calcstatus. | P |
+
+---
+
 ## Completed Gaps (reference)
 
 | ID | Description | Session |

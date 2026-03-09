@@ -151,6 +151,20 @@ Always grep first. Never load entire files.
     Always load gaps.md + session_roadmap.md when planning or scoping a session.
     Load context_log.md when estimating whether a planned session fits in one context window.
 
+### Lookup tables (`docs/lookup/`)
+
+    README.md          — column specs, usage examples, regeneration instructions
+    skill_ref.tsv      — 1168 skills: id · constant · description · category · notes
+    item_ref.tsv       — 2760 items:  id · aegis_name · name · type · script · on_equip · on_unequip · notes
+    mob_ref.tsv        — 1007 mobs:   id · sprite_name · name · notes
+    job_ref.tsv        — 36 jobs:     id · name · notes
+    job_skill_map.tsv  — job_id → skill_id mappings (one row per pair, includes inherited skills)
+
+    Use these for all ID↔name lookups instead of grepping the raw JSON databases.
+    skill_ref.tsv also carries category codes (B/P/O/D/S/H/C/M/X) and planning notes
+    from docs/skill_lists/skills_by_job.md for all categorised skills.
+    Regenerate after any DB rescrape — see docs/lookup/README.md for instructions.
+
 ### GUI (`gui/`)
 
     main_window.py          — QMainWindow, signal routing, pipeline triggers
