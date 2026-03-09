@@ -1030,3 +1030,54 @@ Loads `skill_tree.json`, returns frozenset of skill names for the given job_id.
 - All three JSON files regenerated: item_db.json, job_db.json, skill_tree.json.
 - Extended classes (Taekwon=4046, Star_Gladiator=4047, Soul_Linker=4049, Gangsi=4050, etc.) now have proper IDs — their items correctly filter out for all supported main jobs.
 - **Breaking**: saved builds with transcendent job_id values (23-35 old IDs) are invalid and must be recreated.
+
+---
+
+## GUI Design — Buffs & Target State  2026-03-09  claude-sonnet-4-6
+ctx_used: 71%
+
+Work items completed (design only — no code written):
+- Finalized Buffs section architecture: single `buffs_section` with 9 CollapsibleSubGroups:
+  Self Buffs, Party Buffs, Ground Effects, Bard Songs, Dancer Dances, Ensembles,
+  Applied Debuffs, Guild Buffs, Miscellaneous Effects
+- Designed `CollapsibleSubGroup` widget pattern (proposed: `gui/widgets/collapsible_sub_group.py`)
+- Designed `target_state_section` for combat panel: Applied Debuffs + Monster State + Status Ailments stub
+- Decided: Songs/Dances split into Bard/Dancer sub-groups with separate caster stat panels
+  + per-stat override toggle inline per song row
+- Decided: Party Buffs = single 2-column grid, all provider roles mixed for column balance
+- Decided: Ground Effects = QComboBox (None/Volcano/Deluge/Violent Gale) + level spinner
+- Decided: Eternal Chaos = Applied Debuffs sub-group (both Buffs section and Target State)
+- Decided: Manual Adjustments → collapsible sub-group inside build_header (not standalone section)
+- Decided: Active Items + Miscellaneous Effects both use named-effect toggle pattern (not spinboxes);
+  G46's per-stat spinbox implementation is a placeholder to replace in the same session
+- Written full spec to docs/gui_plan.md ("Buffs & Target State — UI Design Spec", ~430 lines)
+- Updated docs/session_roadmap.md: UI Grouping Design section replaced with gui_plan.md reference
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/gui_plan.md | ~281 | ~1,124 |
+| gui/layout_config.json | 94 | ~470 |
+| gui/sections/passive_section.py | 429 | ~3,003 |
+| gui/section.py | 178 | ~1,246 |
+| docs/session_roadmap.md | ~226 | ~904 |
+| docs/buffs/README.md | ~116 | ~464 |
+| docs/gaps.md (~2 partial) | ~160 | ~640 |
+| docs/completed_work.md | ~1,032 | ~4,128 |
+| docs/context_log.md | ~845 | ~3,380 |
+| **subtotal reads** | **~3,361** | **~15,359** |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| docs/gui_plan.md | +430 net | ~1,720 |
+| docs/session_roadmap.md | -40 net | ~160 |
+| docs/completed_work.md | +this entry | ~400 |
+| docs/context_log.md | +this entry | ~250 |
+
+Files created: none
+
+Total est_tokens: ~15,359 reads + ~2,530 edits + 6,000 fixed + ~25,000 conv ≈ 49,000
+Notes: Pure design/planning session. Extended design discussion iterated with user across 8
+decision points before writing the spec. Active Items named-effect distinction clarified mid-session.
+Next session: concrete design for how buffs/scripts communicate with core pipeline systems.

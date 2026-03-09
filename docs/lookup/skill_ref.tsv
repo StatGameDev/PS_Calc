@@ -31,9 +31,9 @@
 29	AL_INCAGI	Increase AGI	B	
 30	AL_DECAGI	Decrease AGI	D	
 31	AL_HOLYWATER	Aqua Benedicta	X	Creates item
-32	AL_CRUCIS	Signum Crucis	D	Ground-based
+32	AL_CRUCIS	Signum Crucis	D	
 33	AL_ANGELUS	Angelus	B	
-34	AL_BLESSING	Blessing	B	Different effect on self vs party members
+34	AL_BLESSING	Blessing	B, D	
 35	AL_CURE	Cure	X	Removes some statuses
 36	MC_INCCARRY	Enlarge Weight Limit	P	Only useful for weight capacity modelling
 37	MC_DISCOUNT	Discount	P	Not relevant
@@ -218,11 +218,11 @@
 217	RG_STRIPARMOR	Divest Armor	D	
 218	RG_STRIPHELM	Divest Helm	D	
 219	RG_INTIMIDATE	Snatch	O	
-220	RG_GRAFFITI	Scribble		
-221	RG_FLAGGRAFFITI	Piece		
-222	RG_CLEANER	Remover		
-223	RG_GANGSTER	Slyness		
-224	RG_COMPULSION	Haggle		
+220	RG_GRAFFITI	Scribble	X	Not relevant
+221	RG_FLAGGRAFFITI	Piece	X	Not relevant
+222	RG_CLEANER	Remover	X	Not relevant
+223	RG_GANGSTER	Slyness	X	Not relevant
+224	RG_COMPULSION	Haggle	X	Not relevant
 225	RG_PLAGIARISM	Intimidate	M	Allows use of any skill with relevant flag
 226	AM_AXEMASTERY	Axe Mastery	P	
 227	AM_LEARNINGPOTION	Potion Research	P	
@@ -232,13 +232,13 @@
 231	AM_POTIONPITCHER	Aid Potion	H	
 232	AM_CANNIBALIZE	Summon Flora	X	Summons mobs; maybe model Geographer heal
 233	AM_SPHEREMINE	Summon Marine Sphere	X	Summons self-destruct mob; model summon HP and damage
-234	AM_CP_WEAPON	Alchemical Weapon		
-235	AM_CP_SHIELD	Synthesized Shield		
-236	AM_CP_ARMOR	Synthetic Armor		
-237	AM_CP_HELM	Biochemical Helm		
-238	AM_BIOETHICS	Bioethics		
-243	AM_CALLHOMUN	Call Homunculus		
-244	AM_REST	Vaporize		
+234	AM_CP_WEAPON	Alchemical Weapon	X	Not relevant
+235	AM_CP_SHIELD	Synthesized Shield	X	Not relevant
+236	AM_CP_ARMOR	Synthetic Armor	X	Not relevant
+237	AM_CP_HELM	Biochemical Helm	X	Not relevant
+238	AM_BIOETHICS	Bioethics	X	Not relevant
+243	AM_CALLHOMUN	Call Homunculus	X	Not relevant
+244	AM_REST	Vaporize	X	Not relevant
 247	AM_RESURRECTHOMUN	Homunculus Resurrection	X	Not relevant
 248	CR_TRUST	Faith	P	
 249	CR_AUTOGUARD	Guard	B	Relevant for incoming damage modelling; advanced multi-hit
@@ -328,7 +328,7 @@
 334	WE_MALE	I Will Protect You		
 335	WE_FEMALE	I Look up to You		
 336	WE_CALLPARTNER	I miss You		
-337	ITM_TOMAHAWK	Throw Tomahawk		
+337	ITM_TOMAHAWK	Throw Tomahawk	O	From Tomahawk Item
 338	NPC_DARKCROSS	Cross of Darkness		
 339	NPC_GRANDDARKNESS	Grand cross of Darkness		
 340	NPC_DARKSTRIKE	Soul Strike of Darkness		
@@ -458,7 +458,7 @@
 470	SL_SWOO	Eswoo		
 471	SL_SKE	Eske		
 472	SL_SKA	Eska		
-473	SM_SELFPROVOKE	Provoke Self		
+473	SM_SELFPROVOKE	Provoke Self	B	Might be buff from Aloe Vera
 474	NPC_EMOTION_ON	Emotion ON		
 475	ST_PRESERVE	Preserve		
 476	ST_FULLSTRIP	Divest All		
@@ -591,8 +591,8 @@
 1009	HT_PHANTASMIC	Phantasmic Arrow	O	
 1010	BA_PANGVOICE	Pang Voice		
 1011	DC_WINKCHARM	Wink of Charm		
-1012	BS_UNFAIRLYTRICK	Unfair Trick		
-1013	BS_GREED	Greed		
+1012	BS_UNFAIRLYTRICK	Unfair Trick	X	Not relevant
+1013	BS_GREED	Greed	X	Not relevant
 1014	PR_REDEMPTIO	Redemptio	X	Not relevant
 1015	MO_KITRANSLATION	Ki Translation	X	Allow manual spirit sphere count for any build
 1016	MO_BALKYOUNG	Ki Explosion	O, S	
@@ -1158,11 +1158,11 @@
 10003	GD_GUARDUP	Strengthen Guardians		
 10004	GD_EXTENSION	Guild Extension		
 10005	GD_GLORYGUILD	Guild's Glory		
-10006	GD_LEADERSHIP	Great Leadership		
-10007	GD_GLORYWOUNDS	Glorious Wounds		
-10008	GD_SOULCOLD	Cold Heart		
-10009	GD_HAWKEYES	Sharp Gaze		
-10010	GD_BATTLEORDER	Battle Orders		
+10006	GD_LEADERSHIP	Great Leadership	B	Guild Only
+10007	GD_GLORYWOUNDS	Glorious Wounds	B	Guild Only
+10008	GD_SOULCOLD	Cold Heart	B	Guild Only
+10009	GD_HAWKEYES	Sharp Gaze	B	Guild Only
+10010	GD_BATTLEORDER	Battle Orders	B	Guild Only
 10011	GD_REGENERATION	Regeneration		
 10012	GD_RESTORE	Restoration		
 10013	GD_EMERGENCYCALL	Urgent Call		

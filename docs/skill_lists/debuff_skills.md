@@ -2,6 +2,7 @@
 6
 30
 32
+34 //Only against Demons and Undead Attribute
 78
 92 //ground-based
 215

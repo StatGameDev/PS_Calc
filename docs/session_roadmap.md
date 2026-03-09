@@ -187,30 +187,37 @@ Toggles per debuff (PROVOKE, AGIDISCOUNT, etc.) + level spinbox.
 
 ## UI Grouping Design (Buffs Section)
 
-Principle: group by **scenario role** (who provides the buff), not by mechanical effect.
-Users think "I have Blessing + Gloria + Bragi," not "I have a LUK+30 and a DEX% effect."
+**Finalized spec in `docs/gui_plan.md` — "Buffs & Target State — UI Design Spec" section.**
+Design session: 2026-03-09. Do not re-derive from first principles; read gui_plan.md instead.
 
-**Player-side — Buffs collapsible section (builder/passive panel):**
+Summary:
+- Single `buffs_section` on builder panel with 9 `CollapsibleSubGroup` sub-groups:
+  Self Buffs, Party Buffs, Ground Effects, Bard Songs, Dancer Dances, Ensembles,
+  Applied Debuffs, Guild Buffs, Miscellaneous Effects
+- `target_state_section` on combat panel (below Summary): Applied Debuffs, Monster State, Status Ailments stub
+- `CollapsibleSubGroup` widget class needed (`gui/widgets/collapsible_sub_group.py`)
+- `manual_adj_section` removed as standalone; becomes sub-group inside `build_header`
+- Active Items (G46) and Miscellaneous Effects both use named-effect toggles (not spinboxes)
 
-```
-Buffs
-├── Self Buffs          job-filtered; toggle + level per SC (same pattern as Passives)
-├── Party — Priest / Acolyte    SC_BLESSING, SC_GLORIA, SC_INCREASEAGI, SC_ANGELUS, …
-├── Party — Sage / Scholar      (SCs TBD after Session M Hercules lookups)
-├── Party — Bard (songs)        ← Session J
-└── Party — Dancer (dances)     ← Session J
-```
+---
 
-**Target-side — Target State collapsible section (combat panel, near target selector):**
+## Next Session — Core System Design for Buffs / Scripts
 
-```
-Target State
-├── Debuffs on target   SC_PROVOKE, etc. (Session R)
-└── Target Ailments     Freeze / Stone / Stun — deferred (advanced combat modelling)
-```
+**Goal**: Design how `support_buffs`, `song_state`, and `misc_buff_bonuses` data flows into the
+core pipeline systems. No Hercules greps needed — formulas confirmed, architecture is the focus.
 
-**Consumables**: SC_FOOD_* / SC_INC* stay in G46 Active Items (already live). No migration
-unless SC-cap enforcement across food + skill sources becomes necessary.
+Key questions to resolve:
+1. Where in the pipeline does each support_buff SC modify stats?
+   (StatusCalculator extension vs new pre-pipeline pass vs inline in modifiers)
+2. How does `song_state` data reach StatusCalculator? Via PlayerBuild directly, or a new
+   `SongCalculator` that pre-computes SC val1/val2 values and injects them?
+3. How do `misc_buff_bonuses` aggregate — same path as `active_items_bonuses` in `_apply_gear_bonuses`?
+4. How does `target_active_scs` (Target State) reach the pipeline — via Target fields, or
+   a new `TargetStatusCalculator` that computes effective stats before each pipeline run?
+5. SC_ETERNALCHAOS shared data source between buffs_section and target_state_section:
+   collect/load-build round-trip design.
+
+Output: architecture decision document or additions to existing docs; no code.
 
 ---
 

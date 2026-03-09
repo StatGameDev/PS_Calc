@@ -816,6 +816,40 @@ val2/val3 mapping); corrected by direct targeted greps in main conversation.
 
 ---
 
+## GUI Design — Buffs & Target State  2026-03-09  claude-sonnet-4-6
+ctx_used: 71%
+
+Work items: Buffs section + Target State full UI design spec written to docs/gui_plan.md.
+No code changes. 9 collapsible sub-groups in buffs_section; target_state_section on combat panel.
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/gui_plan.md | ~281 | ~1,124 |
+| gui/layout_config.json | 94 | ~470 |
+| gui/sections/passive_section.py | 429 | ~3,003 |
+| gui/section.py | 178 | ~1,246 |
+| docs/session_roadmap.md | ~226 | ~904 |
+| docs/buffs/README.md | ~116 | ~464 |
+| docs/gaps.md (~2 partial) | ~160 | ~640 |
+| docs/completed_work.md | ~1,032 | ~4,128 |
+| docs/context_log.md | ~845 | ~3,380 |
+
+Files edited:
+| file | lines | est_tok |
+|---|---|---|
+| docs/gui_plan.md | +430 | ~1,720 |
+| docs/session_roadmap.md | -40 net | ~160 |
+
+Files created: none
+
+Total est_tokens: ~15,359 reads + ~2,530 edits + 6,000 fixed + ~25,000 conv ≈ 49,000
+Notes: Pure design session. 71% context at user's read-out. Higher conversation overhead than
+typical due to iterative design discussion. Named-effect toggle UX decision for Active Items and
+Misc Effects was the late-session clarification that changed the Miscellaneous Effects spec.
+
+---
+
 ## Template for future sessions
 
 ## Session X  YYYY-MM-DD  claude-sonnet-4-6
