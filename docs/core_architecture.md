@@ -56,9 +56,15 @@ User edits widget
           │  Original manual values preserved — gear bonuses never written to disk
           │
           ├─ StatusCalculator.calculate(build)    → StatusData
+          │   reads: build.support_buffs (priest/ground buffs)
+          │   reads: build.song_state (Bard/Dancer songs)
+          │
+          ├─ TargetStatusCalculator.apply_debuffs(target)  → Target (effective)
+          │   reads: target.target_active_scs
+          │   returns new Target via dataclasses.replace
           │
           └─ BattlePipeline.calculate(
-               build, status, target,
+               build, status, effective_target,
                gear_bonuses, skill
              )                                    → BattleResult
                → MainWindow emits result_updated(BattleResult)
@@ -139,4 +145,56 @@ Two separate fields, two separate effects, no shared source:
   enemy casts it on the player → player.def2=0 in incoming pipeline.
 
 ### Decisions
-_(fill in after design session)_
+_Resolved: Design Session — Buff Architecture (2026-03-09)_
+
+**Q1 — StatusCalculator extension strategy: Option A**
+
+Extend `StatusCalculator.calculate()` to read `build.support_buffs`.
+- SC effects that modify base stats (STR/INT/DEX/AGI/LUK) are applied before downstream derived
+  stat computation (BATK, HIT, FLEE, CRI, etc.) — same slot as `build.bonus_*` additions.
+- SC effects that modify derived stats directly (DEF%, MaxHP, MaxSP, FLEE, HIT, CRI, ASPD)
+  are applied at the relevant block within StatusCalculator.
+- **Exception**: WATK-type buffs (SC_DRUMBATTLE, SC_NIBELUNGEN, SC_VOLCANO) are pre-SkillRatio
+  flat ATK bonuses — they belong in `BaseDamage` (same position as ForgeBonus), not StatusCalculator.
+
+Rationale: StatusCalculator already accepts buff inputs via `build.bonus_*` and
+`build.active_status_levels`. Adding `build.support_buffs` follows the same pattern.
+A separate SupportBuffCalculator would repeat the same stat-computation logic in a new file
+for no architectural gain.
+
+**Q2 — Song state reach: Option A**
+
+`StatusCalculator.calculate()` reads `build.song_state` directly and computes val1/val2
+inline for each active song (level > 0). No separate SongCalculator class.
+- Songs target FLEE, FLEE2, HIT, CRI, MaxHP, MaxSP, ASPD — all already computed there.
+- val1/val2 formulas are ~5 lines per song (function of caster_* stats + song level).
+- **Exception**: SC_DRUMBATTLE WATK bonus → BaseDamage (same as Q1 exception).
+
+**Q3 — misc_buff_bonuses: Deferred**
+
+Do not add `misc_buff_bonuses` to `PlayerBuild` yet. No concrete use case for M or M2.
+When needed, follow the `_apply_gear_bonuses` pattern: inject flat bonuses into `build.bonus_*`
+fields via `dataclasses.replace` before StatusCalculator runs. StatusCalculator never sees the source.
+
+**Q4 — target_active_scs reach: Option B**
+
+New `core/calculators/target_status_calculator.py`:
+```python
+class TargetStatusCalculator:
+    @staticmethod
+    def apply_debuffs(target: Target) -> Target:
+        """Apply target_active_scs debuffs; return effective Target via dataclasses.replace."""
+        ...
+```
+Called in `MainWindow._on_build_changed()` before pipeline runs, alongside the existing
+StatusCalculator call. Modifiers receive the effective Target and remain ignorant of debuff state.
+Effects: SC_ETERNALCHAOS → def2=0, SC_CURSE → luk=0, SC_DECREASEAGI → agi reduction,
+element debuffs → element_override, etc.
+
+Rationale: If modifiers read `target.target_active_scs` directly, every modifier touching
+def/luk/flee must check the debuff dict — couples pipeline to debuff system.
+`TargetStatusCalculator` is a thin pre-pass (~20 lines), symmetric with `_apply_gear_bonuses`.
+
+**Q5 — SC_ETERNALCHAOS: Already resolved** (two fields, two effects, no shared source)
+- `support_buffs["SC_ETERNALCHAOS"]` → applied to enemy target → outgoing pipeline
+- `player_active_scs["SC_ETERNALCHAOS"]` → applied to player → incoming pipeline

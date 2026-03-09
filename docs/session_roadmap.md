@@ -42,23 +42,20 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | K2 | ActiveItems + ManualAdj sections + bonus column redesign + skill_data bugfix | G15, G46, G47 |
 | L | StepsBar tooltips + state persistence + inline dropdown + job ID system fix | G39, G40, G45 |
 | M0 | Buff/Debuff UI scaffolding: CollapsibleSubGroup widget, buffs_section (8 sub-groups, Self Buffs wired), player_debuffs_section, Manual Adj into build_header, passive_section strip | G49~ |
+| Design | Buff Architecture Q1–Q5 resolved; decisions written to core_architecture.md | — |
 
 ---
 
-## Design Session — Buff Architecture
-_Prerequisite for Sessions M and M2. No code. Output: fill in `docs/core_architecture.md` decisions._
+## Design Session — Buff Architecture ✅ DONE (2026-03-09)
+_Decisions written to `docs/core_architecture.md` — "Buff Integration Design — Decisions"._
 
-**Goal**: Resolve the 5 open architecture questions for how buff data flows into the pipeline.
-**Questions**: see `docs/core_architecture.md` — "Buff Integration Design — Open questions".
-**No Hercules research needed** — all formulas are confirmed in `docs/buffs/`.
-**Estimated tokens**: ~20–25k (design discussion + doc updates only).
-
-### Output required before M starts:
-- Decision on Q1 (where support_buffs SCs modify stats)
-- Decision on Q2 (how song_state reaches StatusCalculator)
-- Decision on Q3 (misc_buff_bonuses aggregation path)
-- Decision on Q4 (target_active_scs reach into pipeline)
-- Decision on Q5 (SC_ETERNALCHAOS — now largely resolved by separate player_active_scs field)
+| Q | Decision |
+|---|----------|
+| Q1 | Extend StatusCalculator (Option A); WATK buffs → BaseDamage |
+| Q2 | StatusCalculator reads build.song_state directly (Option A) |
+| Q3 | Deferred — no concrete use case for M/M2 |
+| Q4 | TargetStatusCalculator.apply_debuffs(target) → effective Target (Option B) |
+| Q5 | Already resolved — two separate fields |
 
 ---
 
