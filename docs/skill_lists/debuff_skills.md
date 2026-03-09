@@ -1,13 +1,11 @@
-# List of supportive skills that generate a debuff, distinction from statuses unclear
+# List of skills that generate a debuff, specifically those primarily changing base and derived stats with no source other than the skill
 6
 30
 32
-78 //technically a status effect, here due to order of implementation
-
+78
+215
+216
+217
+218
 308
 328
-
-1008 //changes target attribute, include under debuffs
-1017 //changes target attribute, include under debuffs
-1018 //changes target attribute, include under debuffs
-1019 //changes target attribute, include under debuffs
