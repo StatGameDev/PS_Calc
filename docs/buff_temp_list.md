@@ -34,7 +34,7 @@ _Status: Done | Partial | Future | Deferred_
 | 268 | MO_STEELBODY | Self | SC_STEELBODY; aspd_rate+=250 (status_calc_aspd_rate:5670); def cap=90 (#ifndef RENEWAL); UI+calc Session N |
 | 270 | MO_EXPLOSIONSPIRITS | Self | SC_EXPLOSIONSPIRITS; cri+=val2=75+25×lv (status.c:4753); UI+calc Session N |
 | 285 | SA_VOLCANO | Ground | SC_VOLCANO; val2=lv*10 WATK; base_damage.py + Ground Effects combo (Session O) |
-| 286 | SA_DELUGE | Ground | SC_DELUGE; val2=deluge_eff[lv-1]={5,9,12,14,15}% MaxHP; no damage effect; UI toggle only (Session O) |
+| 286 | SA_DELUGE | Ground | SC_DELUGE; val2=deluge_eff[lv-1]={5,9,12,14,15}% MaxHP; status_calculator.py + Ground Effects combo (Session O fix) |
 | 287 | SA_VIOLENTGALE | Ground | SC_VIOLENTGALE; val2=lv*3 FLEE; status_calculator.py + Ground Effects combo (Session O) |
 | 309 | BD_DRUMBATTLEFIELD | Ensemble | SC_DRUMBATTLE in base_damage.py (Session M2) |
 | 310 | BD_RINGNIBELUNGEN | Ensemble | SC_NIBELUNGEN in base_damage.py (Session M2) |

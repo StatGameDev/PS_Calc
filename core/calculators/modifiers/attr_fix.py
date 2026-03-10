@@ -1,18 +1,59 @@
+from core.models.build import PlayerBuild
 from core.models.weapon import Weapon
 from core.models.target import Target
 from core.models.damage import DamageResult
 from core.data_loader import loader
 from pmf.operations import _scale_floor, pmf_stats
 
+# Ground element attack amplification table (enchant_eff, by skill level 1-5)
+# skill.c:25191: const int skill_enchant_eff[5] = { 10, 14, 17, 19, 20 };
+_ENCHANT_EFF = (10, 14, 17, 19, 20)
+
+# Element integer constants (ELE_*) for ground effect matching
+# weapon_endow.md / Hercules elements.conf
+_ELE_FIRE  = 4
+_ELE_WATER = 5
+_ELE_WIND  = 6
+
+_GROUND_ELEMENT = {
+    "SC_VOLCANO":    _ELE_FIRE,
+    "SC_DELUGE":     _ELE_WATER,
+    "SC_VIOLENTGALE": _ELE_WIND,
+}
+
 
 class AttrFix:
     """Element damage multiplier (after active status bonuses, verbatim position in battle_calc_weapon_attack)."""
 
     @staticmethod
-    def calculate(weapon: Weapon, target: Target, pmf: dict, result: DamageResult) -> dict:
+    def calculate(weapon: Weapon, target: Target, pmf: dict, result: DamageResult,
+                  build: PlayerBuild | None = None) -> dict:
         defending = loader.get_element_name(target.element)
         attacking = loader.get_element_name(weapon.element)
         multiplier = loader.get_attr_fix_multiplier(attacking, defending, target.element_level or 1)
+
+        # Ground element attack amplification: ratio += enchant_eff[lv-1] when
+        # attack element matches the ground element.
+        # battle.c:395-400 (inside battle_attr_fix, applies to attacker's SC):
+        #   if(sc->data[SC_VOLCANO] && atk_elem == ELE_FIRE)
+        #       ratio += skill->enchant_eff[sc->data[SC_VOLCANO]->val1-1];
+        # (same pattern for SC_DELUGE/ELE_WATER and SC_VIOLENTGALE/ELE_WIND)
+        # Pre-renewal: element check for the stat bonus is separate; the ratio
+        # amplification has NO element check on the attacker's armor — it only
+        # checks atk_elem (the weapon/skill attack element).
+        if build is not None:
+            ge = build.support_buffs.get("ground_effect")
+            if ge in _GROUND_ELEMENT and weapon.element == _GROUND_ELEMENT[ge]:
+                ge_lv = int(build.support_buffs.get("ground_effect_lv", 1))
+                enchant_bonus = _ENCHANT_EFF[ge_lv - 1]
+                multiplier += enchant_bonus
+                result.add_step(
+                    name=f"{ge} enchant",
+                    value=None,
+                    note=f"Ground enchant Lv{ge_lv}: +{enchant_bonus}% to element ratio",
+                    formula=f"enchant_eff[{ge_lv}-1] = {enchant_bonus}",
+                    hercules_ref=f"battle.c:395-400 ratio+=skill->enchant_eff[val1-1]; skill.c:25191",
+                )
 
         pmf = _scale_floor(pmf, multiplier, 100)
 
@@ -24,7 +65,7 @@ class AttrFix:
             max_value=mx,
             multiplier=multiplier / 100.0,
             note=f"{attacking} vs {defending} Lv{target.element_level or 1} ({multiplier}%)",
-            formula=f"dmg * {multiplier} // 100 (from attr_fix table)",
+            formula=f"dmg * {multiplier} // 100 (from attr_fix table + ground enchant)",
             hercules_ref="battle.c: if (tstatus->ele) wd.damage = battle_calc_elem_damage(...);"
         )
         return pmf

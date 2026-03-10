@@ -38,7 +38,7 @@ stands in the field or does not.
 **Formula**: `val2 = deluge_eff[skill_lv-1]` = {5, 9, 12, 14, 15}%; `maxhp += maxhp * val2 / 100`
 **Hercules ref**: status.c:7793-7799 (init); status.c:5768-5769 (apply); skill.c:25192 (deluge_eff table)
 **Pre-renewal guard**: `#ifndef RENEWAL` — if player armor element ≠ Water, val2 = 0 (status.c:7795-7797)
-**Calculator**: MaxHP does not affect damage output — UI toggle present, no pipeline step
+**Calculator**: MaxHP is a build stat — implemented in status_calculator.py (Session O fix)
 **Inputs**: QComboBox (Deluge selected) + level QSpinBox 1–5
 
 ---
@@ -90,12 +90,23 @@ Deals Holy damage to undead on ground. Hostile skill, not a buff. Out of scope.
 
 ---
 
-## Known interactions — stubs
+## Ground Element Attack Amplification [confirmed]
 
-Ground elements (Volcano/Deluge/ViolentGale) also affect which element is "boosted"
-by atk/matk attribute tables when the attacker or target stands in the field.
-The exact interaction (field element vs. weapon element vs. skill element) needs
-Hercules trace before implementing. Deferred.
+All three SCs also amplify attacks whose element matches the ground element.
+This is applied in `battle_attr_fix` by adding to the elemental `ratio` before
+the damage multiplier is applied.
+
+**Formula**: `ratio += enchant_eff[skill_lv - 1]`
+**Table** (`enchant_eff`, skill.c:25191): {10, 14, 17, 19, 20} percentage points
+**Condition**: `atk_elem == ELE_FIRE` (Volcano) / `ELE_WATER` (Deluge) / `ELE_WIND` (ViolentGale)
+**Hercules ref**: battle.c:395-400 (inside `battle_attr_fix`); skill.c:25191
+
+**No armor element check** on the amplification — only the weapon/skill attack element matters.
+The armor element check (val2=0 if armor ≠ ground element) applies only to the stat bonuses
+(WATK/FLEE/MaxHP), NOT to the ratio amplification.
+
+**Calculator**: implemented in `attr_fix.py` — `build` passed in from `battle_pipeline.py`.
+Produces a separate DamageStep before the Attr Fix step.
 
 ---
 
@@ -103,6 +114,6 @@ Hercules trace before implementing. Deferred.
 
 | SC | Formula | Calculator | GUI |
 |----|---------|-----------|-----|
-| SC_VOLCANO | confirmed (status.c:7780, 4570) | base_damage.py (Session O) | buffs_section Ground Effects combo |
-| SC_DELUGE | confirmed (status.c:7793, 5768; skill.c:25192) | N/A — MaxHP only, no damage effect | buffs_section Ground Effects combo |
-| SC_VIOLENTGALE | confirmed (status.c:7786, 4871) | status_calculator.py (Session O) | buffs_section Ground Effects combo |
+| SC_VOLCANO | confirmed (status.c:7780, 4570; battle.c:395; skill.c:25191) | base_damage.py (WATK) + attr_fix.py (ratio+enchant when atk=Fire) | Ground Effects combo |
+| SC_DELUGE | confirmed (status.c:7793, 5768; skill.c:25192; battle.c:399) | status_calculator.py (MaxHP) + attr_fix.py (ratio+enchant when atk=Water) | Ground Effects combo |
+| SC_VIOLENTGALE | confirmed (status.c:7786, 4871; battle.c:397; skill.c:25191) | status_calculator.py (FLEE) + attr_fix.py (ratio+enchant when atk=Wind) | Ground Effects combo |

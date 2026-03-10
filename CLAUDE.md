@@ -42,6 +42,14 @@ every implementation is backed by a line number that was actually read.
 "I found a line that mentions this SC" is not the same as "I read the formula."
 If you have not read the formula line, say so explicitly before implementing.
 
+**Implement every confirmed effect — no silent omissions.**
+If a Hercules source line confirms an effect exists (even if it does not directly
+affect the damage pipeline), it must be implemented or explicitly flagged to the
+user for a decision. Do not unilaterally decide an effect is "not important enough"
+and skip it without telling the user. This applies to any stat tracked in StatusData
+(MaxHP, FLEE, ASPD, etc.) and to any pipeline step, regardless of whether that stat
+feeds the outgoing damage number.
+
 ---
 
 ## Cost Controls — Hard Limits

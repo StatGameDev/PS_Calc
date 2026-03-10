@@ -213,7 +213,7 @@ class BattlePipeline:
         pmf = MasteryFix.calculate(weapon, build, target, pmf, result)
 
         # === ATTR FIX ===
-        pmf = AttrFix.calculate(weapon, target, pmf, result)
+        pmf = AttrFix.calculate(weapon, target, pmf, result, build)
 
         # === FORGE BONUS — flat star ATK × div, after AttrFix, before CardFix ===
         # Source: battle.c:5864 (#ifndef RENEWAL): ATK_ADD2(wd.div_*right_weapon.star, ...)

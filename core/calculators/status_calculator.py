@@ -291,6 +291,16 @@ class StatusCalculator:
             val2 = 5 + 2 * song_lv + s_vit // 10 + mus_lv
             status.max_hp += status.max_hp * val2 // 100
 
+        # SC_DELUGE (SA_DELUGE): maxhp% bonus while standing on Water-element ground
+        # val2 = deluge_eff[skill_lv-1] = {5, 9, 12, 14, 15}%; status.c:7793-7799 (init), 5768-5769 (apply)
+        # Pre-renewal (#ifndef RENEWAL): bonus = 0 if player armor element is not Water.
+        # Calculator: user is responsible for applying only when armor element matches.
+        _DELUGE_EFF = (5, 9, 12, 14, 15)
+        if support.get("ground_effect") == "SC_DELUGE":
+            del_lv = int(support.get("ground_effect_lv", 1))
+            del_val2 = _DELUGE_EFF[del_lv - 1]
+            status.max_hp += status.max_hp * del_val2 // 100
+
         # SC_POEMBRAGI: cast time % + after-cast delay % (display-only)
         # skill.c:13261-13267; applied in cast time / ACD checks, not simulated here.
         if song.get("SC_POEMBRAGI"):
