@@ -15,6 +15,12 @@ from core.models.build import PlayerBuild
 from gui.section import Section
 from gui.widgets.collapsible_sub_group import CollapsibleSubGroup
 
+
+class _NoWheelCombo(QComboBox):
+    """QComboBox that ignores scroll wheel events."""
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
 # Pre-renewal job IDs — Hercules constants.conf Job_* values.
 _JOB_NAMES: list[tuple[int, str]] = [
     (0,    "Novice"),
@@ -107,7 +113,7 @@ class BuildHeaderSection(Section):
         job_layout.setSpacing(6)
 
         job_layout.addWidget(QLabel("Job:"))
-        self._job_combo = QComboBox()
+        self._job_combo = _NoWheelCombo()
         for job_id, job_name in _JOB_NAMES:
             self._job_combo.addItem(job_name, job_id)
         self._job_combo.currentIndexChanged.connect(self._emit_job_changed)

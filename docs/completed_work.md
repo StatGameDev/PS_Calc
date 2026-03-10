@@ -1262,3 +1262,22 @@ Added after SC_GS_GATLINGFEVER flee block. Reads `support["ground_effect"]=="SC_
 
 **O-4 — Ground Effects UI** (`gui/sections/buffs_section.py`)
 Replaced stub (sub-group 3) with real widget: QComboBox (none|Volcano|Deluge|Violent Gale) + QSpinBox Lv 1–5 (enabled when combo ≠ none). Module-level `_GROUND_SC_KEYS = [None, "SC_VOLCANO", "SC_DELUGE", "SC_VIOLENTGALE"]`. Storage: `support_buffs["ground_effect"]` (str|None) + `support_buffs["ground_effect_lv"]` (int). `_on_ground_changed` handler enables/disables level spin. load_build + collect_into wired.
+
+## Session GUI-Adj — Widget Adjustment Pass
+
+**Goal**: Tighten GUI widget usage: spinboxes → dropdowns/toggles where appropriate,
+suppress mouse-wheel on all dropdowns, widen spinboxes that were clipping their text.
+No calculator changes — pure UI session.
+
+**GUI-Adj-1 — Spinbox → dropdown/toggle conversions**
+- `passive_section.py`: `BS_HILTBINDING` (max_lv=1) → `QCheckBox`; all other masteries (max_lv=10) → `_NoWheelCombo` dropdowns ("Off", 1–10). Introduced `_get_mastery_value` / `_set_mastery_value` helpers; removed `QSpinBox` entirely from the file.
+- `buffs_section.py` (major rewrite): self-buff level spins → `_NoWheelCombo` (`_sc_combos`); party "spin" type → `_NoWheelCombo` (`_party_level_combos`); song/dance level spins → `_NoWheelCombo` (`_song_level_combos`, `_dance_level_combos`); ensemble spins → `_NoWheelCombo` (`_ensemble_combos`); ground level spin → `_NoWheelCombo` (`_ground_lv_combo`); Musical/Dance Lesson spinbox → `_NoWheelCombo` (0–10). Added `_make_level_combo()` and `_set_combo_value()` helpers. Caster stat spins (1–255) and song override spins (1–255) kept as `QSpinBox` but replaced with `_NoWheelSpin` subclass.
+
+**GUI-Adj-2 — No-wheel on all dropdowns**
+`_NoWheelCombo` (ignores `wheelEvent`) added to and used in all files containing `QComboBox`:
+- `gui/sections/`: `equipment_section`, `passive_section`, `buffs_section`, `combat_controls`, `build_header`, `incoming_damage`
+- `gui/`: `main_window`
+- `gui/dialogs/`: `new_build_dialog`, `monster_browser`
+
+**GUI-Adj-3 — Refine spinbox sizing + cap**
+`equipment_section.py`: refine spinbox max changed from 20 → **10** (pre-renewal cap); width widened 50 → **58px** (prevents "+10" clipping). Combat controls `_level_spin` width 60 → **68px** (prevents "Lv 10" clipping).

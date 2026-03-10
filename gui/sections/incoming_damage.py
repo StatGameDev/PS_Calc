@@ -21,6 +21,12 @@ from PySide6.QtWidgets import (
 from core.models.damage import DamageResult, DamageStep
 from gui.section import Section
 
+
+class _NoWheelCombo(QComboBox):
+    """QComboBox that ignores scroll wheel events."""
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
 _ELEMENTS = [
     (0, "Neutral"),
     (1, "Water"),
@@ -126,7 +132,7 @@ class IncomingDamageSection(Section):
 
         magic_ele_lbl = QLabel("Ele:")
         magic_ele_lbl.setObjectName("incoming_label")
-        self._magic_ele_combo = QComboBox()
+        self._magic_ele_combo = _NoWheelCombo()
         self._magic_ele_combo.addItem("Mob natural", None)
         for ele_id, ele_name in _ELEMENTS:
             self._magic_ele_combo.addItem(ele_name, ele_id)

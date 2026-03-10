@@ -100,6 +100,32 @@ Readback regarding player/target differences in implementation (ideally re-use s
 
 ---
 
+## Session GUI-Rework — Widget Architecture Cleanup
+
+**Goal**: Replace all level-selector widgets with a shared `LevelWidget` class;
+consolidate the 9 duplicate `_NoWheelCombo`/`_NoWheelSpin` local definitions into
+`gui/widgets/`; fix the `isinstance` guard in `_load_song_group` introduced by the
+lesson combo living in the caster-spins dict.
+
+**Motivation**: The GUI-Adj session converted all spinboxes to dropdowns but left each
+file with its own copy of `_NoWheelCombo` and a bespoke `_make_level_combo` helper.
+Future widget-type changes still require touching every call site.
+
+**Work items** (see `docs/gui_plan.md` → LevelWidget Refactor for full spec):
+1. Create `gui/widgets/level_widget.py` — `LevelWidget(QComboBox)` with `value()`,
+   `setValue()`, `valueChanged` matching QSpinBox API.
+2. Export `LevelWidget`, `NoWheelCombo`, `NoWheelSpin` from `gui/widgets/__init__.py`;
+   remove the 9 local `_NoWheelCombo`/`_NoWheelSpin` class definitions.
+3. Update `passive_section.py` and `buffs_section.py` to use `LevelWidget`; remove
+   `_make_level_combo()` helper.
+4. Move `mus_lesson` / `dance_lesson` out of `_bard_caster_spins` / `_dancer_caster_spins`
+   into dedicated `_bard_lesson: LevelWidget` / `_dancer_lesson: LevelWidget` attributes
+   (eliminates the `isinstance` guard in `_load_song_group`).
+
+**Estimated tokens**: ~20–25k (pure GUI, no Hercules reads).
+
+---
+
 ## Deferred (Phase 5+ / Advanced Combat Modelling)
 
 | Item | Reason deferred |

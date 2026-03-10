@@ -6,11 +6,11 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
+    QComboBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QRadioButton,
-    QSpinBox,
     QWidget,
 )
 
@@ -42,6 +42,12 @@ _PASSIVES: list[tuple] = [
 ]
 
 
+class _NoWheelCombo(QComboBox):
+    """QComboBox that ignores scroll wheel events."""
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
+
 def _make_sub_header(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setObjectName("passive_sub_header")
@@ -60,8 +66,9 @@ class PassiveSection(Section):
         self._compact_summary_lbl: QLabel | None = None
         self._current_job_id: int = 0
 
-        self._mastery_spins:  dict[str, QSpinBox] = {}
-        self._mastery_labels: dict[str, QLabel]   = {}
+        self._mastery_combos: dict[str, QComboBox]  = {}  # max_lv > 1 → dropdown
+        self._mastery_checks: dict[str, QCheckBox]  = {}  # max_lv == 1 → toggle
+        self._mastery_labels: dict[str, QLabel]     = {}
 
         # ── Passives (masteries) ──────────────────────────────────────────
         mastery_widget = QWidget()
@@ -79,14 +86,20 @@ class PassiveSection(Section):
             self._mastery_labels[m_key] = lbl
             mastery_grid.addWidget(lbl, row, col_base)
 
-            spin = QSpinBox()
-            spin.setRange(0, max_lv)
-            spin.setValue(0)
-            spin.setFixedWidth(52)
-            self._mastery_spins[m_key] = spin
-            mastery_grid.addWidget(spin, row, col_base + 1)
-
-            spin.valueChanged.connect(self._on_passives_changed)
+            if max_lv == 1:
+                chk = QCheckBox()
+                self._mastery_checks[m_key] = chk
+                mastery_grid.addWidget(chk, row, col_base + 1)
+                chk.toggled.connect(self._on_passives_changed)
+            else:
+                combo = _NoWheelCombo()
+                combo.addItem("Off", 0)
+                for lv in range(1, max_lv + 1):
+                    combo.addItem(str(lv), lv)
+                combo.setCurrentIndex(0)
+                self._mastery_combos[m_key] = combo
+                mastery_grid.addWidget(combo, row, col_base + 1)
+                combo.currentIndexChanged.connect(self._on_passives_changed)
 
         self.add_content_widget(mastery_widget)
 
@@ -132,22 +145,41 @@ class PassiveSection(Section):
         flags_layout.addWidget(ranged_row, 1, 1, 1, 2)
         self.add_content_widget(flags_widget)
 
+    # ── Value helpers ──────────────────────────────────────────────────────
+
+    def _get_mastery_value(self, m_key: str) -> int:
+        if m_key in self._mastery_checks:
+            return 1 if self._mastery_checks[m_key].isChecked() else 0
+        combo = self._mastery_combos.get(m_key)
+        return (combo.currentData() or 0) if combo else 0
+
+    def _set_mastery_value(self, m_key: str, value: int) -> None:
+        if m_key in self._mastery_checks:
+            self._mastery_checks[m_key].setChecked(value > 0)
+        elif m_key in self._mastery_combos:
+            combo = self._mastery_combos[m_key]
+            idx = combo.findData(value)
+            combo.setCurrentIndex(idx if idx >= 0 else 0)
+
     # ── Public API (job visibility) ────────────────────────────────────────
 
     def update_job(self, job_id: int) -> None:
         self._current_job_id = job_id
         job_skills = loader.get_skills_for_job(job_id)
-        for m_key, _disp, _max_lv, source_skill in _PASSIVES:
+        for m_key, _disp, max_lv, source_skill in _PASSIVES:
             visible = source_skill in job_skills
             if m_key in self._mastery_labels:
                 self._mastery_labels[m_key].setVisible(visible)
-            if m_key in self._mastery_spins:
-                spin = self._mastery_spins[m_key]
-                spin.setVisible(visible)
+            w = self._mastery_combos.get(m_key) or self._mastery_checks.get(m_key)
+            if w is not None:
+                w.setVisible(visible)
                 if not visible:
-                    spin.blockSignals(True)
-                    spin.setValue(0)
-                    spin.blockSignals(False)
+                    w.blockSignals(True)
+                    if isinstance(w, QCheckBox):
+                        w.setChecked(False)
+                    else:
+                        w.setCurrentIndex(0)
+                    w.blockSignals(False)
 
     # ── Internal ──────────────────────────────────────────────────────────
 
@@ -159,9 +191,9 @@ class PassiveSection(Section):
     def _build_summary(self) -> str:
         parts: list[str] = []
         for m_key, m_display, *_ in _PASSIVES:
-            spin = self._mastery_spins.get(m_key)
-            if spin and spin.value() > 0:
-                parts.append(f"{m_display} {spin.value()}")
+            val = self._get_mastery_value(m_key)
+            if val > 0:
+                parts.append(f"{m_display} {val}")
         flags: list[str] = []
         if self._riding_peco_chk.isChecked():
             flags.append("Riding")
@@ -211,16 +243,19 @@ class PassiveSection(Section):
     # ── Public API ────────────────────────────────────────────────────────
 
     def load_build(self, build: PlayerBuild) -> None:
-        for spin in self._mastery_spins.values():
-            spin.blockSignals(True)
+        all_widgets = (
+            list(self._mastery_combos.values()) +
+            list(self._mastery_checks.values())
+        )
         for rb in (self._ranged_auto, self._ranged_melee, self._ranged_ranged):
             rb.blockSignals(True)
         self._riding_peco_chk.blockSignals(True)
         self._no_sizefix_chk.blockSignals(True)
+        for w in all_widgets:
+            w.blockSignals(True)
 
         for m_key, _, *_ in _PASSIVES:
-            spin = self._mastery_spins[m_key]
-            spin.setValue(build.mastery_levels.get(m_key, 0))
+            self._set_mastery_value(m_key, build.mastery_levels.get(m_key, 0))
 
         self._riding_peco_chk.setChecked(build.is_riding_peco)
         self._no_sizefix_chk.setChecked(build.no_sizefix)
@@ -233,8 +268,8 @@ class PassiveSection(Section):
         else:
             self._ranged_ranged.setChecked(True)
 
-        for spin in self._mastery_spins.values():
-            spin.blockSignals(False)
+        for w in all_widgets:
+            w.blockSignals(False)
         for rb in (self._ranged_auto, self._ranged_melee, self._ranged_ranged):
             rb.blockSignals(False)
         self._riding_peco_chk.blockSignals(False)
@@ -248,9 +283,9 @@ class PassiveSection(Section):
 
     def collect_into(self, build: PlayerBuild) -> None:
         build.mastery_levels = {
-            m_key: self._mastery_spins[m_key].value()
+            m_key: self._get_mastery_value(m_key)
             for m_key, *_ in _PASSIVES
-            if self._mastery_spins[m_key].value() > 0
+            if self._get_mastery_value(m_key) > 0
         }
         build.is_riding_peco = self._riding_peco_chk.isChecked()
         build.no_sizefix = self._no_sizefix_chk.isChecked()

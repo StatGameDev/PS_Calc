@@ -64,7 +64,7 @@ _SELF_BUFFS: list[tuple] = [
     # SC_ENERGYCOAT: stub; SP-absorbs incoming — incoming pipeline only
     ("SC_ENERGYCOAT",         "Energy Coat",           False, 1,  1,  "MG_ENERGYCOAT"),
     # ── Session N — Assassin / Assassin Cross ────────────────────────────────
-    # SC_CLOAKING: stub; cloaked state — no outgoing damage effect
+    # SC_CLOAKING: stub; cloaked state — no direct outgoing stat
     ("SC_CLOAKING",           "Cloaking",              False, 1,  1,  "AS_CLOAKING"),
     # SC_POISONREACT: stub; counter attack — no direct outgoing stat
     ("SC_POISONREACT",        "Poison React",          False, 1,  1,  "AS_POISONREACT"),
@@ -94,7 +94,7 @@ _SELF_BUFFS: list[tuple] = [
 # ── Party Buffs ───────────────────────────────────────────────────────────────
 # Tuple layout:
 #   (sc_key, display_name, widget_type, min_lv, max_lv)
-#   widget_type: "spin" = QSpinBox(0..max) — 0=off
+#   widget_type: "spin" = QComboBox(Off, 1..max) — 0=off
 #                "check" = QCheckBox only
 #                "adrenaline" = QCheckBox + QComboBox (special case)
 _PARTY_BUFFS: list[tuple] = [
@@ -138,10 +138,39 @@ _ENSEMBLES: list[tuple[str, str, int]] = [
 ]
 
 
+class _NoWheelCombo(QComboBox):
+    """QComboBox that ignores scroll wheel events."""
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
+
+class _NoWheelSpin(QSpinBox):
+    """QSpinBox that ignores scroll wheel events (used for free-range stat inputs)."""
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
+
 def _stub_label(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setObjectName("passive_sub_header")
     return lbl
+
+
+def _make_level_combo(max_lv: int, include_off: bool = True) -> _NoWheelCombo:
+    """Return a _NoWheelCombo populated with Off (optional) + 1..max_lv."""
+    combo = _NoWheelCombo()
+    if include_off:
+        combo.addItem("Off", 0)
+    for lv in range(1, max_lv + 1):
+        combo.addItem(str(lv), lv)
+    combo.setCurrentIndex(0)
+    return combo
+
+
+def _set_combo_value(combo: QComboBox, value: int) -> None:
+    """Set combo to the item whose data equals value; falls back to index 0."""
+    idx = combo.findData(value)
+    combo.setCurrentIndex(idx if idx >= 0 else 0)
 
 
 class BuffsSection(Section):
@@ -162,32 +191,32 @@ class BuffsSection(Section):
 
         # Storage for Self Buffs
         self._sc_checks: dict[str, QCheckBox] = {}
-        self._sc_spins: dict[str, QSpinBox] = {}
+        self._sc_combos: dict[str, QComboBox] = {}       # level dropdowns (was _sc_spins)
         self._self_buff_widgets: dict[str, list[QWidget]] = {}
 
         # Storage for Party Buffs
-        self._party_spins: dict[str, QSpinBox] = {}
+        self._party_level_combos: dict[str, QComboBox] = {}  # "spin" type (was _party_spins)
         self._party_checks: dict[str, QCheckBox] = {}
         self._party_combos: dict[str, QComboBox] = {}  # SC_ADRENALINE only
 
         # Storage for Bard Songs
         self._bard_caster_spins: dict[str, QSpinBox] = {}   # "caster_agi", ..., "mus_lesson"
-        self._song_level_spins: dict[str, QSpinBox] = {}    # SC_key → level spin (0=off)
+        self._song_level_combos: dict[str, QComboBox] = {}  # SC_key → level combo (0=off)
         self._song_ov_checks: dict[str, dict[str, QCheckBox]] = {}  # SC_key → {stat → chk}
         self._song_ov_spins:  dict[str, dict[str, QSpinBox]]  = {}  # SC_key → {stat → spin}
 
         # Storage for Dancer Dances
         self._dancer_caster_spins: dict[str, QSpinBox] = {}  # "dancer_agi", ..., "dance_lesson"
-        self._dance_level_spins: dict[str, QSpinBox] = {}
+        self._dance_level_combos: dict[str, QComboBox] = {}
         self._dance_ov_checks: dict[str, dict[str, QCheckBox]] = {}
         self._dance_ov_spins:  dict[str, dict[str, QSpinBox]]  = {}
 
         # Storage for Ensembles
-        self._ensemble_spins: dict[str, QSpinBox] = {}
+        self._ensemble_combos: dict[str, QComboBox] = {}    # (was _ensemble_spins)
 
         # Storage for Ground Effects
         self._ground_combo: QComboBox | None = None
-        self._ground_lv_spin: QSpinBox | None = None
+        self._ground_lv_combo: QComboBox | None = None      # (was _ground_lv_spin)
 
         # ── 1. Self Buffs ─────────────────────────────────────────────────
         self._sub_self = CollapsibleSubGroup("Self Buffs", default_collapsed=False)
@@ -212,21 +241,16 @@ class BuffsSection(Section):
 
             row_widgets: list[QWidget] = [chk]
             if has_lv:
-                spin = QSpinBox()
-                spin.setRange(min_lv, max_lv)
-                spin.setValue(min_lv)
-                spin.setFixedWidth(52)
-                spin.setEnabled(False)
-                self._sc_spins[sc_key] = spin
-                buffs_grid.addWidget(spin, row_i, 1)
-                row_widgets.append(spin)
-                chk.toggled.connect(spin.setEnabled)
+                combo = _make_level_combo(max_lv, include_off=False)
+                combo.setEnabled(False)
+                self._sc_combos[sc_key] = combo
+                buffs_grid.addWidget(combo, row_i, 1)
+                row_widgets.append(combo)
+                chk.toggled.connect(combo.setEnabled)
+                combo.currentIndexChanged.connect(self._on_changed)
 
             chk.toggled.connect(self._on_changed)
             self._self_buff_widgets[sc_key] = row_widgets
-
-        for spin in self._sc_spins.values():
-            spin.valueChanged.connect(self._on_changed)
 
         self._sub_self.add_content_widget(buffs_widget)
         self.add_content_widget(self._sub_self)
@@ -245,14 +269,10 @@ class BuffsSection(Section):
             party_grid.addWidget(lbl, row_i, 0)
 
             if wtype == "spin":
-                spin = QSpinBox()
-                spin.setRange(min_lv, max_lv)
-                spin.setValue(0)
-                spin.setFixedWidth(52)
-                spin.setSpecialValueText("Off")
-                self._party_spins[sc_key] = spin
-                spin.valueChanged.connect(self._on_changed)
-                party_grid.addWidget(spin, row_i, 1)
+                combo = _make_level_combo(max_lv, include_off=True)
+                self._party_level_combos[sc_key] = combo
+                combo.currentIndexChanged.connect(self._on_changed)
+                party_grid.addWidget(combo, row_i, 1)
 
             elif wtype == "check":
                 chk = QCheckBox()
@@ -263,7 +283,7 @@ class BuffsSection(Section):
             elif wtype == "adrenaline":
                 chk = QCheckBox()
                 self._party_checks[sc_key] = chk
-                combo = QComboBox()
+                combo = _NoWheelCombo()
                 combo.addItem("Self")
                 combo.addItem("Party member")
                 combo.setEnabled(False)
@@ -319,7 +339,7 @@ class BuffsSection(Section):
         lbl.setObjectName("passive_sub_header")
         lay.addWidget(lbl)
 
-        self._ground_combo = QComboBox()
+        self._ground_combo = _NoWheelCombo()
         self._ground_combo.addItem("— (none)")
         self._ground_combo.addItem("Volcano")
         self._ground_combo.addItem("Deluge")
@@ -330,12 +350,9 @@ class BuffsSection(Section):
         lv_lbl.setObjectName("passive_sub_header")
         lay.addWidget(lv_lbl)
 
-        self._ground_lv_spin = QSpinBox()
-        self._ground_lv_spin.setRange(1, 5)
-        self._ground_lv_spin.setValue(1)
-        self._ground_lv_spin.setFixedWidth(44)
-        self._ground_lv_spin.setEnabled(False)
-        lay.addWidget(self._ground_lv_spin)
+        self._ground_lv_combo = _make_level_combo(5, include_off=False)
+        self._ground_lv_combo.setEnabled(False)
+        lay.addWidget(self._ground_lv_combo)
 
         note = QLabel("(requires matching armor element)")
         note.setObjectName("passive_note")
@@ -343,12 +360,12 @@ class BuffsSection(Section):
         lay.addStretch()
 
         self._ground_combo.currentIndexChanged.connect(self._on_ground_changed)
-        self._ground_lv_spin.valueChanged.connect(self._on_changed)
+        self._ground_lv_combo.currentIndexChanged.connect(self._on_changed)
         return w
 
     def _on_ground_changed(self) -> None:
-        if self._ground_lv_spin is not None:
-            self._ground_lv_spin.setEnabled(self._ground_combo.currentIndex() != 0)
+        if self._ground_lv_combo is not None:
+            self._ground_lv_combo.setEnabled(self._ground_combo.currentIndex() != 0)
         self._on_changed()
 
     # ── Song/Dance widget builders ─────────────────────────────────────────
@@ -364,7 +381,7 @@ class BuffsSection(Section):
             lbl = QLabel(lbl_text)
             lbl.setObjectName("passive_sub_header")
             grid.addWidget(lbl, row, col)
-            spin = QSpinBox()
+            spin = _NoWheelSpin()
             spin.setRange(1, 255)
             spin.setValue(1)
             spin.setFixedWidth(52)
@@ -372,36 +389,29 @@ class BuffsSection(Section):
             spin.valueChanged.connect(on_changed)
             grid.addWidget(spin, row, col + 1)
             col += 2
-        # Lesson spinbox
+        # Lesson dropdown (0..10)
         lbl = QLabel(lesson_label)
         lbl.setObjectName("passive_sub_header")
         grid.addWidget(lbl, row, col)
-        spin = QSpinBox()
-        spin.setRange(0, 10)
-        spin.setValue(0)
-        spin.setFixedWidth(52)
-        store[lesson_key] = spin
-        spin.valueChanged.connect(on_changed)
-        grid.addWidget(spin, row, col + 1)
+        lesson_combo = _make_level_combo(10, include_off=True)
+        store[lesson_key] = lesson_combo  # type: ignore[assignment]
+        lesson_combo.currentIndexChanged.connect(on_changed)
+        grid.addWidget(lesson_combo, row, col + 1)
 
     def _make_song_rows(self, grid: QGridLayout, start_row: int,
                         song_list: list[tuple[str, str, list[tuple[str, str]]]],
-                        level_store: dict[str, QSpinBox],
+                        level_store: dict[str, QComboBox],
                         ov_check_store: dict[str, dict[str, QCheckBox]],
                         ov_spin_store:  dict[str, dict[str, QSpinBox]]) -> None:
-        """Build one row per song: level spin + per-stat override check+spin."""
+        """Build one row per song: level combo + per-stat override check+spin."""
         for r, (sc_key, display, overrides) in enumerate(song_list, start=start_row):
             lbl = QLabel(display)
             grid.addWidget(lbl, r, 0)
 
-            lv_spin = QSpinBox()
-            lv_spin.setRange(0, 10)
-            lv_spin.setValue(0)
-            lv_spin.setFixedWidth(52)
-            lv_spin.setSpecialValueText("Off")
-            level_store[sc_key] = lv_spin
-            lv_spin.valueChanged.connect(self._on_changed)
-            grid.addWidget(lv_spin, r, 1)
+            lv_combo = _make_level_combo(10, include_off=True)
+            level_store[sc_key] = lv_combo
+            lv_combo.currentIndexChanged.connect(self._on_changed)
+            grid.addWidget(lv_combo, r, 1)
 
             ov_check_store[sc_key] = {}
             ov_spin_store[sc_key]  = {}
@@ -413,7 +423,7 @@ class BuffsSection(Section):
                 ov_chk.setObjectName("passive_sc_check")
                 ov_check_store[sc_key][stat_key] = ov_chk
                 grid.addWidget(ov_chk, r, col + 1)
-                ov_spin = QSpinBox()
+                ov_spin = _NoWheelSpin()
                 ov_spin.setRange(1, 255)
                 ov_spin.setValue(1)
                 ov_spin.setFixedWidth(52)
@@ -439,7 +449,7 @@ class BuffsSection(Section):
             self._on_changed,
         )
         self._make_song_rows(grid, 1, _BARD_SONGS,
-                             self._song_level_spins,
+                             self._song_level_combos,
                              self._song_ov_checks, self._song_ov_spins)
         return w
 
@@ -457,7 +467,7 @@ class BuffsSection(Section):
             self._on_changed,
         )
         self._make_song_rows(grid, 1, _DANCER_DANCES,
-                             self._dance_level_spins,
+                             self._dance_level_combos,
                              self._dance_ov_checks, self._dance_ov_spins)
         return w
 
@@ -472,14 +482,10 @@ class BuffsSection(Section):
         grid.addWidget(note, 0, 0, 1, 4)
         for r, (sc_key, display, max_lv) in enumerate(_ENSEMBLES, start=1):
             grid.addWidget(QLabel(display), r, 0)
-            spin = QSpinBox()
-            spin.setRange(0, max_lv)
-            spin.setValue(0)
-            spin.setFixedWidth(52)
-            spin.setSpecialValueText("Off")
-            self._ensemble_spins[sc_key] = spin
-            spin.valueChanged.connect(self._on_changed)
-            grid.addWidget(spin, r, 1)
+            combo = _make_level_combo(max_lv, include_off=True)
+            self._ensemble_combos[sc_key] = combo
+            combo.currentIndexChanged.connect(self._on_changed)
+            grid.addWidget(combo, r, 1)
         return w
 
     # ── Job filtering ──────────────────────────────────────────────────────
@@ -497,10 +503,10 @@ class BuffsSection(Section):
                 chk.blockSignals(True)
                 chk.setChecked(False)
                 chk.blockSignals(False)
-                if sc_key in self._sc_spins:
-                    self._sc_spins[sc_key].blockSignals(True)
-                    self._sc_spins[sc_key].setValue(1)
-                    self._sc_spins[sc_key].blockSignals(False)
+                if sc_key in self._sc_combos:
+                    self._sc_combos[sc_key].blockSignals(True)
+                    self._sc_combos[sc_key].setCurrentIndex(0)
+                    self._sc_combos[sc_key].blockSignals(False)
 
         # Show Bard Songs only for Bard/Clown; Dancer Dances only for Dancer/Gypsy.
         self._sub_bard.setVisible(job_id in _BARD_JOBS)
@@ -521,8 +527,8 @@ class BuffsSection(Section):
         for sc_key, display, has_lv, *_ in _SELF_BUFFS:
             chk = self._sc_checks.get(sc_key)
             if chk and chk.isChecked():
-                if has_lv and sc_key in self._sc_spins:
-                    parts.append(f"{display} {self._sc_spins[sc_key].value()}")
+                if has_lv and sc_key in self._sc_combos:
+                    parts.append(f"{display} {self._sc_combos[sc_key].currentData()}")
                 else:
                     parts.append(display)
         return "  ·  ".join(parts) if parts else "No active buffs"
@@ -563,23 +569,23 @@ class BuffsSection(Section):
     # ── Public API ─────────────────────────────────────────────────────────
 
     def load_build(self, build: PlayerBuild) -> None:
-        # Block all signals while loading
+        # Collect all blockable widgets
         _all_widgets: list[QWidget] = (
             list(self._sc_checks.values()) +
-            list(self._sc_spins.values()) +
-            list(self._party_spins.values()) +
+            list(self._sc_combos.values()) +
+            list(self._party_level_combos.values()) +
             list(self._party_checks.values()) +
             list(self._party_combos.values()) +
             list(self._bard_caster_spins.values()) +
-            list(self._song_level_spins.values()) +
+            list(self._song_level_combos.values()) +
             list(self._dancer_caster_spins.values()) +
-            list(self._dance_level_spins.values()) +
-            list(self._ensemble_spins.values())
+            list(self._dance_level_combos.values()) +
+            list(self._ensemble_combos.values())
         )
         if self._ground_combo is not None:
             _all_widgets.append(self._ground_combo)
-        if self._ground_lv_spin is not None:
-            _all_widgets.append(self._ground_lv_spin)
+        if self._ground_lv_combo is not None:
+            _all_widgets.append(self._ground_lv_combo)
         for ov_d in self._song_ov_checks.values():
             _all_widgets.extend(ov_d.values())
         for ov_d in self._song_ov_spins.values():
@@ -597,16 +603,17 @@ class BuffsSection(Section):
             chk = self._sc_checks[sc_key]
             is_active = sc_key in active
             chk.setChecked(is_active)
-            if has_lv and sc_key in self._sc_spins:
-                spin = self._sc_spins[sc_key]
-                spin.setValue(active.get(sc_key, min_lv))
-                spin.setEnabled(is_active)
+            if has_lv and sc_key in self._sc_combos:
+                combo = self._sc_combos[sc_key]
+                _set_combo_value(combo, active.get(sc_key, min_lv))
+                combo.setEnabled(is_active)
 
         # Party buffs
         support = build.support_buffs
         for sc_key, _, wtype, *_ in _PARTY_BUFFS:
             if wtype == "spin":
-                self._party_spins[sc_key].setValue(int(support.get(sc_key, 0)))
+                _set_combo_value(self._party_level_combos[sc_key],
+                                 int(support.get(sc_key, 0)))
             elif wtype == "check":
                 self._party_checks[sc_key].setChecked(bool(support.get(sc_key, False)))
             elif wtype == "adrenaline":
@@ -620,21 +627,21 @@ class BuffsSection(Section):
         # Songs/dances
         ss = build.song_state
         self._load_song_group(ss, self._bard_caster_spins,
-                              self._song_level_spins, self._song_ov_checks, self._song_ov_spins,
+                              self._song_level_combos, self._song_ov_checks, self._song_ov_spins,
                               _BARD_SONGS)
         self._load_song_group(ss, self._dancer_caster_spins,
-                              self._dance_level_spins, self._dance_ov_checks, self._dance_ov_spins,
+                              self._dance_level_combos, self._dance_ov_checks, self._dance_ov_spins,
                               _DANCER_DANCES)
         for sc_key, _, _ in _ENSEMBLES:
-            self._ensemble_spins[sc_key].setValue(int(ss.get(sc_key, 0)))
+            _set_combo_value(self._ensemble_combos[sc_key], int(ss.get(sc_key, 0)))
 
         # Ground effects
-        if self._ground_combo is not None and self._ground_lv_spin is not None:
+        if self._ground_combo is not None and self._ground_lv_combo is not None:
             ge = support.get("ground_effect")
             ge_idx = _GROUND_SC_KEYS.index(ge) if ge in _GROUND_SC_KEYS else 0
             self._ground_combo.setCurrentIndex(ge_idx)
-            self._ground_lv_spin.setValue(int(support.get("ground_effect_lv", 1)))
-            self._ground_lv_spin.setEnabled(ge_idx != 0)
+            _set_combo_value(self._ground_lv_combo, int(support.get("ground_effect_lv", 1)))
+            self._ground_lv_combo.setEnabled(ge_idx != 0)
 
         for w in _all_widgets:
             w.blockSignals(False)
@@ -647,14 +654,17 @@ class BuffsSection(Section):
 
     def _load_song_group(self, ss: dict,
                          caster_store: dict[str, QSpinBox],
-                         level_store:  dict[str, QSpinBox],
+                         level_store:  dict[str, QComboBox],
                          ov_chk_store: dict[str, dict[str, QCheckBox]],
                          ov_spin_store: dict[str, dict[str, QSpinBox]],
                          song_list: list) -> None:
-        for stat_key, spin in caster_store.items():
-            spin.setValue(int(ss.get(stat_key, 1)))
+        for stat_key, spin_or_combo in caster_store.items():
+            if isinstance(spin_or_combo, QComboBox):
+                _set_combo_value(spin_or_combo, int(ss.get(stat_key, 0)))
+            else:
+                spin_or_combo.setValue(int(ss.get(stat_key, 1)))
         for sc_key, _, overrides in song_list:
-            level_store[sc_key].setValue(int(ss.get(sc_key, 0)))
+            _set_combo_value(level_store[sc_key], int(ss.get(sc_key, 0)))
             for stat_key, _ in overrides:
                 ov_key = f"{sc_key}_{stat_key}"
                 raw = ss.get(ov_key)  # None = use shared; int = override
@@ -676,8 +686,8 @@ class BuffsSection(Section):
         for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
             chk = self._sc_checks[sc_key]
             if chk.isChecked():
-                if has_lv and sc_key in self._sc_spins:
-                    active[sc_key] = self._sc_spins[sc_key].value()
+                if has_lv and sc_key in self._sc_combos:
+                    active[sc_key] = self._sc_combos[sc_key].currentData() or min_lv
                 else:
                     active[sc_key] = min_lv
         build.active_status_levels = active
@@ -688,7 +698,7 @@ class BuffsSection(Section):
             support.pop(sc_key, None)
         for sc_key, _, wtype, *_ in _PARTY_BUFFS:
             if wtype == "spin":
-                val = self._party_spins[sc_key].value()
+                val = self._party_level_combos[sc_key].currentData() or 0
                 if val > 0:
                     support[sc_key] = val
             elif wtype == "check":
@@ -704,31 +714,34 @@ class BuffsSection(Section):
         support.pop("ground_effect_lv", None)
         if self._ground_combo is not None and self._ground_combo.currentIndex() != 0:
             support["ground_effect"] = _GROUND_SC_KEYS[self._ground_combo.currentIndex()]
-            support["ground_effect_lv"] = self._ground_lv_spin.value()
+            support["ground_effect_lv"] = self._ground_lv_combo.currentData() or 1
         build.support_buffs = support
 
         # Songs/dances → song_state
         ss: dict[str, object] = {}
         self._collect_song_group(ss, self._bard_caster_spins,
-                                 self._song_level_spins, self._song_ov_checks, self._song_ov_spins,
+                                 self._song_level_combos, self._song_ov_checks, self._song_ov_spins,
                                  _BARD_SONGS)
         self._collect_song_group(ss, self._dancer_caster_spins,
-                                 self._dance_level_spins, self._dance_ov_checks, self._dance_ov_spins,
+                                 self._dance_level_combos, self._dance_ov_checks, self._dance_ov_spins,
                                  _DANCER_DANCES)
         for sc_key, _, _ in _ENSEMBLES:
-            ss[sc_key] = self._ensemble_spins[sc_key].value()
+            ss[sc_key] = self._ensemble_combos[sc_key].currentData() or 0
         build.song_state = ss
 
     def _collect_song_group(self, ss: dict,
                             caster_store: dict[str, QSpinBox],
-                            level_store:  dict[str, QSpinBox],
+                            level_store:  dict[str, QComboBox],
                             ov_chk_store: dict[str, dict[str, QCheckBox]],
                             ov_spin_store: dict[str, dict[str, QSpinBox]],
                             song_list: list) -> None:
-        for stat_key, spin in caster_store.items():
-            ss[stat_key] = spin.value()
+        for stat_key, spin_or_combo in caster_store.items():
+            if isinstance(spin_or_combo, QComboBox):
+                ss[stat_key] = spin_or_combo.currentData() or 0
+            else:
+                ss[stat_key] = spin_or_combo.value()
         for sc_key, _, overrides in song_list:
-            ss[sc_key] = level_store[sc_key].value()
+            ss[sc_key] = level_store[sc_key].currentData() or 0
             for stat_key, _ in overrides:
                 ov_key = f"{sc_key}_{stat_key}"
                 chk = ov_chk_store[sc_key][stat_key]

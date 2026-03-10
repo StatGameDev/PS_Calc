@@ -102,6 +102,66 @@ Changes vs current:
 
 ---
 
+## LevelWidget Refactor (Session GUI-Rework)
+
+_Planned after Session R. Pure GUI, no calculator changes. ~20–25k tokens._
+
+### Problem
+
+After the GUI-Adj session, every file that needs a level dropdown has its own local
+`_NoWheelCombo` class definition (9 copies) and calls `_make_level_combo()` directly.
+All load/collect call sites use `combo.currentData()` / `combo.findData()` instead of
+the QSpinBox-compatible `value()` / `setValue()` API. A future widget-type swap requires
+touching every call site again.
+
+### Solution — `LevelWidget`
+
+```python
+# gui/widgets/level_widget.py
+class LevelWidget(QComboBox):
+    valueChanged = Signal(int)   # same name as QSpinBox
+
+    def __init__(self, max_lv: int, include_off: bool = True):
+        super().__init__()
+        if include_off:
+            self.addItem("Off", 0)
+        for lv in range(1, max_lv + 1):
+            self.addItem(str(lv), lv)
+        self.currentIndexChanged.connect(
+            lambda _: self.valueChanged.emit(self.value())
+        )
+
+    def value(self) -> int:
+        return self.currentData() or 0
+
+    def setValue(self, v: int) -> None:
+        idx = self.findData(v)
+        self.setCurrentIndex(idx if idx >= 0 else 0)
+
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+```
+
+`setValue` / `value` / `valueChanged` match the QSpinBox API exactly — future widget
+type changes require editing only this class.
+
+### Work items
+
+1. **`gui/widgets/level_widget.py`** — `LevelWidget` class as above.
+2. **`gui/widgets/__init__.py`** — export `LevelWidget`, `NoWheelCombo`, `NoWheelSpin`;
+   remove the 9 duplicate local class definitions across section and dialog files.
+3. **`passive_section.py`** — `_mastery_combos: dict[str, LevelWidget]`; replace
+   `_make_level_combo()` calls with `LevelWidget(max_lv, include_off=True)`.
+4. **`buffs_section.py`** — all `_sc_combos`, `_party_level_combos`, `_song_level_combos`,
+   `_dance_level_combos`, `_ensemble_combos`, `_ground_lv_combo` → `LevelWidget`.
+   Remove `_make_level_combo()` and `_set_combo_value()` helpers (replaced by `setValue`).
+5. **Lesson combo fix** — move `mus_lesson` / `dance_lesson` out of `_bard_caster_spins` /
+   `_dancer_caster_spins` into dedicated `_bard_lesson: LevelWidget` /
+   `_dancer_lesson: LevelWidget` attributes. This eliminates the `isinstance` guard
+   in `_load_song_group` / `_collect_song_group`.
+
+---
+
 ## Phases 5–8
 
 **Phase 5 — Stat Planner Tab**

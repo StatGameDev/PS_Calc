@@ -17,6 +17,12 @@ from PySide6.QtWidgets import (
 
 from core.data_loader import loader
 
+
+class _NoWheelCombo(QComboBox):
+    """QComboBox that ignores scroll wheel events."""
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
 _ELEMENT_NAMES = [
     "Neutral", "Water", "Earth", "Fire", "Wind",
     "Poison", "Holy", "Dark", "Ghost", "Undead",
@@ -115,7 +121,7 @@ class MonsterBrowserDialog(QDialog):
 
     @staticmethod
     def _make_combo(options: list[str]) -> QComboBox:
-        cb = QComboBox()
+        cb = _NoWheelCombo()
         cb.addItems(options)
         return cb
 

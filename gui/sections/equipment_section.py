@@ -227,7 +227,7 @@ class EquipmentSection(Section):
                 self._forge_ranked_chk = ranked_chk
 
                 forge_layout.addWidget(QLabel("Ele:"))
-                ele_combo = QComboBox()
+                ele_combo = _NoWheelCombo()
                 for ele_idx, ele_name in enumerate(_ELEMENT_NAMES):
                     ele_combo.addItem(ele_name, ele_idx)
                 ele_combo.currentIndexChanged.connect(self.equipment_changed)
@@ -253,9 +253,9 @@ class EquipmentSection(Section):
 
             if has_refine:
                 refine_spin = QSpinBox()
-                refine_spin.setRange(0, 20)
+                refine_spin.setRange(0, 10)
                 refine_spin.setValue(0)
-                refine_spin.setFixedWidth(50)
+                refine_spin.setFixedWidth(58)
                 refine_spin.setPrefix("+")
                 refine_spin.valueChanged.connect(self.equipment_changed)
                 self._refine_spins[slot_key] = refine_spin
@@ -281,7 +281,7 @@ class EquipmentSection(Section):
         elem_layout.setContentsMargins(0, 4, 0, 0)
         elem_layout.setSpacing(6)
         elem_layout.addWidget(QLabel("Weapon Element:"))
-        self._element_combo = QComboBox()
+        self._element_combo = _NoWheelCombo()
         self._element_combo.addItem("From Item", None)
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._element_combo.addItem(name, idx)
@@ -296,7 +296,7 @@ class EquipmentSection(Section):
         armor_elem_layout.setContentsMargins(0, 0, 0, 0)
         armor_elem_layout.setSpacing(6)
         armor_elem_layout.addWidget(QLabel("Armor Element:"))
-        self._armor_element_combo = QComboBox()
+        self._armor_element_combo = _NoWheelCombo()
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._armor_element_combo.addItem(name, idx)
         self._armor_element_combo.currentIndexChanged.connect(self.equipment_changed)

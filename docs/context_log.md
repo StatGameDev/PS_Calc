@@ -922,27 +922,52 @@ brief reads before proceeding.
 
 ## Template for future sessions
 
-## Session X  YYYY-MM-DD  claude-sonnet-4-6
-ctx_used: ___%
+## Session GUI-Adj  2026-03-10  claude-sonnet-4-6
+ctx_used: ~55%
 
 Work items completed:
-- ...
+- Spinbox → dropdown/toggle: all level selectors in passive_section + buffs_section
+- No-wheel: all QComboBox across 9 GUI files
+- Refine max cap +10, width 58px; combat level spin 68px
 
 Files read:
 | file | lines | est_tok |
 |---|---|---|
+| gui/sections/passive_section.py | 263 | ~750 |
+| gui/sections/buffs_section.py | 739 | ~2100 |
+| gui/sections/equipment_section.py | 668 | ~1900 |
+| gui/sections/combat_controls.py | ~210 | ~600 |
+| gui/sections/target_section.py | 80 | ~230 |
+| gui/sections/stats_section.py | 60 | ~170 |
+| docs/session_roadmap.md | 113 | ~320 |
+| docs/gui_plan.md | 130 | ~370 |
 
 Files edited:
 | file | lines | est_tok |
 |---|---|---|
+| gui/sections/passive_section.py | 263 | ~750 |
+| gui/sections/buffs_section.py | ~490 | ~1400 |
+| gui/sections/equipment_section.py | 4 hunks | ~80 |
+| gui/sections/combat_controls.py | 3 hunks | ~60 |
+| gui/sections/build_header.py | 2 hunks | ~40 |
+| gui/sections/incoming_damage.py | 2 hunks | ~40 |
+| gui/main_window.py | 2 hunks | ~40 |
+| gui/dialogs/new_build_dialog.py | 2 hunks | ~40 |
+| gui/dialogs/monster_browser.py | 2 hunks | ~40 |
+| docs/completed_work.md | +40 lines | ~120 |
+| docs/session_roadmap.md | +25 lines | ~75 |
+| docs/gui_plan.md | +55 lines | ~160 |
+| docs/context_log.md | this entry | ~100 |
 
 Files created:
 | file | lines | est_tok |
 |---|---|---|
+| (none) | | |
 
 Extra reads (debug/investigation not in plan):
 | file | lines | est_tok |
 |---|---|---|
+| (none) | | |
 
-Total est_tokens: (sum) + ~6k fixed overhead
-Notes:
+Total est_tokens: ~9000 content + ~6k fixed overhead ≈ 15k
+Notes: Pure GUI session, no Hercules reads, no calculator changes.

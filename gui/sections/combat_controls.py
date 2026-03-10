@@ -24,6 +24,12 @@ from core.models.build import PlayerBuild
 from core.models.skill import SkillInstance
 from gui.section import Section
 
+
+class _NoWheelCombo(QComboBox):
+    """QComboBox that ignores scroll wheel events."""
+    def wheelEvent(self, event) -> None:
+        event.ignore()
+
 # Jobs that can use plagiarised skills from other jobs (Rogue=17, Stalker=34)
 _PLAGIARISM_JOBS: frozenset[int] = frozenset({17, 34})
 
@@ -59,14 +65,14 @@ class CombatControlsSection(Section):
         skill_row = QHBoxLayout()
         skill_row.setSpacing(6)
 
-        self._skill_combo = QComboBox()
+        self._skill_combo = _NoWheelCombo()
         self._skill_combo.setMinimumWidth(160)
         skill_row.addWidget(self._skill_combo, stretch=1)
 
         self._level_spin = QSpinBox()
         self._level_spin.setRange(1, 10)
         self._level_spin.setPrefix("Lv ")
-        self._level_spin.setFixedWidth(60)
+        self._level_spin.setFixedWidth(68)
         skill_row.addWidget(self._level_spin)
 
         self._skill_show_all = QCheckBox("All")
