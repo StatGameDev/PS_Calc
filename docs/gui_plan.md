@@ -177,7 +177,7 @@ Requires C1 variance tuple structure to be correct.
 
 **Phase 8 — Polish & Config**
 Layout presets. Resolution scaling verification (1280×720 – 1920×1080).
-`ui_scale_override` in settings JSON. Payon Stories BattleConfig fully wired.
+`ui_scale_override` in settings JSON. compact_view rework.
 
 ---
 
@@ -271,7 +271,7 @@ SC_SPEARQUICKEN   "Spear Quicken"       lv 1–10   CR_SPEARQUICKEN
 SC_ONEHANDQUICKEN "One-Hand Quicken*"   no lv     KN_ONEHAND
 ```
 Session N additions: SC_TRUESIGHT, SC_CONCENTRATE, SC_DEFENDER, SC_AUTOGUARD,
-SC_CARTBOOST, Spirit Spheres 0–15 (Monk/Champion), and others from buff_skills.md.
+SC_CARTBOOST, Spirit Spheres 0–5 (Monk/Champion), and others from buff_skills.md.
 
 Data model: `PlayerBuild.active_status_levels` — unchanged key format.
 
@@ -468,7 +468,7 @@ compact_mode: `compact_view` → one-line summary of active debuff names
 default_collapsed: true
 
 **Scope**: Debuffs applied to the player by enemies — affects the player's own stats
-in incoming damage calculations. Symmetric to `target_state_section` Applied Debuffs,
+in various ways. Symmetric to `target_state_section` Applied Debuffs,
 but for the opposite role.
 
 Public API:

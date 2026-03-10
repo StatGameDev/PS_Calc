@@ -70,4 +70,21 @@ class MasteryFix:
                 hercules_ref="battle.c:927-929 #else: damage += damage * (10 + 2 * skill2_lv) / 100"
             )
 
+        # NJ_TOBIDOUGU: Throw Shuriken mastery — flat +3*lv damage (battle.c:844)
+        # Applies to all attacks with W_SHURIKEN (practically only NJ_SYURIKEN uses this weapon).
+        nj_tobi_lv = build.mastery_levels.get("NJ_TOBIDOUGU", 0)
+        if weapon.weapon_type == "Shuriken" and nj_tobi_lv > 0:
+            pmf = _add_flat(pmf, 3 * nj_tobi_lv)
+            mn, mx, av = pmf_stats(pmf)
+            result.add_step(
+                name="Throw Mastery",
+                value=av,
+                min_value=mn,
+                max_value=mx,
+                multiplier=1.0,
+                note=f"NJ_TOBIDOUGU Lv {nj_tobi_lv}: +{3 * nj_tobi_lv}",
+                formula=f"dmg + 3 × {nj_tobi_lv}",
+                hercules_ref="battle.c:844 NJ_TOBIDOUGU: damage += 3 * skill_lv",
+            )
+
         return pmf

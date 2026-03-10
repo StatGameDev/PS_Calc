@@ -50,6 +50,13 @@ and skip it without telling the user. This applies to any stat tracked in Status
 (MaxHP, FLEE, ASPD, etc.) and to any pipeline step, regardless of whether that stat
 feeds the outgoing damage number.
 
+**Never pre-filter scope by relevance judgment.**
+When planning a session that covers a defined list of skills (or items, SCs, etc.),
+every entry on that list must appear in the planning output with its confirmed
+Hercules effect. Do not exclude entries because you judged them "not relevant to the
+damage pipeline", "only a regen effect", "only affects SP", etc. That judgment belongs
+to the user, not to you. List every entry; let the user decide the disposition.
+
 ---
 
 ## Cost Controls — Hard Limits

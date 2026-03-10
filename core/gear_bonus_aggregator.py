@@ -66,6 +66,30 @@ class GearBonusAggregator:
         return bonuses
 
     @staticmethod
+    def apply_passive_bonuses(bonuses: GearBonuses, mastery_levels: dict) -> None:
+        """Augment GearBonuses in-place with resist/race bonuses from passive skills.
+        Call immediately after compute() wherever gear_bonuses feeds CardFix or DefenseFix.
+        Source: status_calc_pc_ (status.c, #ifndef RENEWAL guards noted).
+        """
+        # CR_TRUST: subele[Ele_Holy] += lv*5 (status.c:2187)
+        cr_trust_lv = mastery_levels.get("CR_TRUST", 0)
+        if cr_trust_lv:
+            bonuses.sub_ele["Ele_Holy"] = bonuses.sub_ele.get("Ele_Holy", 0) + cr_trust_lv * 5
+
+        # BS_SKINTEMPER: subele[Ele_Neutral] += lv; subele[Ele_Fire] += lv*4 (status.c:2189–2192)
+        bs_skin_lv = mastery_levels.get("BS_SKINTEMPER", 0)
+        if bs_skin_lv:
+            bonuses.sub_ele["Ele_Neutral"] = bonuses.sub_ele.get("Ele_Neutral", 0) + bs_skin_lv
+            bonuses.sub_ele["Ele_Fire"]    = bonuses.sub_ele.get("Ele_Fire", 0)    + bs_skin_lv * 4
+
+        # SA_DRAGONOLOGY: #ifndef RENEWAL addrace[RC_Dragon] += lv*4 (weapon+magic); subrace[RC_Dragon] += lv*4
+        # (status.c:2197–2210)
+        sa_dragon_lv = mastery_levels.get("SA_DRAGONOLOGY", 0)
+        if sa_dragon_lv:
+            bonuses.add_race["RC_Dragon"] = bonuses.add_race.get("RC_Dragon", 0) + sa_dragon_lv * 4
+            bonuses.sub_race["RC_Dragon"] = bonuses.sub_race.get("RC_Dragon", 0) + sa_dragon_lv * 4
+
+    @staticmethod
     def _apply(bonuses: GearBonuses, eff: ItemEffect) -> None:
         """Route one ItemEffect into the appropriate GearBonuses field."""
         bt = eff.bonus_type

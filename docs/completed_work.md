@@ -1281,3 +1281,62 @@ No calculator changes — pure UI session.
 
 **GUI-Adj-3 — Refine spinbox sizing + cap**
 `equipment_section.py`: refine spinbox max changed from 20 → **10** (pre-renewal cap); width widened 50 → **58px** (prevents "+10" clipping). Combat controls `_level_spin` width 60 → **68px** (prevents "Lv 10" clipping).
+
+## Session P — Passive Skills Completion
+
+**P-0 — hp_regen + sp_regen** (`core/models/status.py`, `core/calculators/status_calculator.py`, `gui/sections/derived_section.py`)
+Two new StatusData fields. Natural tick regen formula from status_calc_regen_pc (status.c:2650–2653, no RENEWAL guard):
+- hp_regen = 1 + (vit//5) + (max_hp//200)
+- sp_regen = 1 + (int_//6) + (max_sp//100); if int_ >= 120: += ((int_-120)//2) + 4
+DerivedSection gains "HP Regen" and "SP Regen" rows displaying "{n}/tick".
+
+**P-1 — PassiveSection new rows** (`gui/sections/passive_section.py`)
+16 new rows added to `_PASSIVES` (all with source_skill for job-visibility filtering):
+SA_DRAGONOLOGY, AC_OWL, CR_TRUST, BS_WEAPONRESEARCH, AC_VULTURE, GS_SINGLEACTION,
+GS_SNAKEEYE, TF_MISS, MO_DODGE, BS_SKINTEMPER, AL_DP, SM_RECOVERY, MG_SRECOVERY,
+NJ_NINPOU, NJ_TOBIDOUGU. (BS_HILTBINDING and SA_ADVANCEDBOOK were already in UI.)
+
+**P-2 — StatusCalculator passive stat bonuses** (`core/calculators/status_calculator.py`)
+Module-level constants `_GUN_WEAPON_TYPES` and `_TF_MISS_JOBL2` added.
+Stat passives (before BATK — affect BATK formula):
+- BS_HILTBINDING: STR +1 (status.c:1881); BATK +4 (status.c:1914, #ifndef RENEWAL)
+- SA_DRAGONOLOGY: INT += (lv+1)//2 (status.c:1882)
+- AC_OWL: DEX += lv (status.c:1884)
+DEF passive (conditional on target race via loader.get_monster):
+- AL_DP: def2 += lv*(3+(base_level+1)*4//100) vs Demon/Undead (battle.c:1494)
+HIT/FLEE passives:
+- BS_WEAPONRESEARCH: HIT += lv*2 (#ifndef RENEWAL, status.c:2035)
+- AC_VULTURE: HIT += lv (#ifndef RENEWAL, status.c:2039–2042; range bonus not tracked)
+- GS_SINGLEACTION: HIT += 2*lv (gun types only, status.c:2047)
+- GS_SNAKEEYE: HIT += lv (gun types only, status.c:2049–2051; range bonus not tracked)
+- TF_MISS: FLEE += lv*4 if JOBL_2 thief {12,17,4013,4018}, else lv*3 (status.c:2064)
+- MO_DODGE: FLEE += (lv*3)>>1 (status.c:2066)
+ASPD passives (in sc_aspd_rate block):
+- SA_ADVANCEDBOOK: sc_aspd_rate -= 5*lv (W_BOOK only, #ifndef RENEWAL_ASPD, status.c:2116)
+- GS_SINGLEACTION: sc_aspd_rate -= ((lv+1)//2)*10 (gun types only, status.c:2120)
+MaxHP passive:
+- CR_TRUST: max_hp += lv*200 (status.c:1927)
+
+**P-3 — StatusCalculator passive regen bonuses** (`core/calculators/status_calculator.py`)
+Added after natural regen block; contribute to hp_regen/sp_regen totals:
+- SM_RECOVERY: hp_regen += lv*5 + lv*max_hp//500 (status.c:2691)
+- MG_SRECOVERY: sp_regen += lv*3 + lv*max_sp//500 (status.c:2694)
+- NJ_NINPOU: sp_regen += lv*3 + lv*max_sp//500 (status.c:2695)
+
+**P-4 — GearBonusAggregator.apply_passive_bonuses()** (`core/gear_bonus_aggregator.py`)
+New static method augmenting GearBonuses in-place with passive skill bonuses:
+- CR_TRUST: sub_ele["Ele_Holy"] += lv*5 (status.c:2187)
+- BS_SKINTEMPER: sub_ele["Ele_Neutral"] += lv; sub_ele["Ele_Fire"] += lv*4 (status.c:2189–2192)
+- SA_DRAGONOLOGY: add_race["RC_Dragon"] += lv*4; sub_race["RC_Dragon"] += lv*4 (#ifndef RENEWAL, status.c:2197–2210)
+Called after compute() in: battle_pipeline.py (attacker gear_bonuses) and both
+player_build_to_target() call sites in main_window.py.
+
+**P-5 — NJ_TOBIDOUGU mastery bonus** (`core/calculators/modifiers/mastery_fix.py`)
+Added after ASC_KATAR block: flat +3*lv damage for weapon_type=="Shuriken" (battle.c:844).
+Note: "Shuriken" string assumed from naming convention — unverified (G55).
+
+**Deferred (new gaps G52–G55):**
+- G52: Dual-wield pipeline (AS_RIGHT/AS_LEFT RH+LH multipliers)
+- G53: Falcon/Blitz Beat system (HT_STEELCROW)
+- G54: Proc/extra-hit system (GS_CHAINACTION, TF_DOUBLE)
+- G55: NJ_TOBIDOUGU "Shuriken" weapon_type string verification

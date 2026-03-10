@@ -495,6 +495,7 @@ class MainWindow(QMainWindow):
                 )
                 pvp_status = StatusCalculator(self._config).calculate(pvp_eff, pvp_weapon)
                 pvp_gear_bonuses = GearBonusAggregator.compute(pvp_eff.equipped, pvp_eff.refine_levels)
+                GearBonusAggregator.apply_passive_bonuses(pvp_gear_bonuses, pvp_eff.mastery_levels)
                 target = BuildManager.player_build_to_target(pvp_eff, pvp_status, pvp_gear_bonuses)
             else:
                 pvp_stem = None
@@ -507,6 +508,7 @@ class MainWindow(QMainWindow):
 
         # Incoming damage pipelines — player as defender.
         gear_bonuses = GearBonusAggregator.compute(eff_build.equipped, eff_build.refine_levels)
+        GearBonusAggregator.apply_passive_bonuses(gear_bonuses, eff_build.mastery_levels)
         player_target = BuildManager.player_build_to_target(eff_build, status, gear_bonuses)
         phys_result = None
         magic_result = None

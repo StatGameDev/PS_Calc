@@ -37,3 +37,7 @@ class StatusData:
     # SC_SERVICEFORYU (DC_SERVICEFORYOU) val3 — SP cost reduction %; display-only.
     # Applied in skill cast cost checks in Hercules; not simulated here.
     sp_cost_reduction_pct: int = 0
+
+    # Natural tick regen (status_calc_regen_pc, status.c:2650–2653, no RENEWAL guard)
+    hp_regen: int = 0
+    sp_regen: int = 0

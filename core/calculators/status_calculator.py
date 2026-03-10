@@ -5,6 +5,10 @@ from core.models.build import PlayerBuild
 from core.models.status import StatusData
 from core.models.weapon import Weapon
 
+_GUN_WEAPON_TYPES = frozenset({"Revolver", "Rifle", "Gatling", "Shotgun", "Grenade"})
+_TF_MISS_JOBL2 = frozenset({12, 17, 4013, 4018})  # 2nd-class thief jobs (Assassin, Rogue + trans)
+
+
 class StatusCalculator:
     """Exact pre-renewal port from status.c (status_calc_pc_ + status_calc_misc)"""
 
@@ -52,6 +56,23 @@ class StatusCalculator:
             status.agi += 4
             status.dex += 4
 
+        # === PASSIVE SKILL STAT BONUSES ===
+        # status_calc_pc_ (status.c, no guard unless noted)
+
+        # BS_HILTBINDING: STR +1 (status.c:1881)
+        if build.mastery_levels.get("BS_HILTBINDING", 0):
+            status.str += 1
+
+        # SA_DRAGONOLOGY: INT += (lv+1)//2 (status.c:1882)
+        _sa_dragonology_lv = build.mastery_levels.get("SA_DRAGONOLOGY", 0)
+        if _sa_dragonology_lv:
+            status.int_ += (_sa_dragonology_lv + 1) // 2
+
+        # AC_OWL: DEX += lv (status.c:1884)
+        _ac_owl_lv = build.mastery_levels.get("AC_OWL", 0)
+        if _ac_owl_lv:
+            status.dex += _ac_owl_lv
+
         # === BASE ATK ===
         # Ranged weapons (W_BOW etc.) swap STR/DEX roles in BATK.
         # is_ranged_override overrides; otherwise derived from weapon_type.
@@ -62,6 +83,10 @@ class StatusCalculator:
         dstr = str_val // 10
         status.batk = str_val + (dstr * dstr) + (dex_val // 5) + (status.luk // 5)
         status.batk += build.bonus_batk
+
+        # BS_HILTBINDING: #ifndef RENEWAL BATK +4 (status.c:1914)
+        if build.mastery_levels.get("BS_HILTBINDING", 0):
+            status.batk += 4
 
         # === SELF BUFF SC — BATK MODIFIERS ===
         # Both are #ifndef RENEWAL guards — pre-renewal only.
@@ -89,6 +114,13 @@ class StatusCalculator:
         # Scale def2 for display (def2 is display-only; DefenseFix uses target.vit directly).
         if angelus_lv:
             status.def2 = status.def2 * status.def_percent // 100
+
+        # AL_DP: vit_def += lv*(3 + (base_level+1)*4//100) vs Demon/Undead mob (battle.c:1494)
+        _al_dp_lv = build.mastery_levels.get("AL_DP", 0)
+        if _al_dp_lv and build.target_mob_id:
+            _al_mob = loader.get_monster(build.target_mob_id)
+            if _al_mob and _al_mob.race in ("Demon", "Undead"):
+                status.def2 += _al_dp_lv * (3 + (build.base_level + 1) * 4 // 100)
 
         # === CRITICAL ===
         # status.c:3876 — cri in 0.1% units: base 1.0% (=10) + 0.333% per LUK
@@ -140,6 +172,39 @@ class StatusCalculator:
         # Calculator: user is responsible for applying only when armor element matches.
         if support.get("ground_effect") == "SC_VIOLENTGALE":
             status.flee += int(support.get("ground_effect_lv", 1)) * 3
+
+        # === PASSIVE SKILL HIT/FLEE BONUSES ===
+        # status_calc_pc_ (status.c, no guard unless noted)
+
+        # BS_WEAPONRESEARCH: #ifndef RENEWAL HIT += lv*2 (status.c:2035)
+        _bs_wr_lv = build.mastery_levels.get("BS_WEAPONRESEARCH", 0)
+        if _bs_wr_lv:
+            status.hit += _bs_wr_lv * 2
+
+        # AC_VULTURE: #ifndef RENEWAL HIT += lv (status.c:2039–2042; range bonus not tracked)
+        _ac_vulture_lv = build.mastery_levels.get("AC_VULTURE", 0)
+        if _ac_vulture_lv:
+            status.hit += _ac_vulture_lv
+
+        # GS_SINGLEACTION: HIT += 2*lv (gun types only) (status.c:2047)
+        _gs_sa_lv = build.mastery_levels.get("GS_SINGLEACTION", 0)
+        if _gs_sa_lv and weapon.weapon_type in _GUN_WEAPON_TYPES:
+            status.hit += 2 * _gs_sa_lv
+
+        # GS_SNAKEEYE: HIT += lv (gun types only) (status.c:2049–2051; range bonus not tracked)
+        _gs_se_lv = build.mastery_levels.get("GS_SNAKEEYE", 0)
+        if _gs_se_lv and weapon.weapon_type in _GUN_WEAPON_TYPES:
+            status.hit += _gs_se_lv
+
+        # TF_MISS: FLEE += lv*4 (JOBL_2 thief: Assassin/Rogue + trans), else lv*3 (status.c:2064)
+        _tf_miss_lv = build.mastery_levels.get("TF_MISS", 0)
+        if _tf_miss_lv:
+            status.flee += _tf_miss_lv * 4 if build.job_id in _TF_MISS_JOBL2 else _tf_miss_lv * 3
+
+        # MO_DODGE: FLEE += (lv*3)>>1 (status.c:2066)
+        _mo_dodge_lv = build.mastery_levels.get("MO_DODGE", 0)
+        if _mo_dodge_lv:
+            status.flee += (_mo_dodge_lv * 3) >> 1
 
         # === ASPD ===
         # Pre-renewal formula (status.c status_base_amotion_pc, #ifndef RENEWAL_ASPD):
@@ -215,6 +280,15 @@ class StatusCalculator:
             _lv = active_sc["SC_DEFENDER"]
             sc_aspd_rate += 250 - 50 * _lv
 
+        # SA_ADVANCEDBOOK: #ifndef RENEWAL_ASPD aspd_rate -= 5*lv (W_BOOK only) (status.c:2116)
+        _sa_advbook_lv = build.mastery_levels.get("SA_ADVANCEDBOOK", 0)
+        if _sa_advbook_lv and weapon.weapon_type == "Book":
+            sc_aspd_rate -= 5 * _sa_advbook_lv
+
+        # GS_SINGLEACTION: #ifndef RENEWAL_ASPD aspd_rate -= ((lv+1)//2)*10 (gun types only) (status.c:2120)
+        if _gs_sa_lv and weapon.weapon_type in _GUN_WEAPON_TYPES:
+            sc_aspd_rate -= ((_gs_sa_lv + 1) // 2) * 10
+
         if sc_aspd_rate != 1000:
             amotion = amotion * sc_aspd_rate // 1000
 
@@ -238,6 +312,11 @@ class StatusCalculator:
         hp_base = loader.get_hp_at_level(build.job_id, build.base_level)
         status.max_hp = hp_base * (100 + status.vit) // 100
         status.max_hp += build.bonus_maxhp
+
+        # CR_TRUST: MaxHP += lv*200 (status.c:1927)
+        _cr_trust_lv = build.mastery_levels.get("CR_TRUST", 0)
+        if _cr_trust_lv:
+            status.max_hp += _cr_trust_lv * 200
 
         # === MAX SP ===
         # Same pattern: SPTable[job_id][base_level - 1] * (100 + int_) // 100
@@ -352,5 +431,33 @@ class StatusCalculator:
 
         # SC_NIBELUNGEN has no stat effect beyond WATK (handled in base_damage.py).
         # SC_SIEGFRIED elemental resistance affects incoming pipeline — Session R.
+
+        # === NATURAL TICK REGEN ===
+        # status_calc_regen_pc (status.c:2650–2653, no RENEWAL guard)
+        # regen->hp = 1 + (vit / 5) + (max_hp / 200)
+        # regen->sp = 1 + (int_ / 6) + (max_sp / 100)
+        # if int_ >= 120: sp += ((int_ - 120) / 2) + 4
+        status.hp_regen = 1 + (status.vit // 5) + (status.max_hp // 200)
+        status.sp_regen = 1 + (status.int_ // 6) + (status.max_sp // 100)
+        if status.int_ >= 120:
+            status.sp_regen += ((status.int_ - 120) // 2) + 4
+
+        # === PASSIVE SKILL REGEN BONUSES ===
+        # status_calc_regen_pc (status.c — no RENEWAL guard)
+
+        # SM_RECOVERY: hp_regen += lv*5 + lv*max_hp//500 (status.c:2691)
+        _sm_rec_lv = build.mastery_levels.get("SM_RECOVERY", 0)
+        if _sm_rec_lv:
+            status.hp_regen += _sm_rec_lv * 5 + _sm_rec_lv * status.max_hp // 500
+
+        # MG_SRECOVERY: sp_regen += lv*3 + lv*max_sp//500 (status.c:2694)
+        _mg_srec_lv = build.mastery_levels.get("MG_SRECOVERY", 0)
+        if _mg_srec_lv:
+            status.sp_regen += _mg_srec_lv * 3 + _mg_srec_lv * status.max_sp // 500
+
+        # NJ_NINPOU: sp_regen += lv*3 + lv*max_sp//500 (status.c:2695)
+        _nj_ninpou_lv = build.mastery_levels.get("NJ_NINPOU", 0)
+        if _nj_ninpou_lv:
+            status.sp_regen += _nj_ninpou_lv * 3 + _nj_ninpou_lv * status.max_sp // 500
 
         return status

@@ -47,20 +47,8 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | M2 | Bard/Dancer songs: song_state on PlayerBuild; SC_ASSNCROS/WHISTLE/APPLEIDUN/POEMBRAGI/HUMMING/FORTUNE/SERVICEFORYU in StatusCalculator; SC_DRUMBATTLE+SC_NIBELUNGEN in base_damage.py; Bard Songs+Dancer Dances+Ensembles UI; job visibility filter | G9, G49~ |
 | N | Self-Buffs: 10 SCs in StatusCalculator (stat/BATK/CRI/HIT/FLEE/ASPD/MDEF); 3 ASPD bugs fixed (MADNESSCANCEL not in max pool, STEELBODY/DEFENDER scale corrected); 22 new _SELF_BUFFS rows in buffs_section.py | G49~ |
 | O | Ground Effects: SC_VOLCANO (base_damage.py, lv*10 WATK); SC_VIOLENTGALE (status_calculator.py, lv*3 FLEE); SC_DELUGE (UI only, MaxHP no damage effect); Ground Effects sub-group wired (QComboBox+QSpinBox). Endows deferred (manual element override sufficient). | G49~ |
-
----
-
-## Session P — Passive Skills Completion
-
-**Goal**: Implement passive_skills.md entries not yet in StatusCalculator or mastery.
-**Source**: pc.c → `pc_calcstatus`.
-**Skills**: ~52 entries in passive_skills.md; subset already done (weapon masteries,
-ASC_KATAR, ASPD passives). Remaining = weapon-type stat bonuses, conditional stat
-passives, and any formula passives feeding StatusData.
-**Architecture**: Extend StatusCalculator; introduce `passive_calculator.py` if volume
-warrants a separate module.
-**Gap ID**: G50
-**Estimated tokens**: 30–40k.
+| GUI-Adj | Spinbox→dropdowns/toggles, no-wheel on all combos, refine cap +10 | — |
+| P | Passive skills: hp/sp regen in StatusData+StatusCalculator+DerivedSection; 16 new passive_section rows; stat/HIT/FLEE/ASPD/regen passives in StatusCalculator; GearBonusAggregator.apply_passive_bonuses() (sub_ele/add_race/sub_race); NJ_TOBIDOUGU in mastery_fix.py. Deferred: G52 dual-wield, G53 falcon, G54 proc/extra-hit, G55 Shuriken type verify. | G50~ |
 
 ---
 

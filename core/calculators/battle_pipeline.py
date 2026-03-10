@@ -146,6 +146,7 @@ class BattlePipeline:
         """Run a single damage branch (normal or crit) through the full modifier chain."""
         result = DamageResult()
         gear_bonuses = GearBonusAggregator.compute(build.equipped, build.refine_levels)
+        GearBonusAggregator.apply_passive_bonuses(gear_bonuses, build.mastery_levels)
         is_ranged = effective_is_ranged(build, weapon)
 
         # Informational input steps — show values entering the pipeline

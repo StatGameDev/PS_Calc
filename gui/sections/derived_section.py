@@ -38,8 +38,10 @@ class DerivedSection(Section):
             ("HIT",   "hit",   "—"),
             ("CRI",   "cri",   "—"),
             ("ASPD",  "aspd",  "—"),
-            ("HP",    "hp",    "—"),
-            ("SP",    "sp",    "—"),
+            ("HP",       "hp",       "—"),
+            ("HP Regen", "hp_regen", "—"),
+            ("SP",       "sp",       "—"),
+            ("SP Regen", "sp_regen", "—"),
             # SC_POEMBRAGI / SC_SERVICEFORYU — hidden when 0
             ("Cast Red.",  "cast_red",  "—"),
             ("ACD Red.",   "acd_red",   "—"),
@@ -132,7 +134,9 @@ class DerivedSection(Section):
         self._value_labels["cri"].setText(f"{cri_pct:.1f}%")
         self._value_labels["aspd"].setText(f"{status.aspd:.1f}")
         self._value_labels["hp"].setText(str(status.max_hp))
+        self._value_labels["hp_regen"].setText(f"{status.hp_regen}/tick")
         self._value_labels["sp"].setText(str(status.max_sp))
+        self._value_labels["sp_regen"].setText(f"{status.sp_regen}/tick")
 
         # Optional rows: show only when non-zero (SC_POEMBRAGI / SC_SERVICEFORYU)
         self._set_optional("cast_red",    status.cast_time_reduction_pct,        f"{status.cast_time_reduction_pct}%")

@@ -920,6 +920,65 @@ brief reads before proceeding.
 
 ---
 
+## Session P  2026-03-10  claude-sonnet-4-6
+ctx_used: ___%   (fill in after session)
+
+Work items completed:
+- hp_regen + sp_regen: StatusData + StatusCalculator + DerivedSection
+- 16 new passive rows in passive_section.py
+- StatusCalculator: stat passives (BS_HILTBINDING, SA_DRAGONOLOGY, AC_OWL, CR_TRUST, BS_WEAPONRESEARCH, AC_VULTURE, GS_SINGLEACTION, GS_SNAKEEYE, TF_MISS, MO_DODGE, SA_ADVANCEDBOOK, AL_DP)
+- StatusCalculator: regen passives (SM_RECOVERY, MG_SRECOVERY, NJ_NINPOU)
+- GearBonusAggregator.apply_passive_bonuses() + 3 call sites
+- mastery_fix.py: NJ_TOBIDOUGU (+3*lv for Shuriken)
+- docs maintenance: gaps.md G50[~] + G52–G55; completed_work.md; session_roadmap.md; context_log.md; MEMORY.md
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md | 182 | ~728 |
+| core/models/status.py | 43 | ~301 |
+| core/calculators/status_calculator.py | 384 | ~2,688 |
+| gui/sections/derived_section.py | 159 | ~1,113 |
+| gui/sections/passive_section.py | ~298 | ~2,086 |
+| core/models/build.py | 108 | ~756 |
+| core/calculators/modifiers/mastery_fix.py | 73 | ~511 |
+| core/gear_bonus_aggregator.py | 142 | ~994 |
+| core/models/weapon.py | 26 | ~182 |
+| core/calculators/modifiers/card_fix.py (partial + greps) | ~50 | ~350 |
+| gui/main_window.py (partial) | ~120 | ~840 |
+| core/calculators/battle_pipeline.py (partial) | ~12 | ~84 |
+| docs/gaps.md | 155 | ~620 |
+| docs/completed_work.md (partial) | ~140 | ~560 |
+| docs/context_log.md (partial) | ~60 | ~240 |
+| MEMORY.md (partial) | ~20 | ~80 |
+| **subtotal reads** | **~1,992** | **~12,133** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| gui/sections/passive_section.py | +16 | ~80 |
+| core/calculators/status_calculator.py | +82 | ~574 |
+| core/gear_bonus_aggregator.py | +25 | ~175 |
+| core/calculators/battle_pipeline.py | +1 | ~7 |
+| gui/main_window.py | +2 | ~14 |
+| core/calculators/modifiers/mastery_fix.py | +18 | ~126 |
+| core/models/status.py | +3 | ~21 |
+| docs/gaps.md | +5 rows | ~60 |
+| docs/session_roadmap.md | -55 lines, +2 rows | ~80 |
+| docs/completed_work.md | +68 lines | ~272 |
+| docs/context_log.md | this entry | ~120 |
+| MEMORY.md | +2 lines | ~14 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| (none) | | |
+
+Total est_tokens: ~12,133 reads + ~1,543 edits + 6,000 fixed + ~25,000 conv ≈ 45,000
+Notes: Session split into 3 parts (planning → items 1–3 → items 4–6 → docs). No Hercules greps needed — all source lines were pre-confirmed in planning session and recorded in session_roadmap.md.
+
+---
+
 ## Template for future sessions
 
 ## Session GUI-Adj  2026-03-10  claude-sonnet-4-6

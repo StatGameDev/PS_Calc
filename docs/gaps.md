@@ -100,7 +100,11 @@ _Status: [ ] open, [x] done, [~] partial_
 |---|---|---|---|
 | G48 | [ ] | Target debuff system: `target_active_scs: dict[str,int]` on Target; new target-side status calculator; "Target State" UI section with debuff toggles + level spinboxes. | R |
 | G49 | [~] | Buffs section UI: role-grouped collapsible panel. M0: skeleton + Self Buffs wired. M: Party Buffs sub-group wired. M2: Bard Songs + Dancer Dances + Ensembles sub-groups wired. N: 22 new Self Buff rows (all Session N SCs + stubs + sphere/coin spinners). O: Ground Effects sub-group wired (SC_VOLCANO/DELUGE/VIOLENTGALE). Remaining: Guild Buffs, Misc (future sessions). | M–future |
-| G50 | [ ] | Passive skills completion: implement passive_skills.md entries not yet in StatusCalculator or mastery (weapon-type stat bonuses, conditional stat passives). Source: pc.c pc_calcstatus. | P |
+| G50 | [~] | Passive skills completion: stat/HIT/FLEE/ASPD/regen passives wired (Session P). Deferred: GS_CHAINACTION→G54, AS_RIGHT/AS_LEFT→G52, HT_STEELCROW→G53, AC_VULTURE/GS_SNAKEEYE range increase (range not tracked in StatusData). | P |
+| G52 | [ ] | Dual-wield pipeline: AS_RIGHT (RH ×(50+10×lv)%, battle.c:5923) + AS_LEFT (LH ×(30+10×lv)%, battle.c:5929). Requires separate RH+LH damage branches; only active for `_DUAL_WIELD_JOBS = {12, 4013}`. Deferred from Session P. | future |
+| G53 | [ ] | Falcon/Blitz Beat system: HT_STEELCROW affects Blitz Beat ATK formula (battle.c:4242). Requires modelling the falcon auto-attack proc probability and its own damage branch. Deferred from Session P. | future |
+| G54 | [ ] | Proc/extra-hit system: GS_CHAINACTION (5×lv% second shot with W_REVOLVER, battle.c:4879–4883) and TF_DOUBLE (dagger double attack, passive_section UI present). A "proc system" means modelling the discrete outcome — proc fires vs does not — as a PMF branch or expected-value multiplier on hit count; neither is in the current PMF architecture. | future |
+| G55 | [ ] | NJ_TOBIDOUGU weapon_type string "Shuriken" unverified against item_db. mastery_fix.py uses "Shuriken" (assumed from naming convention). Verify before Session Q Ninja skills — if wrong, the bonus silently never applies. | P |
 
 ---
 

@@ -38,7 +38,22 @@ _PASSIVES: list[tuple] = [
     ("ASC_KATAR",        "Adv. Katar",     10, "ASC_KATAR"),
     ("AL_DEMONBANE",     "Demon Bane",     10, "AL_DEMONBANE"),
     ("HT_BEASTBANE",     "Beast Bane",     10, "HT_BEASTBANE"),
-    ("BS_HILTBINDING",   "Hilt Binding",   1,  "BS_HILTBINDING"),
+    ("BS_HILTBINDING",   "Hilt Binding",    1,  "BS_HILTBINDING"),
+    ("SA_DRAGONOLOGY",   "Dragonology",     5,  "SA_DRAGONOLOGY"),
+    ("AC_OWL",           "Owl's Eye",      10,  "AC_OWL"),
+    ("CR_TRUST",         "Faith",          10,  "CR_TRUST"),
+    ("BS_WEAPONRESEARCH","Weapon Research",10,  "BS_WEAPONRESEARCH"),
+    ("AC_VULTURE",       "Vulture's Eye",  10,  "AC_VULTURE"),
+    ("GS_SINGLEACTION",  "Single Action",  10,  "GS_SINGLEACTION"),
+    ("GS_SNAKEEYE",      "Snake's Eye",    10,  "GS_SNAKEEYE"),
+    ("TF_MISS",          "Improve Dodge",  10,  "TF_MISS"),
+    ("MO_DODGE",         "Dodge",          10,  "MO_DODGE"),
+    ("BS_SKINTEMPER",    "Skin Tempering",  5,  "BS_SKINTEMPER"),
+    ("AL_DP",            "Divine Protection", 10, "AL_DP"),
+    ("SM_RECOVERY",      "Recuperation",   10,  "SM_RECOVERY"),
+    ("MG_SRECOVERY",     "Spiritual Recovery", 10, "MG_SRECOVERY"),
+    ("NJ_NINPOU",        "Ninpou",          4,  "NJ_NINPOU"),
+    ("NJ_TOBIDOUGU",     "Throw Mastery",  10,  "NJ_TOBIDOUGU"),
 ]
 
 
