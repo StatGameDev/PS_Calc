@@ -45,50 +45,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | Design | Buff Architecture Q1–Q5 resolved; decisions written to core_architecture.md | — |
 | M | Party Buffs: SC_BLESSING/INC_AGI/GLORIA/ANGELUS/IMPOSITIO/ADRENALINE; def_percent chain; bonus display "Buffs" column | G49~ |
 | M2 | Bard/Dancer songs: song_state on PlayerBuild; SC_ASSNCROS/WHISTLE/APPLEIDUN/POEMBRAGI/HUMMING/FORTUNE/SERVICEFORYU in StatusCalculator; SC_DRUMBATTLE+SC_NIBELUNGEN in base_damage.py; Bard Songs+Dancer Dances+Ensembles UI; job visibility filter | G9, G49~ |
-
----
-
-## Session N — Self-Buffs
-
-**Goal**: Add all self-only SC rows to `_SELF_BUFFS` in `buffs_section.py` and implement
-their formulas in `status_calculator.py` / `active_status_bonus.py`.
-
-**Full skill tracking**: `docs/buff_temp_list.md` — every entry from buff_skills.md with
-category/status/notes. Load this file at session start.
-
-**Self-only SCs to add (22 new rows):**
-7 SM_MAGNUM, 8 SM_ENDURE, 45 AC_CONCENTRATION, 135 AS_CLOAKING, 139 AS_POISONREACT,
-146 SM_AUTOBERSERK, 155 MC_LOUD, 157 MG_ENERGYCOAT, 249 CR_AUTOGUARD,
-252 CR_REFLECTSHIELD, 257 CR_DEFENDER, 261 MO_CALLSPIRITS, 268 MO_STEELBODY,
-270 MO_EXPLOSIONSPIRITS, 411 TK_RUN, 500 GS_GLITTERING, 504 GS_MADNESSCANCEL,
-505 GS_ADJUSTMENT, 506 GS_INCREASING, 517 GS_GATLINGFEVER, 543 NJ_NEN,
-1005 RG_CLOSECONFINE
-
-**Formulas confirmed from Hercules this session** (status.c):
-- SC_GS_MADNESSCANCEL: batk += 100 (#ifndef RENEWAL, line 4479); ASPD skill1 bonus=20
-- SC_GS_GATLINGFEVER: batk += 20+10×lv (#ifndef RENEWAL); flee −= 5×lv; ASPD rate += val1; init: val2=20×lv, val3=20+10×lv, val4=5×lv (line 8348)
-- SC_GS_ADJUSTMENT: hit −= 30; flee += 30 (lines 4809, 4878)
-- SC_GS_ACCURACY (GS_INCREASING): hit += 20 (line 4810)
-- SC_RG_CCONFINE_M (RG_CLOSECONFINE): flee += 10 (line 4831)
-- SC_EXPLOSIONSPIRITS: critical += val2 (line 4754)
-- SC_NJ_NEN: str += val1; int_ += val1 (lines 3963, 4149)
-- SC_PROVOKE init: val3=2+3×lv (atk%), val4=5+5×lv (def%) (line 8363)
-
-**Still needs one grep at session start** (SC keys not found):
-- SM_MAGNUM SC key, AC_CONCENTRATION SC key, MC_LOUD SC key, MO_CALLSPIRITS SC key,
-  GS_GLITTERING SC key; also val definitions for SC_NJ_NEN and SC_EXPLOSIONSPIRITS
-
-**Party buff corrections identified this session:**
-- PR_SUFFRAGIUM (67): skipped in Session M — add to next party buff session
-- CR_PROVIDENCE (256): party buff, future session
-- SM_PROVOKE (6): debuff on enemies (Session R); SC_PROVOKE on player via SM_AUTOBERSERK only
-
-**Architecture**: All new self SCs go into `active_status_levels` dict (existing).
-StatusCalculator gains one new block after the ASPD section reading active_sc keys.
-Stub rows (incoming-only: AutoGuard, ShieldReflect, Defender, MentalStrength, Cloaking,
-PoisonReact, EnergyCoat, AutoBerserk) get UI rows but zero calculator effect.
-
-**Estimated tokens**: 25–35k.
+| N | Self-Buffs: 10 SCs in StatusCalculator (stat/BATK/CRI/HIT/FLEE/ASPD/MDEF); 3 ASPD bugs fixed (MADNESSCANCEL not in max pool, STEELBODY/DEFENDER scale corrected); 22 new _SELF_BUFFS rows in buffs_section.py | G49~ |
 
 ---
 

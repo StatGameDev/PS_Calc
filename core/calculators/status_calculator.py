@@ -27,6 +27,30 @@ class StatusCalculator:
         # by _apply_gear_bonuses() in main_window.py before StatusCalculator is called.
         # They therefore already appear in status.str/agi/etc. via base+bonus arithmetic.
         support = build.support_buffs
+        active_sc = build.active_status_levels
+
+        # === SELF BUFF SC — STAT MODIFIERS ===
+        # Applied before derived stats (BATK, HIT, FLEE, ASPD) so all downstream
+        # calculations pick them up automatically.
+
+        # SC_SHOUT (MC_LOUD lv1): str +4 flat, hardcoded — no level scaling
+        # status.c:3956-3957
+        if "SC_SHOUT" in active_sc:
+            status.str += 4
+
+        # SC_NJ_NEN (NJ_NEN): str += val1=lv, int_ += val1=lv
+        # status.c:3962-3963 (str), 4148-4149 (int_); val1=skill_lv via sc_start (skill.c:7428)
+        if "SC_NJ_NEN" in active_sc:
+            _lv = active_sc["SC_NJ_NEN"]
+            status.str  += _lv
+            status.int_ += _lv
+
+        # SC_GS_ACCURACY (GS_INCREASING): agi +4, dex +4 flat
+        # status.c:4023-4024 (agi), 4219-4220 (dex)
+        # hit +20 deferred to after HIT is calculated (status.c:4811)
+        if "SC_GS_ACCURACY" in active_sc:
+            status.agi += 4
+            status.dex += 4
 
         # === BASE ATK ===
         # Ranged weapons (W_BOW etc.) swap STR/DEX roles in BATK.
@@ -38,6 +62,20 @@ class StatusCalculator:
         dstr = str_val // 10
         status.batk = str_val + (dstr * dstr) + (dex_val // 5) + (status.luk // 5)
         status.batk += build.bonus_batk
+
+        # === SELF BUFF SC — BATK MODIFIERS ===
+        # Both are #ifndef RENEWAL guards — pre-renewal only.
+
+        # SC_GS_MADNESSCANCEL: batk += 100
+        # status.c:4478-4479 (#ifndef RENEWAL)
+        if "SC_GS_MADNESSCANCEL" in active_sc:
+            status.batk += 100
+
+        # SC_GS_GATLINGFEVER: batk += val3 = 20+10×lv
+        # status.c:8351-8352 (#ifndef RENEWAL); val3 set in init block at status.c:8352
+        if "SC_GS_GATLINGFEVER" in active_sc:
+            _lv = active_sc["SC_GS_GATLINGFEVER"]
+            status.batk += 20 + 10 * _lv
 
         # === DEFENSE ===
         status.def_ = build.equip_def                    # Hard DEF (def1) = equipment only
@@ -60,10 +98,41 @@ class StatusCalculator:
         # that is the non-default path. We implement the default only.
         status.cri = 10 + (status.luk * 10 // 3) + (build.bonus_cri * 10)
 
+        # SC_EXPLOSIONSPIRITS (MO_EXPLOSIONSPIRITS): cri += val2 = 75+25×lv
+        # status.c:7844 (init: val2=75+25*val1), 4753-4754 (application)
+        # Units: same 0.1% scale as status.cri (lv1=+10.0%, lv5=+35.0%)
+        if "SC_EXPLOSIONSPIRITS" in active_sc:
+            _lv = active_sc["SC_EXPLOSIONSPIRITS"]
+            status.cri += 75 + 25 * _lv
+
         # === HIT / FLEE ===
         status.hit = build.base_level + status.dex + build.bonus_hit
         status.flee = build.base_level + status.agi + build.bonus_flee
         status.flee2 = status.luk + 10 if self.config.enable_perfect_flee else 0
+
+        # === SELF BUFF SC — HIT / FLEE MODIFIERS ===
+
+        # SC_GS_ACCURACY (GS_INCREASING): hit +20
+        # status.c:4811 (applied after base HIT derivation)
+        if "SC_GS_ACCURACY" in active_sc:
+            status.hit += 20
+
+        # SC_GS_ADJUSTMENT (GS_ADJUSTMENT): hit −30, flee +30
+        # status.c:4809 (hit), 4878 (flee)
+        if "SC_GS_ADJUSTMENT" in active_sc:
+            status.hit  -= 30
+            status.flee += 30
+
+        # SC_RG_CCONFINE_M (RG_CLOSECONFINE): flee +10
+        # status.c:4874
+        if "SC_RG_CCONFINE_M" in active_sc:
+            status.flee += 10
+
+        # SC_GS_GATLINGFEVER: flee −= val4 = 5×lv
+        # status.c:8350 (init: val4=5*val1), 4883 (application)
+        if "SC_GS_GATLINGFEVER" in active_sc:
+            _lv = active_sc["SC_GS_GATLINGFEVER"]
+            status.flee -= 5 * _lv
 
         # === ASPD ===
         # Pre-renewal formula (status.c status_base_amotion_pc, #ifndef RENEWAL_ASPD):
@@ -77,32 +146,32 @@ class StatusCalculator:
         amotion = base_amotion - base_amotion * (4 * status.agi + status.dex) // 1000
         amotion += build.bonus_aspd_add  # stub: flat amotion reduction from bAspd (Session 4)
 
-        # SC ASPD buffs — source: status.c:5587-5652 status_calc_aspd_rate
-        # Comment in source: "Note that the scale of aspd_rate is 1000 = 100%."
-        # Formula: aspd_rate -= max(all active SC reductions); amotion = amotion * aspd_rate // 1000
-        # Only the highest single reduction applies — no stacking between quicken-type SCs.
-        active_sc = build.active_status_levels
-        sc_aspd_reduction = 0   # in 1000-scale units (300 = 30% reduction)
+        # SC ASPD buffs — status.c:5587-5685 status_calc_aspd_rate (no RENEWAL guard)
+        # Scale: 1000 = 100%. aspd_rate < 1000 → faster; aspd_rate > 1000 → slower.
+        # Quicken SCs compete for max pool (take-max, no stacking, lines 5597-5650).
+        # MADNESSCANCEL is NOT in the max pool — separate additional −200 (lines 5656-5657).
+        # STEELBODY/DEFENDER add slowdown via aspd_rate += N (lines 5670-5675).
+        sc_aspd_max = 0
 
-        # Fixed-value SCs (val2 constant regardless of level)
+        # Fixed-value quicken SCs (val2 = 300)
         for sc_key in ("SC_TWOHANDQUICKEN", "SC_ONEHANDQUICKEN"):
             if sc_key in active_sc:
-                sc_aspd_reduction = max(sc_aspd_reduction, 300)  # val2 = 300
+                sc_aspd_max = max(sc_aspd_max, 300)  # val2 = 300
 
         # SC_ADRENALINE: val3 = 300 (self) or 200 (party member) (status.c:7226-7232)
         # support_buffs stores the actual val3 directly (300 or 200).
         # Weapon restriction (axe/mace only) not enforced here — user's responsibility.
         adrenaline_val = int(support.get("SC_ADRENALINE", 0))
         if adrenaline_val:
-            sc_aspd_reduction = max(sc_aspd_reduction, adrenaline_val)
+            sc_aspd_max = max(sc_aspd_max, adrenaline_val)
         elif "SC_ADRENALINE" in active_sc:
             # backward-compat: old saves that stored it in active_status_levels
-            sc_aspd_reduction = max(sc_aspd_reduction, 300)
+            sc_aspd_max = max(sc_aspd_max, 300)
 
-        # SC_SPEARQUICKEN: val2 = 200 + 10*val1 (status.c:7822 #ifndef RENEWAL_ASPD)
+        # SC_SPEARQUICKEN: val2 = 200+10×lv (status.c:7822 #ifndef RENEWAL_ASPD)
         if "SC_SPEARQUICKEN" in active_sc:
             spear_lv = active_sc["SC_SPEARQUICKEN"]
-            sc_aspd_reduction = max(sc_aspd_reduction, 200 + 10 * spear_lv)
+            sc_aspd_max = max(sc_aspd_max, 200 + 10 * spear_lv)
 
         # SC_ASSNCROS (Assassin's Cross): val2 = (MusLesson/2 + 10 + song_lv + bard_agi/10) * 10
         # skill.c:13296-13307 #else (pre-renewal); weapon restriction (no bow/gun) not enforced here.
@@ -113,10 +182,34 @@ class StatusCalculator:
             s_agi     = int(song.get("SC_ASSNCROS_agi") if song.get("SC_ASSNCROS_agi") is not None
                            else song.get("caster_agi", 1))
             val2 = (mus_lv // 2 + 10 + song_lv + s_agi // 10) * 10
-            sc_aspd_reduction = max(sc_aspd_reduction, val2)
+            sc_aspd_max = max(sc_aspd_max, val2)
 
-        if sc_aspd_reduction:
-            amotion = amotion * (1000 - sc_aspd_reduction) // 1000
+        # SC_GS_GATLINGFEVER: val2 = 20×lv in max pool (status_calc_aspd_rate:5626-5628)
+        if "SC_GS_GATLINGFEVER" in active_sc:
+            _lv = active_sc["SC_GS_GATLINGFEVER"]
+            sc_aspd_max = max(sc_aspd_max, 20 * _lv)
+
+        sc_aspd_rate = 1000 - sc_aspd_max
+
+        # SC_GS_MADNESSCANCEL: separate additional −200, not in max pool
+        # status_calc_aspd_rate:5656-5657 (else-if; only applies when SC_BERSERK inactive)
+        if "SC_GS_MADNESSCANCEL" in active_sc:
+            sc_aspd_rate -= 200
+
+        # === ASPD SLOWDOWNS (status_calc_aspd_rate:5670-5685, no RENEWAL guard) ===
+
+        # SC_STEELBODY: aspd_rate += 250 (status_calc_aspd_rate:5670-5671)
+        if "SC_STEELBODY" in active_sc:
+            sc_aspd_rate += 250
+
+        # SC_DEFENDER: aspd_rate += val4 = 250-50×lv (status_calc_aspd_rate:5674-5675)
+        # lv1→200, lv2→150, lv3→100, lv4→50, lv5→0
+        if "SC_DEFENDER" in active_sc:
+            _lv = active_sc["SC_DEFENDER"]
+            sc_aspd_rate += 250 - 50 * _lv
+
+        if sc_aspd_rate != 1000:
+            amotion = amotion * sc_aspd_rate // 1000
 
         # bonus_aspd_percent: percentage aspd_rate bonus (e.g. 10 = 10% faster)
         # Implemented as aspd_rate modifier: amotion *= (1000 - pct*10) / 1000
@@ -155,6 +248,12 @@ class StatusCalculator:
         status.mdef = build.equip_mdef
         # Soft MDEF (mdef2): int_ + vit//2  (status.c:3867 #else not RENEWAL)
         status.mdef2 = status.int_ + (status.vit >> 1)
+
+        # SC_ENDURE (SM_ENDURE): mdef += val1 = skill_lv, when val4=0 (skill cast, not Eddga card)
+        # status.c:5149-5150: mdef += (val4==0) ? val1 : 1
+        # val1=skill_lv via sc_start; we always treat as skill cast (val4=0 path)
+        if "SC_ENDURE" in active_sc:
+            status.mdef += active_sc["SC_ENDURE"]
 
         # === BARD SONGS (song_state) ===
         # All formulas from skill.c skill_unitsetting (#else pre-renewal blocks).

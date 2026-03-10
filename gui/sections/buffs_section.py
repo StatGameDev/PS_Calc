@@ -26,13 +26,68 @@ _DANCER_JOBS = frozenset({20, 4021})
 # All are job-filtered via update_job(). Show All overrides filtering.
 # SC_ADRENALINE and SC_ASSNCROS are in support_buffs / song_state — not here.
 _SELF_BUFFS: list[tuple] = [
-    ("SC_AURABLADE",      "Aura Blade",         True,  1,  5,  "LK_AURABLADE"),
-    ("SC_MAXIMIZEPOWER",  "Maximize Power",      False, 1,  1,  "BS_MAXIMIZE"),
-    ("SC_OVERTHRUST",     "Overthrust",          True,  1,  10, "BS_OVERTHRUST"),
-    ("SC_OVERTHRUSTMAX",  "Max. Overthrust",     True,  1,  5,  "WS_OVERTHRUSTMAX"),
-    ("SC_TWOHANDQUICKEN", "Two-Hand Quicken",    False, 1,  1,  "KN_TWOHANDQUICKEN"),
-    ("SC_SPEARQUICKEN",   "Spear Quicken",       True,  1,  10, "CR_SPEARQUICKEN"),
-    ("SC_ONEHANDQUICKEN", "One-Hand Quicken*",   False, 1,  1,  "KN_ONEHAND"),
+    # ── Existing (Sessions 1–M2) ──────────────────────────────────────────────
+    ("SC_AURABLADE",          "Aura Blade",           True,  1,  5,  "LK_AURABLADE"),
+    ("SC_MAXIMIZEPOWER",      "Maximize Power",        False, 1,  1,  "BS_MAXIMIZE"),
+    ("SC_OVERTHRUST",         "Overthrust",            True,  1,  10, "BS_OVERTHRUST"),
+    ("SC_OVERTHRUSTMAX",      "Max. Overthrust",       True,  1,  5,  "WS_OVERTHRUSTMAX"),
+    ("SC_TWOHANDQUICKEN",     "Two-Hand Quicken",      False, 1,  1,  "KN_TWOHANDQUICKEN"),
+    ("SC_SPEARQUICKEN",       "Spear Quicken",         True,  1,  10, "CR_SPEARQUICKEN"),
+    ("SC_ONEHANDQUICKEN",     "One-Hand Quicken*",     False, 1,  1,  "KN_ONEHAND"),
+    # ── Session N — Swordman / Knight / Crusader ──────────────────────────────
+    # SC_SUB_WEAPONPROPERTY: stub; fire property + 20% dmg for one hit (battle.c:996-1001)
+    ("SC_SUB_WEAPONPROPERTY", "Magnum Break",          False, 1,  1,  "SM_MAGNUM"),
+    # SC_AUTOBERSERK: stub; auto-applies SC_PROVOKE when HP<25% — no outgoing dmg formula
+    ("SC_AUTOBERSERK",        "Auto Berserk",          False, 1,  1,  "SM_AUTOBERSERK"),
+    # SC_ENDURE: mdef += val1=lv — status_calculator.py (status.c:5149)
+    ("SC_ENDURE",             "Endure",                True,  1,  10, "SM_ENDURE"),
+    # SC_AUTOGUARD: stub; block chance incoming — no outgoing effect
+    ("SC_AUTOGUARD",          "Auto Guard",            False, 1,  1,  "CR_AUTOGUARD"),
+    # SC_REFLECTSHIELD: stub; reflect incoming melee — advanced/incoming only
+    ("SC_REFLECTSHIELD",      "Reflect Shield",        False, 1,  1,  "CR_REFLECTSHIELD"),
+    # SC_DEFENDER: aspd_rate += val4=250-50×lv — status_calculator.py (status_calc_aspd_rate:5674)
+    ("SC_DEFENDER",           "Defender",              True,  1,  5,  "CR_DEFENDER"),
+    # ── Session N — Monk / Champion ──────────────────────────────────────────
+    # MO_SPIRITBALL: no SC; sphere count stored for future skill ratio use
+    ("MO_SPIRITBALL",         "Spirit Spheres",        True,  1,  5,  "MO_CALLSPIRITS"),
+    # SC_STEELBODY: aspd_rate += 250; def cap=90 stub — status_calculator.py
+    ("SC_STEELBODY",          "Steel Body",            False, 1,  1,  "MO_STEELBODY"),
+    # SC_EXPLOSIONSPIRITS: cri += val2=75+25×lv — status_calculator.py (status.c:4753)
+    ("SC_EXPLOSIONSPIRITS",   "Fury",                  True,  1,  10, "MO_EXPLOSIONSPIRITS"),
+    # ── Session N — Archer / Hunter ───────────────────────────────────────────
+    # SC_CONCENTRATION: stub; agi/dex % boost needs card-split (status.c:4007, 4195)
+    ("SC_CONCENTRATION",      "Concentration",         True,  1,  10, "AC_CONCENTRATION"),
+    # ── Session N — Merchant ──────────────────────────────────────────────────
+    # SC_SHOUT: str += 4 flat — status_calculator.py (status.c:3956)
+    ("SC_SHOUT",              "Loud",                  False, 1,  1,  "MC_LOUD"),
+    # ── Session N — Mage / Sage ───────────────────────────────────────────────
+    # SC_ENERGYCOAT: stub; SP-absorbs incoming — incoming pipeline only
+    ("SC_ENERGYCOAT",         "Energy Coat",           False, 1,  1,  "MG_ENERGYCOAT"),
+    # ── Session N — Assassin / Assassin Cross ────────────────────────────────
+    # SC_CLOAKING: stub; cloaked state — no outgoing damage effect
+    ("SC_CLOAKING",           "Cloaking",              False, 1,  1,  "AS_CLOAKING"),
+    # SC_POISONREACT: stub; counter attack — no direct outgoing stat
+    ("SC_POISONREACT",        "Poison React",          False, 1,  1,  "AS_POISONREACT"),
+    # ── Session N — Rogue / Stalker ──────────────────────────────────────────
+    # SC_RG_CCONFINE_M: flee += 10 — status_calculator.py (status.c:4874)
+    ("SC_RG_CCONFINE_M",      "Close Confine",         False, 1,  1,  "RG_CLOSECONFINE"),
+    # ── Session N — Gunslinger ────────────────────────────────────────────────
+    # GS_COINS: no SC; coin count stored for future GS skill ratio use
+    ("GS_COINS",              "Coins",                 True,  1,  10, "GS_GLITTERING"),
+    # SC_GS_MADNESSCANCEL: batk+=100; aspd_rate-=200 (separate) — status_calculator.py
+    ("SC_GS_MADNESSCANCEL",   "Madness Cancel",        False, 1,  1,  "GS_MADNESSCANCEL"),
+    # SC_GS_ADJUSTMENT: hit-=30; flee+=30 — status_calculator.py (status.c:4809, 4878)
+    ("SC_GS_ADJUSTMENT",      "Adjustment",            False, 1,  1,  "GS_ADJUSTMENT"),
+    # SC_GS_ACCURACY: agi+4, dex+4, hit+20 — status_calculator.py (status.c:4023, 4219, 4811)
+    ("SC_GS_ACCURACY",        "Increasing Acc.",       False, 1,  1,  "GS_INCREASING"),
+    # SC_GS_GATLINGFEVER: batk+=20+10×lv; flee-=5×lv; aspd in max pool — status_calculator.py
+    ("SC_GS_GATLINGFEVER",    "Gatling Fever",         True,  1,  10, "GS_GATLINGFEVER"),
+    # ── Session N — Ninja ────────────────────────────────────────────────────
+    # SC_NJ_NEN: str+=lv; int_+=lv — status_calculator.py (status.c:3962, 4148)
+    ("SC_NJ_NEN",             "Nen",                   True,  1,  10, "NJ_NEN"),
+    # ── Session N — Taekwon (future job support) ─────────────────────────────
+    # SC_RUN: stub; movement speed +55 (status.c:5375); FLEE effect unconfirmed
+    ("SC_RUN",                "Sprint",                False, 1,  1,  "TK_RUN"),
 ]
 
 

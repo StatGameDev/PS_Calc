@@ -1217,3 +1217,30 @@ Full Bard Songs sub-group: shared caster stats table (agi/dex/vit/int/luk + MusL
 
 **M2-6 — derived_section.py** (`gui/sections/derived_section.py`)
 New display rows for Poem of Bragi (cast time / after-cast delay) and Service for You (SP cost reduction), wired to new StatusData fields.
+
+---
+
+## Session N — Self-Buffs
+
+**N-0 — Source re-verification + ASPD bug fixes** (`core/calculators/status_calculator.py`)
+Session N was initially a partial failure due to ASPD formula errors. All implementations re-verified against Hercules source this session. Three ASPD bugs fixed:
+1. SC_GS_MADNESSCANCEL ASPD: was in max pool (`max(sc_aspd_reduction, 200)`). Correct: separate `aspd_rate -= 200` applied AFTER `aspd_rate -= max_pool` (status_calc_aspd_rate:5656-5657). MADNESSCANCEL is NOT in the max pool.
+2. SC_STEELBODY ASPD: was `amotion += base_amotion * 25 // 1000` (2.5%, wrong scale). Correct: `sc_aspd_rate += 250` (25% slowdown, status_calc_aspd_rate:5670-5671).
+3. SC_DEFENDER ASPD: was using `val4//10` from `#ifdef RENEWAL_ASPD` path (wrong formula). Correct: `sc_aspd_rate += val4 = 250-50×lv` (status_calc_aspd_rate:5674-5675). lv1→+200, lv5→0.
+Key discovery: `status_calc_aspd` (`bonus -= N` lines 5496-5501) is entirely `#ifdef RENEWAL_ASPD`. Pre-renewal only uses `status_calc_aspd_rate` (no RENEWAL guard). ASPD section restructured to use `sc_aspd_max` + `sc_aspd_rate` single accumulator.
+
+**N-1 — StatusCalculator self-buff SCs** (`core/calculators/status_calculator.py`)
+10 SCs added across 6 groups (confirmed from Hercules source):
+- Stat mods (before BATK): SC_SHOUT (str+4, status.c:3956), SC_NJ_NEN (str+lv, int+lv, 3962/4148), SC_GS_ACCURACY (agi+4, dex+4, 4023/4219)
+- BATK mods: SC_GS_MADNESSCANCEL (batk+100, #ifndef RENEWAL, 4478), SC_GS_GATLINGFEVER (batk+=val3=20+10×lv, #ifndef RENEWAL, 4480)
+- CRI mod: SC_EXPLOSIONSPIRITS (cri+=val2=75+25×lv, 4753)
+- HIT/FLEE mods: SC_GS_ACCURACY (hit+20, 4811), SC_GS_ADJUSTMENT (hit-30, flee+30, 4809/4878), SC_RG_CCONFINE_M (flee+10, 4874), SC_GS_GATLINGFEVER (flee-=5×lv, 4882)
+- ASPD: SC_GS_MADNESSCANCEL (-200 separate), SC_GS_GATLINGFEVER (in max pool, val2=20×lv), SC_STEELBODY (+250), SC_DEFENDER (+val4=250-50×lv)
+- MDEF: SC_ENDURE (mdef+=val1=lv when val4=0, 5149)
+
+**N-2 — Self Buffs UI rows** (`gui/sections/buffs_section.py`)
+22 new entries added to `_SELF_BUFFS` (total now 29):
+- Full calc: SC_ENDURE, SC_SHOUT, SC_STEELBODY, SC_EXPLOSIONSPIRITS, SC_DEFENDER, SC_GS_MADNESSCANCEL, SC_GS_ADJUSTMENT, SC_GS_ACCURACY, SC_GS_GATLINGFEVER, SC_NJ_NEN, SC_RG_CCONFINE_M
+- Stubs (no/partial calc): SC_SUB_WEAPONPROPERTY(Magnum Break), SC_AUTOBERSERK, SC_AUTOGUARD, SC_REFLECTSHIELD, SC_CONCENTRATION(stub — card split needed), SC_ENERGYCOAT, SC_CLOAKING, SC_POISONREACT, SC_RUN(TK_RUN)
+- Counters (no SC): MO_SPIRITBALL (spirit spheres, 1-5), GS_COINS (coin count, 1-10)
+All rows use existing tuple format (sc_key, display, has_lv, min_lv, max_lv, source_skill); no __init__ changes needed — loops iterate _SELF_BUFFS at construction time.

@@ -99,7 +99,7 @@ _Status: [ ] open, [x] done, [~] partial_
 | ID | Status | Description | Session |
 |---|---|---|---|
 | G48 | [ ] | Target debuff system: `target_active_scs: dict[str,int]` on Target; new target-side status calculator; "Target State" UI section with debuff toggles + level spinboxes. | R |
-| G49 | [~] | Buffs section UI: role-grouped collapsible panel. M0: skeleton + Self Buffs wired. M: Party Buffs sub-group wired. M2: Bard Songs + Dancer Dances + Ensembles sub-groups wired (7 Bard SCs + 7 Dancer SCs + 3 Ensemble SCs; job visibility filter). Remaining: Ground Effects, Guild Buffs, Misc (Sessions N/O). | M–N |
+| G49 | [~] | Buffs section UI: role-grouped collapsible panel. M0: skeleton + Self Buffs wired. M: Party Buffs sub-group wired. M2: Bard Songs + Dancer Dances + Ensembles sub-groups wired. N: 22 new Self Buff rows (all Session N SCs + stubs + sphere/coin spinners). Remaining: Ground Effects, Guild Buffs, Misc (Sessions O/future). | M–O |
 | G50 | [ ] | Passive skills completion: implement passive_skills.md entries not yet in StatusCalculator or mastery (weapon-type stat bonuses, conditional stat passives). Source: pc.c pc_calcstatus. | P |
 
 ---

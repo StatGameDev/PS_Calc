@@ -16,6 +16,34 @@ If a task requires locating files, external data, or unfamiliar formats — ask 
 user first. One targeted grep or read is fine. Exploratory multi-file searches are
 not. Stop and ask after one failed attempt.
 
+## Source Verification — Hard Rule
+
+**No implementation without reading the exact source line in the current session.**
+
+Prior session notes, memory files, and roadmap entries are planning aids, not
+verified source. Before writing any formula or value into code:
+
+1. Grep or read the specific Hercules source line that justifies it — this session.
+2. If the line was not read this session, read it now before writing the code.
+3. Never derive a formula by reasoning about code you haven't read. If the
+   implementation requires understanding a function's full logic (e.g. how a
+   variable maps to an output), read that function — do not infer it.
+
+**Save confirmed facts with file + line number so the next session can skip the grep:**
+
+When a formula, val definition, or SC behaviour is confirmed from source, record it
+in `docs/session_roadmap.md` (or the relevant planning doc) as:
+`SC_FOO: effect description (file.c:line_number)`
+
+This avoids re-reading the same lines every session while still requiring that
+every implementation is backed by a line number that was actually read.
+
+**Do not report partial evidence as full confirmation.**
+"I found a line that mentions this SC" is not the same as "I read the formula."
+If you have not read the formula line, say so explicitly before implementing.
+
+---
+
 ## Cost Controls — Hard Limits
 
 These caps are non-negotiable. Exceeding them wastes context with no benefit.
