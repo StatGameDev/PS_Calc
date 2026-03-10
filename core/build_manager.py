@@ -88,6 +88,7 @@ class BuildManager:
             "manual_adj": dict(build.manual_adj_bonuses),
             "support_buffs": dict(build.support_buffs),
             "player_active_scs": dict(build.player_active_scs),
+            "song_state": dict(build.song_state),
         }
 
         # cached_display — read by PlayerTargetBrowserDialog to show build stats
@@ -146,6 +147,12 @@ class BuildManager:
             support_buffs = dict(support_buffs)
             support_buffs["SC_ADRENALINE"] = active_buffs.pop("SC_ADRENALINE")
 
+        # M2 migration: SC_ASSNCROS level moves from active_buffs → song_state.
+        song_state: dict = data.get("song_state", {})
+        if "SC_ASSNCROS" in active_buffs and "SC_ASSNCROS" not in song_state:
+            song_state = dict(song_state)
+            song_state["SC_ASSNCROS"] = active_buffs.pop("SC_ASSNCROS")
+
         return PlayerBuild(
             name=data.get("name", ""),
             job_id=data.get("job_id", 0),
@@ -186,6 +193,7 @@ class BuildManager:
             manual_adj_bonuses=data.get("manual_adj", {}),
             support_buffs=support_buffs,
             player_active_scs=data.get("player_active_scs", {}),
+            song_state=song_state,
         )
 
     @staticmethod

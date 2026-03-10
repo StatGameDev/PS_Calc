@@ -271,7 +271,7 @@ sub-group (see below) because it modifies target DEF.
 ---
 
 #### Sub-group 4: Bard Songs
-`default_collapsed: false`
+`default_collapsed: true`
 
 **Shared caster stat row** (compact, one line):
 ```
@@ -312,7 +312,7 @@ Data model: `PlayerBuild.song_state: dict` (new field):
 ---
 
 #### Sub-group 5: Dancer Dances
-`default_collapsed: false`
+`default_collapsed: true`
 
 Same structure as Bard Songs. Separate shared caster stat row:
 ```
@@ -338,7 +338,7 @@ Data model (added to `song_state`):
 ---
 
 #### Sub-group 6: Ensembles
-`default_collapsed: false`
+`default_collapsed: true`
 
 Requires both Bard + Dancer in party. No per-caster stat input — ensemble formulas TBD.
 ```
@@ -369,7 +369,7 @@ Data model (added to `support_buffs`):
 ---
 
 #### Sub-group 8: Miscellaneous Effects
-`default_collapsed: false`
+`default_collapsed: true`
 
 Catch-all for temporary effects triggered by equipped items and card scripts (proc effects,
 conditional bonuses, pet buffs) that are not represented by any dedicated sub-group.
@@ -419,7 +419,7 @@ Public API:
 Data model: `PlayerBuild.player_active_scs: dict[str, int]` (new field, Session R prereq).
 
 #### Sub-group: Player Debuffs
-`default_collapsed: false`
+`default_collapsed: true`
 
 Framing: "debuffs the enemy has applied to you."
 Widget pattern: QCheckBox + optional QSpinBox, 2-column grid.
@@ -428,7 +428,7 @@ Tooltip per row: stat modified + how.
 Initial debuffs (Session R):
 ```
 SC_ETERNALCHAOS  "Eternal Chaos"   no lv    → zeroes player's soft DEF (def2=0) in incoming calc
-SC_CURSE         "Curse"           no lv    → STR reduced
+SC_CURSE         "Curse"           no lv    → Various effects
 SC_BLIND         "Blind"           no lv    → DEX/HIT reduced
 SC_DECREASEAGI   "Decrease AGI"    lv 1–10  → AGI reduced → FLEE reduced
 ```

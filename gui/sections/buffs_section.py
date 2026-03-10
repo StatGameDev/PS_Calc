@@ -16,6 +16,11 @@ from core.models.build import PlayerBuild
 from gui.section import Section
 from gui.widgets.collapsible_sub_group import CollapsibleSubGroup
 
+# Bard job IDs: Bard (19), Clown (4020)
+_BARD_JOBS   = frozenset({19, 4020})
+# Dancer job IDs: Dancer (20), Gypsy (4021)
+_DANCER_JOBS = frozenset({20, 4021})
+
 # ── Self Buffs ────────────────────────────────────────────────────────────────
 # (sc_key, display_name, has_level, min_lv, max_lv, source_skill)
 # All are job-filtered via update_job(). Show All overrides filtering.
@@ -49,6 +54,32 @@ _PARTY_BUFFS: list[tuple] = [
 _ADRENALINE_VALUES = (300, 200)
 
 
+# ── Bard Songs ────────────────────────────────────────────────────────────────
+# (sc_key, display_name, overrides: list of (stat_key, label))
+# stat_key maps to "SC_ASSNCROS_agi" in song_state; shared key is "caster_{stat}"
+_BARD_SONGS: list[tuple[str, str, list[tuple[str, str]]]] = [
+    ("SC_ASSNCROS",  "Assassin Cross", [("agi", "AGI")]),
+    ("SC_WHISTLE",   "Whistle",        [("agi", "AGI"), ("luk", "LUK")]),
+    ("SC_APPLEIDUN", "Apple of Idun",  [("vit", "VIT")]),
+    ("SC_POEMBRAGI", "Poem of Bragi",  [("dex", "DEX"), ("int", "INT")]),
+]
+
+# ── Dancer Dances ─────────────────────────────────────────────────────────────
+_DANCER_DANCES: list[tuple[str, str, list[tuple[str, str]]]] = [
+    ("SC_HUMMING",      "Humming",         [("dex", "DEX")]),
+    ("SC_FORTUNE",      "Fortune's Kiss",  [("luk", "LUK")]),
+    ("SC_SERVICEFORYU", "Service for You", [("int", "INT")]),
+]
+
+# ── Ensembles ─────────────────────────────────────────────────────────────────
+# Level only (0=off); no caster-stat formula. Calculator deferred (pipeline TBD).
+_ENSEMBLES: list[tuple[str, str, int]] = [
+    ("SC_DRUMBATTLE", "Battle Theme",        5),
+    ("SC_NIBELUNGEN", "Song of Nibelungen",  5),
+    ("SC_SIEGFRIED",  "Lullaby of Woe",      5),
+]
+
+
 def _stub_label(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setObjectName("passive_sub_header")
@@ -80,6 +111,21 @@ class BuffsSection(Section):
         self._party_spins: dict[str, QSpinBox] = {}
         self._party_checks: dict[str, QCheckBox] = {}
         self._party_combos: dict[str, QComboBox] = {}  # SC_ADRENALINE only
+
+        # Storage for Bard Songs
+        self._bard_caster_spins: dict[str, QSpinBox] = {}   # "caster_agi", ..., "mus_lesson"
+        self._song_level_spins: dict[str, QSpinBox] = {}    # SC_key → level spin (0=off)
+        self._song_ov_checks: dict[str, dict[str, QCheckBox]] = {}  # SC_key → {stat → chk}
+        self._song_ov_spins:  dict[str, dict[str, QSpinBox]]  = {}  # SC_key → {stat → spin}
+
+        # Storage for Dancer Dances
+        self._dancer_caster_spins: dict[str, QSpinBox] = {}  # "dancer_agi", ..., "dance_lesson"
+        self._dance_level_spins: dict[str, QSpinBox] = {}
+        self._dance_ov_checks: dict[str, dict[str, QCheckBox]] = {}
+        self._dance_ov_spins:  dict[str, dict[str, QSpinBox]]  = {}
+
+        # Storage for Ensembles
+        self._ensemble_spins: dict[str, QSpinBox] = {}
 
         # ── 1. Self Buffs ─────────────────────────────────────────────────
         self._sub_self = CollapsibleSubGroup("Self Buffs", default_collapsed=False)
@@ -174,19 +220,19 @@ class BuffsSection(Section):
         self._sub_ground.add_content_widget(_stub_label("(Sage ground buffs — Session O)"))
         self.add_content_widget(self._sub_ground)
 
-        # ── 4. Bard Songs (stub) ──────────────────────────────────────────
-        self._sub_bard = CollapsibleSubGroup("Bard Songs", default_collapsed=False)
-        self._sub_bard.add_content_widget(_stub_label("(Bard songs — Session M2)"))
+        # ── 4. Bard Songs ────────────────────────────────────────────────────
+        self._sub_bard = CollapsibleSubGroup("Bard Songs", default_collapsed=True)
+        self._sub_bard.add_content_widget(self._build_bard_widget())
         self.add_content_widget(self._sub_bard)
 
-        # ── 5. Dancer Dances (stub) ───────────────────────────────────────
-        self._sub_dancer = CollapsibleSubGroup("Dancer Dances", default_collapsed=False)
-        self._sub_dancer.add_content_widget(_stub_label("(Dancer dances — Session M2)"))
+        # ── 5. Dancer Dances ─────────────────────────────────────────────────
+        self._sub_dancer = CollapsibleSubGroup("Dancer Dances", default_collapsed=True)
+        self._sub_dancer.add_content_widget(self._build_dancer_widget())
         self.add_content_widget(self._sub_dancer)
 
-        # ── 6. Ensembles (stub) ───────────────────────────────────────────
-        self._sub_ensemble = CollapsibleSubGroup("Ensembles", default_collapsed=False)
-        self._sub_ensemble.add_content_widget(_stub_label("(Bard+Dancer ensembles — Session M2)"))
+        # ── 6. Ensembles ─────────────────────────────────────────────────────
+        self._sub_ensemble = CollapsibleSubGroup("Ensembles", default_collapsed=True)
+        self._sub_ensemble.add_content_widget(self._build_ensemble_widget())
         self.add_content_widget(self._sub_ensemble)
 
         # ── 7. Guild Buffs (stub) ─────────────────────────────────────────
@@ -198,6 +244,137 @@ class BuffsSection(Section):
         self._sub_misc = CollapsibleSubGroup("Miscellaneous Effects", default_collapsed=False)
         self._sub_misc.add_content_widget(_stub_label("(Item proc / pet buffs — future session)"))
         self.add_content_widget(self._sub_misc)
+
+    # ── Song/Dance widget builders ─────────────────────────────────────────
+
+    @staticmethod
+    def _make_caster_row(grid: QGridLayout, row: int,
+                         stats: list[tuple[str, str]], store: dict[str, QSpinBox],
+                         lesson_key: str, lesson_label: str,
+                         on_changed) -> None:
+        """Build the shared caster-stats row for songs or dances."""
+        col = 0
+        for stat_key, lbl_text in stats:
+            lbl = QLabel(lbl_text)
+            lbl.setObjectName("passive_sub_header")
+            grid.addWidget(lbl, row, col)
+            spin = QSpinBox()
+            spin.setRange(1, 255)
+            spin.setValue(1)
+            spin.setFixedWidth(52)
+            store[stat_key] = spin
+            spin.valueChanged.connect(on_changed)
+            grid.addWidget(spin, row, col + 1)
+            col += 2
+        # Lesson spinbox
+        lbl = QLabel(lesson_label)
+        lbl.setObjectName("passive_sub_header")
+        grid.addWidget(lbl, row, col)
+        spin = QSpinBox()
+        spin.setRange(0, 10)
+        spin.setValue(0)
+        spin.setFixedWidth(52)
+        store[lesson_key] = spin
+        spin.valueChanged.connect(on_changed)
+        grid.addWidget(spin, row, col + 1)
+
+    def _make_song_rows(self, grid: QGridLayout, start_row: int,
+                        song_list: list[tuple[str, str, list[tuple[str, str]]]],
+                        level_store: dict[str, QSpinBox],
+                        ov_check_store: dict[str, dict[str, QCheckBox]],
+                        ov_spin_store:  dict[str, dict[str, QSpinBox]]) -> None:
+        """Build one row per song: level spin + per-stat override check+spin."""
+        for r, (sc_key, display, overrides) in enumerate(song_list, start=start_row):
+            lbl = QLabel(display)
+            grid.addWidget(lbl, r, 0)
+
+            lv_spin = QSpinBox()
+            lv_spin.setRange(0, 10)
+            lv_spin.setValue(0)
+            lv_spin.setFixedWidth(52)
+            lv_spin.setSpecialValueText("Off")
+            level_store[sc_key] = lv_spin
+            lv_spin.valueChanged.connect(self._on_changed)
+            grid.addWidget(lv_spin, r, 1)
+
+            ov_check_store[sc_key] = {}
+            ov_spin_store[sc_key]  = {}
+            col = 2
+            for stat_key, stat_label in overrides:
+                ov_lbl = QLabel(f"{stat_label}:")
+                grid.addWidget(ov_lbl, r, col)
+                ov_chk = QCheckBox("Ovr")
+                ov_chk.setObjectName("passive_sc_check")
+                ov_check_store[sc_key][stat_key] = ov_chk
+                grid.addWidget(ov_chk, r, col + 1)
+                ov_spin = QSpinBox()
+                ov_spin.setRange(1, 255)
+                ov_spin.setValue(1)
+                ov_spin.setFixedWidth(52)
+                ov_spin.setEnabled(False)
+                ov_spin_store[sc_key][stat_key] = ov_spin
+                ov_chk.toggled.connect(ov_spin.setEnabled)
+                ov_chk.toggled.connect(self._on_changed)
+                ov_spin.valueChanged.connect(self._on_changed)
+                grid.addWidget(ov_spin, r, col + 2)
+                col += 3
+
+    def _build_bard_widget(self) -> QWidget:
+        w = QWidget()
+        grid = QGridLayout(w)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(4)
+        grid.setVerticalSpacing(3)
+        self._make_caster_row(
+            grid, 0,
+            [("caster_agi", "AGI"), ("caster_vit", "VIT"), ("caster_dex", "DEX"),
+             ("caster_int", "INT"), ("caster_luk", "LUK")],
+            self._bard_caster_spins, "mus_lesson", "Mus.Lesson",
+            self._on_changed,
+        )
+        self._make_song_rows(grid, 1, _BARD_SONGS,
+                             self._song_level_spins,
+                             self._song_ov_checks, self._song_ov_spins)
+        return w
+
+    def _build_dancer_widget(self) -> QWidget:
+        w = QWidget()
+        grid = QGridLayout(w)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(4)
+        grid.setVerticalSpacing(3)
+        self._make_caster_row(
+            grid, 0,
+            [("dancer_agi", "AGI"), ("dancer_vit", "VIT"), ("dancer_dex", "DEX"),
+             ("dancer_int", "INT"), ("dancer_luk", "LUK")],
+            self._dancer_caster_spins, "dance_lesson", "Dance Lesson",
+            self._on_changed,
+        )
+        self._make_song_rows(grid, 1, _DANCER_DANCES,
+                             self._dance_level_spins,
+                             self._dance_ov_checks, self._dance_ov_spins)
+        return w
+
+    def _build_ensemble_widget(self) -> QWidget:
+        w = QWidget()
+        grid = QGridLayout(w)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(4)
+        grid.setVerticalSpacing(3)
+        note = QLabel("(WATK/resist effects pending — pipeline position TBD)")
+        note.setObjectName("passive_sub_header")
+        grid.addWidget(note, 0, 0, 1, 4)
+        for r, (sc_key, display, max_lv) in enumerate(_ENSEMBLES, start=1):
+            grid.addWidget(QLabel(display), r, 0)
+            spin = QSpinBox()
+            spin.setRange(0, max_lv)
+            spin.setValue(0)
+            spin.setFixedWidth(52)
+            spin.setSpecialValueText("Off")
+            self._ensemble_spins[sc_key] = spin
+            spin.valueChanged.connect(self._on_changed)
+            grid.addWidget(spin, r, 1)
+        return w
 
     # ── Job filtering ──────────────────────────────────────────────────────
 
@@ -218,6 +395,10 @@ class BuffsSection(Section):
                     self._sc_spins[sc_key].blockSignals(True)
                     self._sc_spins[sc_key].setValue(1)
                     self._sc_spins[sc_key].blockSignals(False)
+
+        # Show Bard Songs only for Bard/Clown; Dancer Dances only for Dancer/Gypsy.
+        self._sub_bard.setVisible(job_id in _BARD_JOBS)
+        self._sub_dancer.setVisible(job_id in _DANCER_JOBS)
 
     # ── Internal ───────────────────────────────────────────────────────────
 
@@ -276,17 +457,31 @@ class BuffsSection(Section):
     # ── Public API ─────────────────────────────────────────────────────────
 
     def load_build(self, build: PlayerBuild) -> None:
-        for chk in self._sc_checks.values():
-            chk.blockSignals(True)
-        for spin in self._sc_spins.values():
-            spin.blockSignals(True)
-        for spin in self._party_spins.values():
-            spin.blockSignals(True)
-        for chk in self._party_checks.values():
-            chk.blockSignals(True)
-        for combo in self._party_combos.values():
-            combo.blockSignals(True)
+        # Block all signals while loading
+        _all_widgets: list[QWidget] = (
+            list(self._sc_checks.values()) +
+            list(self._sc_spins.values()) +
+            list(self._party_spins.values()) +
+            list(self._party_checks.values()) +
+            list(self._party_combos.values()) +
+            list(self._bard_caster_spins.values()) +
+            list(self._song_level_spins.values()) +
+            list(self._dancer_caster_spins.values()) +
+            list(self._dance_level_spins.values()) +
+            list(self._ensemble_spins.values())
+        )
+        for ov_d in self._song_ov_checks.values():
+            _all_widgets.extend(ov_d.values())
+        for ov_d in self._song_ov_spins.values():
+            _all_widgets.extend(ov_d.values())
+        for ov_d in self._dance_ov_checks.values():
+            _all_widgets.extend(ov_d.values())
+        for ov_d in self._dance_ov_spins.values():
+            _all_widgets.extend(ov_d.values())
+        for w in _all_widgets:
+            w.blockSignals(True)
 
+        # Self buffs
         active = build.active_status_levels
         for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
             chk = self._sc_checks[sc_key]
@@ -297,6 +492,7 @@ class BuffsSection(Section):
                 spin.setValue(active.get(sc_key, min_lv))
                 spin.setEnabled(is_active)
 
+        # Party buffs
         support = build.support_buffs
         for sc_key, _, wtype, *_ in _PARTY_BUFFS:
             if wtype == "spin":
@@ -309,19 +505,21 @@ class BuffsSection(Section):
                 chk.setChecked(val != 0)
                 combo = self._party_combos[sc_key]
                 combo.setEnabled(val != 0)
-                # index 0 = Self (300), index 1 = Party (200)
                 combo.setCurrentIndex(0 if val != 200 else 1)
 
-        for chk in self._sc_checks.values():
-            chk.blockSignals(False)
-        for spin in self._sc_spins.values():
-            spin.blockSignals(False)
-        for spin in self._party_spins.values():
-            spin.blockSignals(False)
-        for chk in self._party_checks.values():
-            chk.blockSignals(False)
-        for combo in self._party_combos.values():
-            combo.blockSignals(False)
+        # Songs/dances
+        ss = build.song_state
+        self._load_song_group(ss, self._bard_caster_spins,
+                              self._song_level_spins, self._song_ov_checks, self._song_ov_spins,
+                              _BARD_SONGS)
+        self._load_song_group(ss, self._dancer_caster_spins,
+                              self._dance_level_spins, self._dance_ov_checks, self._dance_ov_spins,
+                              _DANCER_DANCES)
+        for sc_key, _, _ in _ENSEMBLES:
+            self._ensemble_spins[sc_key].setValue(int(ss.get(sc_key, 0)))
+
+        for w in _all_widgets:
+            w.blockSignals(False)
 
         self._current_job_id = build.job_id
         self.update_job(build.job_id)
@@ -329,12 +527,34 @@ class BuffsSection(Section):
         if self._compact_summary_lbl is not None:
             self._compact_summary_lbl.setText(self._build_summary())
 
+    def _load_song_group(self, ss: dict,
+                         caster_store: dict[str, QSpinBox],
+                         level_store:  dict[str, QSpinBox],
+                         ov_chk_store: dict[str, dict[str, QCheckBox]],
+                         ov_spin_store: dict[str, dict[str, QSpinBox]],
+                         song_list: list) -> None:
+        for stat_key, spin in caster_store.items():
+            spin.setValue(int(ss.get(stat_key, 1)))
+        for sc_key, _, overrides in song_list:
+            level_store[sc_key].setValue(int(ss.get(sc_key, 0)))
+            for stat_key, _ in overrides:
+                ov_key = f"{sc_key}_{stat_key}"
+                raw = ss.get(ov_key)  # None = use shared; int = override
+                chk = ov_chk_store[sc_key][stat_key]
+                spin = ov_spin_store[sc_key][stat_key]
+                if raw is not None:
+                    chk.setChecked(True)
+                    spin.setValue(int(raw))
+                    spin.setEnabled(True)
+                else:
+                    chk.setChecked(False)
+                    spin.setEnabled(False)
+
     def collect_into(self, build: PlayerBuild) -> None:
+        # Self buffs → active_status_levels
         active: dict[str, int] = build.active_status_levels.copy()
-        # Remove any keys we own, then re-add active ones
         for sc_key, *_ in _SELF_BUFFS:
             active.pop(sc_key, None)
-
         for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
             chk = self._sc_checks[sc_key]
             if chk.isChecked():
@@ -342,14 +562,12 @@ class BuffsSection(Section):
                     active[sc_key] = self._sc_spins[sc_key].value()
                 else:
                     active[sc_key] = min_lv
-
         build.active_status_levels = active
 
+        # Party buffs → support_buffs
         support: dict[str, object] = build.support_buffs.copy()
-        # Remove keys we own, then re-add active ones
         for sc_key, *_ in _PARTY_BUFFS:
             support.pop(sc_key, None)
-
         for sc_key, _, wtype, *_ in _PARTY_BUFFS:
             if wtype == "spin":
                 val = self._party_spins[sc_key].value()
@@ -362,5 +580,34 @@ class BuffsSection(Section):
                 if self._party_checks[sc_key].isChecked():
                     idx = self._party_combos[sc_key].currentIndex()
                     support[sc_key] = _ADRENALINE_VALUES[idx]
-
         build.support_buffs = support
+
+        # Songs/dances → song_state
+        ss: dict[str, object] = {}
+        self._collect_song_group(ss, self._bard_caster_spins,
+                                 self._song_level_spins, self._song_ov_checks, self._song_ov_spins,
+                                 _BARD_SONGS)
+        self._collect_song_group(ss, self._dancer_caster_spins,
+                                 self._dance_level_spins, self._dance_ov_checks, self._dance_ov_spins,
+                                 _DANCER_DANCES)
+        for sc_key, _, _ in _ENSEMBLES:
+            ss[sc_key] = self._ensemble_spins[sc_key].value()
+        build.song_state = ss
+
+    def _collect_song_group(self, ss: dict,
+                            caster_store: dict[str, QSpinBox],
+                            level_store:  dict[str, QSpinBox],
+                            ov_chk_store: dict[str, dict[str, QCheckBox]],
+                            ov_spin_store: dict[str, dict[str, QSpinBox]],
+                            song_list: list) -> None:
+        for stat_key, spin in caster_store.items():
+            ss[stat_key] = spin.value()
+        for sc_key, _, overrides in song_list:
+            ss[sc_key] = level_store[sc_key].value()
+            for stat_key, _ in overrides:
+                ov_key = f"{sc_key}_{stat_key}"
+                chk = ov_chk_store[sc_key][stat_key]
+                if chk.isChecked():
+                    ss[ov_key] = ov_spin_store[sc_key][stat_key].value()
+                else:
+                    ss[ov_key] = None

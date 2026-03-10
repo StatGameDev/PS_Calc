@@ -1182,3 +1182,38 @@ QCheckBox + QComboBox("Self"→300, "Party member"→200). Full load/collect rou
 `_sc_stat_bonuses(support_buffs)` static method computes SC stat contributions.
 `_apply_gear_bonuses` folds SC bonuses into `bonus_str/agi/int/dex/luk`.
 `update_from_bonuses` gains 4th `sc: dict` param; tooltip shows "Buffs: +N" source.
+
+---
+
+## Session M2 — Bard/Dancer Songs
+
+**M2-1 — PlayerBuild.song_state** (`core/models/build.py`)
+New `song_state: Dict[str, object]` field. Stores shared caster stats ("caster_agi", "caster_dex", etc.), per-song levels (e.g. "SC_ASSNCROS"), and per-stat overrides (e.g. "SC_ASSNCROS_agi": None = use shared). Separate Bard/Dancer namespacing. Save/load in BuildManager with migration: SC_ASSNCROS level moved from `active_status_levels` → `song_state`.
+
+**M2-2 — StatusData new fields** (`core/models/status.py`)
+Three new display-only fields for song effects not simulated in the damage pipeline:
+- `cast_time_reduction_pct`: from SC_POEMBRAGI val1 (BA_POEMBRAGI)
+- `after_cast_delay_reduction_pct`: from SC_POEMBRAGI val2
+- `sp_cost_reduction_pct`: from SC_SERVICEFORYU val3
+
+**M2-3 — StatusCalculator song SCs** (`core/calculators/status_calculator.py`)
+Seven song SCs implemented — all read from `build.song_state`:
+- SC_ASSNCROS: amotion reduction = `(MusLesson/2+10+song_lv+caster_agi/10)*10`; completes G9~
+- SC_WHISTLE: FLEE flat bonus `= song_lv+5+(caster_agi+caster_luk)/10+MusLesson/10`
+- SC_APPLEIDUN: MaxHP% `= 5+2*song_lv+caster_vit/10+MusLesson`; applied after HP table calc
+- SC_POEMBRAGI: cast time `= 3*song_lv+caster_dex/10+2*MusLesson`; after-cast delay formula
+- SC_HUMMING: HIT flat bonus `= song_lv+5+(caster_dex+caster_luk)/10+DanceLesson/10`
+- SC_FORTUNE: CRI flat bonus `= (10+song_lv+caster_luk/10+DanceLesson)*10` (÷10 for cri units)
+- SC_SERVICEFORYU: MaxSP% + sp_cost_reduction_pct
+
+**M2-4 — base_damage.py song SCs** (`core/calculators/modifiers/base_damage.py`)
+- SC_DRUMBATTLE: flat WATK bonus `= (song_lv+1)*25` + DEF bonus `= (song_lv+1)*2` on StatusData.def_percent
+- SC_NIBELUNGEN: flat WATK bonus `= (song_lv+2)*25`, gated by `weapon.level == 4`
+Both read from `build.song_state`. Source: status.c #ifndef RENEWAL lines 4564/4589.
+Note: G51 open — in-game tests suggest SC_NIBELUNGEN bypasses DEF. Awaiting Hercules dev clarification.
+
+**M2-5 — Buffs section UI** (`gui/sections/buffs_section.py`)
+Full Bard Songs sub-group: shared caster stats table (agi/dex/vit/int/luk + MusLesson level) + per-song rows (SC_ASSNCROS/WHISTLE/APPLEIDUN/POEMBRAGI + Ensembles). Full Dancer Dances sub-group: shared caster stats (DanceLesson) + per-dance rows (SC_HUMMING/FORTUNE/SERVICEFORYU). Ensembles sub-group: SC_DRUMBATTLE/NIBELUNGEN/SIEGFRIED (level spinbox only, no per-stat override). Job visibility filter: Bard Songs hidden unless job_id in Bard/Clown set; Dancer Dances hidden unless Dancer/Gypsy. SC_SIEGFRIED deferred to Session R (incoming elemental resist).
+
+**M2-6 — derived_section.py** (`gui/sections/derived_section.py`)
+New display rows for Poem of Bragi (cast time / after-cast delay) and Service for You (SP cost reduction), wired to new StatusData fields.

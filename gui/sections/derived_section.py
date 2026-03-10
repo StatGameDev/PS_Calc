@@ -40,17 +40,30 @@ class DerivedSection(Section):
             ("ASPD",  "aspd",  "—"),
             ("HP",    "hp",    "—"),
             ("SP",    "sp",    "—"),
+            # SC_POEMBRAGI / SC_SERVICEFORYU — hidden when 0
+            ("Cast Red.",  "cast_red",  "—"),
+            ("ACD Red.",   "acd_red",   "—"),
+            ("SP Cost Red.", "sp_cost_red", "—"),
         ]
+
+        # Keys for rows that should be hidden when value is zero
+        self._optional_rows: set[str] = {"cast_red", "acd_red", "sp_cost_red"}
+        self._row_name_labels: dict[str, QLabel] = {}
 
         for row_i, (display, key_s, default) in enumerate(rows):
             name_lbl = QLabel(display)
             name_lbl.setObjectName("derived_stat_label")
             grid.addWidget(name_lbl, row_i, 0)
+            self._row_name_labels[key_s] = name_lbl
 
             val_lbl = QLabel(default)
             val_lbl.setObjectName("derived_stat_value")
             self._value_labels[key_s] = val_lbl
             grid.addWidget(val_lbl, row_i, 1)
+
+            if key_s in self._optional_rows:
+                name_lbl.setVisible(False)
+                val_lbl.setVisible(False)
 
         self.add_content_widget(grid_widget)
 
@@ -121,8 +134,21 @@ class DerivedSection(Section):
         self._value_labels["hp"].setText(str(status.max_hp))
         self._value_labels["sp"].setText(str(status.max_sp))
 
+        # Optional rows: show only when non-zero (SC_POEMBRAGI / SC_SERVICEFORYU)
+        self._set_optional("cast_red",    status.cast_time_reduction_pct,        f"{status.cast_time_reduction_pct}%")
+        self._set_optional("acd_red",     status.after_cast_delay_reduction_pct,  f"{status.after_cast_delay_reduction_pct}%")
+        self._set_optional("sp_cost_red", status.sp_cost_reduction_pct,           f"{status.sp_cost_reduction_pct}%")
+
         # Keep compact labels in sync
         for key_s, clbl in self._compact_values.items():
             full_lbl = self._value_labels.get(key_s)
             if full_lbl:
                 clbl.setText(full_lbl.text())
+
+    def _set_optional(self, key_s: str, value: int, text: str) -> None:
+        visible = value != 0
+        self._row_name_labels[key_s].setVisible(visible)
+        lbl = self._value_labels[key_s]
+        lbl.setVisible(visible)
+        if visible:
+            lbl.setText(text)

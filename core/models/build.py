@@ -99,3 +99,10 @@ class PlayerBuild:
     # Keys added in Session R when player_debuffs_section gets actual toggles.
     player_active_scs: Dict[str, object] = field(default_factory=dict)
     # e.g. {"SC_ETERNALCHAOS": False, "SC_CURSE": False, ...}
+
+    # M2: Bard/Dancer song state — caster stats + per-song levels + per-stat overrides.
+    # Bard keys: "caster_agi/dex/vit/int/luk", "mus_lesson", "SC_ASSNCROS" (level), "SC_ASSNCROS_agi" (None=shared), etc.
+    # Dancer keys: "dancer_agi/dex/vit/int/luk", "dance_lesson", "SC_HUMMING" (level), etc.
+    # Ensemble keys: "SC_DRUMBATTLE", "SC_NIBELUNGEN", "SC_SIEGFRIED" (level only).
+    # None for override key = use shared caster stat. int = use that value.
+    song_state: Dict[str, object] = field(default_factory=dict)

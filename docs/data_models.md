@@ -84,8 +84,20 @@ mdef: int = 0       # hard MDEF — from build.equip_mdef (bMdef scripts; IT_ARM
 mdef2: int = 0      # soft MDEF = int_ + vit//2 — status.c:3867 #else not RENEWAL
 ```
 
+### Fields added in Session M [EXISTS]:
+```python
+def_percent: int = 100  # st->def_percent: vit_def multiplier for PC targets (SC_ANGELUS adds 5*lv); default 100
+```
+
+### Fields added in Session M2 [EXISTS]:
+```python
+cast_time_reduction_pct: int = 0       # SC_POEMBRAGI val1 — display-only; no action speed simulation
+after_cast_delay_reduction_pct: int = 0 # SC_POEMBRAGI val2 — display-only
+sp_cost_reduction_pct: int = 0         # SC_SERVICEFORYU val3 — display-only
+```
+
 ### Fields to add [NEW]:
-_All previously listed [NEW] fields were added in Session B. No remaining StatusData fields to add._
+_No remaining StatusData fields to add._
 
 ---
 
@@ -159,6 +171,16 @@ player_active_scs: Dict[str, object] = field(default_factory=dict)
     # Debuffs the enemy has applied TO the player (affects incoming damage calcs).
     # Keys added in Session R when player_debuffs_section gets actual toggles.
     # e.g. {"SC_ETERNALCHAOS": False, "SC_CURSE": False, ...}
+```
+
+### Fields added in Session M2 [EXISTS]:
+```python
+song_state: Dict[str, object] = field(default_factory=dict)
+    # Bard/Dancer song caster stats + per-song levels + per-stat overrides.
+    # Bard keys: "caster_agi/dex/vit/int/luk", "mus_lesson", "SC_ASSNCROS" (level), "SC_ASSNCROS_agi" (None=shared)
+    # Dancer keys: "dancer_agi/dex/vit/int/luk", "dance_lesson", "SC_HUMMING" (level), etc.
+    # Ensemble keys: "SC_DRUMBATTLE", "SC_NIBELUNGEN", "SC_SIEGFRIED" (level only).
+    # Saved under "song_state" key in build JSON. Migration: SC_ASSNCROS moved from active_status_levels.
 ```
 
 ### Other [EXISTS] fields added in Session B:

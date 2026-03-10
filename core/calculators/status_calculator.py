@@ -104,8 +104,16 @@ class StatusCalculator:
             spear_lv = active_sc["SC_SPEARQUICKEN"]
             sc_aspd_reduction = max(sc_aspd_reduction, 200 + 10 * spear_lv)
 
-        # SC_ASSNCROS (Assassin's Cross song): val2 = f(bard_agi) — not yet implemented.
-        # Needs a Bard AGI input field; deferred until party buff system is added.
+        # SC_ASSNCROS (Assassin's Cross): val2 = (MusLesson/2 + 10 + song_lv + bard_agi/10) * 10
+        # skill.c:13296-13307 #else (pre-renewal); weapon restriction (no bow/gun) not enforced here.
+        song = build.song_state
+        if song.get("SC_ASSNCROS"):
+            song_lv   = int(song["SC_ASSNCROS"])
+            mus_lv    = int(song.get("mus_lesson", 0))
+            s_agi     = int(song.get("SC_ASSNCROS_agi") if song.get("SC_ASSNCROS_agi") is not None
+                           else song.get("caster_agi", 1))
+            val2 = (mus_lv // 2 + 10 + song_lv + s_agi // 10) * 10
+            sc_aspd_reduction = max(sc_aspd_reduction, val2)
 
         if sc_aspd_reduction:
             amotion = amotion * (1000 - sc_aspd_reduction) // 1000
@@ -147,5 +155,86 @@ class StatusCalculator:
         status.mdef = build.equip_mdef
         # Soft MDEF (mdef2): int_ + vit//2  (status.c:3867 #else not RENEWAL)
         status.mdef2 = status.int_ + (status.vit >> 1)
+
+        # === BARD SONGS (song_state) ===
+        # All formulas from skill.c skill_unitsetting (#else pre-renewal blocks).
+        # val stored as sg->val1 in skill_unitsetting → becomes SC->val2 when applied.
+        # Override key (e.g. "SC_ASSNCROS_agi") not None → use that value; None → shared caster stat.
+
+        def _sv(key: str, shared_key: str, default: int = 1) -> int:
+            """Resolve a per-song stat override or fall back to shared caster stat."""
+            v = song.get(key)
+            return int(v) if v is not None else int(song.get(shared_key, default))
+
+        # SC_WHISTLE: val2=FLEE bonus, val3=FLEE2 bonus (×10 scale in status.c)
+        # skill.c:13245-13251; status.c:~4866 (flee), ~4952 (flee2)
+        if song.get("SC_WHISTLE"):
+            song_lv  = int(song["SC_WHISTLE"])
+            mus_lv   = int(song.get("mus_lesson", 0))
+            s_agi    = _sv("SC_WHISTLE_agi", "caster_agi")
+            s_luk    = _sv("SC_WHISTLE_luk", "caster_luk")
+            status.flee  += song_lv + s_agi // 10 + mus_lv
+            status.flee2 += ((song_lv + 1) // 2 + s_luk // 10 + mus_lv) * 10
+
+        # SC_APPLEIDUN: maxhp += maxhp * val2 / 100
+        # skill.c:13283-13286; status.c:5766-5767
+        if song.get("SC_APPLEIDUN"):
+            song_lv  = int(song["SC_APPLEIDUN"])
+            mus_lv   = int(song.get("mus_lesson", 0))
+            s_vit    = _sv("SC_APPLEIDUN_vit", "caster_vit")
+            val2 = 5 + 2 * song_lv + s_vit // 10 + mus_lv
+            status.max_hp += status.max_hp * val2 // 100
+
+        # SC_POEMBRAGI: cast time % + after-cast delay % (display-only)
+        # skill.c:13261-13267; applied in cast time / ACD checks, not simulated here.
+        if song.get("SC_POEMBRAGI"):
+            song_lv  = int(song["SC_POEMBRAGI"])
+            mus_lv   = int(song.get("mus_lesson", 0))
+            s_dex    = _sv("SC_POEMBRAGI_dex", "caster_dex")
+            s_int    = _sv("SC_POEMBRAGI_int", "caster_int")
+            status.cast_time_reduction_pct       = 3 * song_lv + s_dex // 10 + 2 * mus_lv
+            status.after_cast_delay_reduction_pct = (
+                (3 * song_lv if song_lv < 10 else 50) + s_int // 5 + 2 * mus_lv
+            )
+
+        # === DANCER DANCES (song_state) ===
+
+        # SC_HUMMING: hit += val2
+        # skill.c:13253-13260; status.c:~4803-4804
+        if song.get("SC_HUMMING"):
+            song_lv   = int(song["SC_HUMMING"])
+            dance_lv  = int(song.get("dance_lesson", 0))
+            s_dex     = _sv("SC_HUMMING_dex", "dancer_dex")
+            status.hit += 2 * song_lv + s_dex // 10 + dance_lv
+
+        # SC_FORTUNE: critical += val2 (10× scale — same units as rest of cri)
+        # skill.c:13309-13313; status.c:~4755-4756
+        if song.get("SC_FORTUNE"):
+            song_lv   = int(song["SC_FORTUNE"])
+            dance_lv  = int(song.get("dance_lesson", 0))
+            s_luk     = _sv("SC_FORTUNE_luk", "dancer_luk")
+            status.cri += (10 + song_lv + s_luk // 10 + dance_lv) * 10
+
+        # SC_SERVICEFORYU: maxsp % + sp_cost_reduction_pct (display-only)
+        # skill.c:13288-13294; status.c:~5847-5848
+        if song.get("SC_SERVICEFORYU"):
+            song_lv   = int(song["SC_SERVICEFORYU"])
+            dance_lv  = int(song.get("dance_lesson", 0))
+            s_int     = _sv("SC_SERVICEFORYU_int", "dancer_int")
+            val2 = 15 + song_lv + s_int // 10 + dance_lv // 2
+            val3 = 20 + 3 * song_lv + s_int // 10 + dance_lv // 2
+            status.max_sp            += status.max_sp * val2 // 100
+            status.sp_cost_reduction_pct = val3
+
+        # === ENSEMBLES (song_state) ===
+
+        # SC_DRUMBATTLE DEF bonus: def += val3 = (skill_lv+1)*2
+        # status.c:4999-5000 (hard DEF, same block as equipment DEF)
+        drum_lv = int(song.get("SC_DRUMBATTLE", 0))
+        if drum_lv:
+            status.def_ += (drum_lv + 1) * 2
+
+        # SC_NIBELUNGEN has no stat effect beyond WATK (handled in base_damage.py).
+        # SC_SIEGFRIED elemental resistance affects incoming pipeline — Session R.
 
         return status

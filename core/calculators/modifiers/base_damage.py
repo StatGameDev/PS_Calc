@@ -62,6 +62,35 @@ class BaseDamage:
                 hercules_ref="status.c #ifndef RENEWAL ~line 4562: watk += sc->data[SC_IMPOSITIO]->val2",
             )
 
+        # SC_DRUMBATTLE (BD_DRUMBATTLEFIELD): flat WATK bonus, #ifndef RENEWAL
+        # val2 = (skill_lv+1)*25; status.c:4564-4565
+        drum_lv = int(build.song_state.get("SC_DRUMBATTLE", 0))
+        if drum_lv:
+            drum_bonus = (drum_lv + 1) * 25
+            atkmax += drum_bonus
+            result.add_step(
+                name="SC_DRUMBATTLE",
+                value=drum_bonus,
+                note=f"Battle Theme Lv{drum_lv}: +{drum_bonus} weapon ATK",
+                formula=f"(skill_lv+1)*25 = ({drum_lv}+1)*25 = {drum_bonus}",
+                hercules_ref="status.c #ifndef RENEWAL line 4564: watk += sc->data[SC_DRUMBATTLE]->val2",
+            )
+
+        # SC_NIBELUNGEN (BD_RINGNIBELUNGEN): flat WATK bonus for level-4 weapons only, #ifndef RENEWAL
+        # val2 = (skill_lv+2)*25; status.c:4589-4596
+        # PC restriction: only applies if equipped weapon is weapon level 4.
+        nibel_lv = int(build.song_state.get("SC_NIBELUNGEN", 0))
+        if nibel_lv and weapon.level == 4:
+            nibel_bonus = (nibel_lv + 2) * 25
+            atkmax += nibel_bonus
+            result.add_step(
+                name="SC_NIBELUNGEN",
+                value=nibel_bonus,
+                note=f"Nibelungen Lv{nibel_lv}: +{nibel_bonus} weapon ATK (wlv 4)",
+                formula=f"(skill_lv+2)*25 = ({nibel_lv}+2)*25 = {nibel_bonus}",
+                hercules_ref="status.c #ifndef RENEWAL line 4589: watk += sc->data[SC_NIBELUNGEN]->val2",
+            )
+
         # Arrow ATK: bow-type weapons add ammo ATK to weapon ATK
         # battle.c: sd->arrow_atk contributes to weapon ATK for arrow attacks
         if weapon.weapon_type == "Bow":
