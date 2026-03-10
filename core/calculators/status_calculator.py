@@ -134,6 +134,13 @@ class StatusCalculator:
             _lv = active_sc["SC_GS_GATLINGFEVER"]
             status.flee -= 5 * _lv
 
+        # SC_VIOLENTGALE (SA_VIOLENTGALE): flat FLEE bonus while standing on Wind-element ground
+        # val2 = skill_lv * 3; status.c:7786-7790 (init), status.c:4870-4871 (apply: flee += val2)
+        # Pre-renewal (#ifndef RENEWAL): bonus = 0 if player's armor element is not Wind.
+        # Calculator: user is responsible for applying only when armor element matches.
+        if support.get("ground_effect") == "SC_VIOLENTGALE":
+            status.flee += int(support.get("ground_effect_lv", 1)) * 3
+
         # === ASPD ===
         # Pre-renewal formula (status.c status_base_amotion_pc, #ifndef RENEWAL_ASPD):
         #   amotion = aspd_base[job][weapon_type]

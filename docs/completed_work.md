@@ -1244,3 +1244,21 @@ Key discovery: `status_calc_aspd` (`bonus -= N` lines 5496-5501) is entirely `#i
 - Stubs (no/partial calc): SC_SUB_WEAPONPROPERTY(Magnum Break), SC_AUTOBERSERK, SC_AUTOGUARD, SC_REFLECTSHIELD, SC_CONCENTRATION(stub — card split needed), SC_ENERGYCOAT, SC_CLOAKING, SC_POISONREACT, SC_RUN(TK_RUN)
 - Counters (no SC): MO_SPIRITBALL (spirit spheres, 1-5), GS_COINS (coin count, 1-10)
 All rows use existing tuple format (sc_key, display, has_lv, min_lv, max_lv, source_skill); no __init__ changes needed — loops iterate _SELF_BUFFS at construction time.
+
+## Session O — Ground Effects
+
+**O-1 — Hercules source verification** (status.c:7779-7800, skill.c:25192)
+All three SC formulas confirmed with direct source reads:
+- SC_VOLCANO: val2 = skill_lv * 10 (status.c:7780); pre-renewal: val2=0 if armor ≠ Fire (status.c:7781-7783); applied: watk += val2 (status.c:4569-4570)
+- SC_VIOLENTGALE: val2 = skill_lv * 3 (status.c:7786); pre-renewal: val2=0 if armor ≠ Wind (status.c:7788-7790); applied: flee += val2 (status.c:4870-4871)
+- SC_DELUGE: val2 = deluge_eff[lv-1] = {5,9,12,14,15}% (skill.c:25192, status.c:7793); pre-renewal: val2=0 if armor ≠ Water (status.c:7795-7797); applied: maxhp += maxhp*val2/100 (status.c:5768-5769)
+Pre-renewal element check not enforced in code — user's responsibility. SC_DELUGE has no damage pipeline effect (MaxHP only).
+
+**O-2 — SC_VOLCANO** (`core/calculators/modifiers/base_damage.py`)
+Added after SC_NIBELUNGEN block. Reads `build.support_buffs["ground_effect"]=="SC_VOLCANO"` + `ground_effect_lv`. Formula: atkmax += lv*10. DamageStep with Hercules ref.
+
+**O-3 — SC_VIOLENTGALE** (`core/calculators/status_calculator.py`)
+Added after SC_GS_GATLINGFEVER flee block. Reads `support["ground_effect"]=="SC_VIOLENTGALE"` + `ground_effect_lv`. Formula: status.flee += lv*3.
+
+**O-4 — Ground Effects UI** (`gui/sections/buffs_section.py`)
+Replaced stub (sub-group 3) with real widget: QComboBox (none|Volcano|Deluge|Violent Gale) + QSpinBox Lv 1–5 (enabled when combo ≠ none). Module-level `_GROUND_SC_KEYS = [None, "SC_VOLCANO", "SC_DELUGE", "SC_VIOLENTGALE"]`. Storage: `support_buffs["ground_effect"]` (str|None) + `support_buffs["ground_effect_lv"]` (int). `_on_ground_changed` handler enables/disables level spin. load_build + collect_into wired.

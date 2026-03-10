@@ -108,6 +108,9 @@ _PARTY_BUFFS: list[tuple] = [
 # SC_ADRENALINE QComboBox options: index 0 = Self (val3=300), index 1 = Party (val3=200)
 _ADRENALINE_VALUES = (300, 200)
 
+# Ground effect SC key by combo index (index 0 = none)
+_GROUND_SC_KEYS = [None, "SC_VOLCANO", "SC_DELUGE", "SC_VIOLENTGALE"]
+
 
 # ── Bard Songs ────────────────────────────────────────────────────────────────
 # (sc_key, display_name, overrides: list of (stat_key, label))
@@ -181,6 +184,10 @@ class BuffsSection(Section):
 
         # Storage for Ensembles
         self._ensemble_spins: dict[str, QSpinBox] = {}
+
+        # Storage for Ground Effects
+        self._ground_combo: QComboBox | None = None
+        self._ground_lv_spin: QSpinBox | None = None
 
         # ── 1. Self Buffs ─────────────────────────────────────────────────
         self._sub_self = CollapsibleSubGroup("Self Buffs", default_collapsed=False)
@@ -270,9 +277,9 @@ class BuffsSection(Section):
         self._sub_party.add_content_widget(party_widget)
         self.add_content_widget(self._sub_party)
 
-        # ── 3. Ground Effects (stub) ──────────────────────────────────────
+        # ── 3. Ground Effects ─────────────────────────────────────────────
         self._sub_ground = CollapsibleSubGroup("Ground Effects", default_collapsed=False)
-        self._sub_ground.add_content_widget(_stub_label("(Sage ground buffs — Session O)"))
+        self._sub_ground.add_content_widget(self._build_ground_widget())
         self.add_content_widget(self._sub_ground)
 
         # ── 4. Bard Songs ────────────────────────────────────────────────────
@@ -299,6 +306,50 @@ class BuffsSection(Section):
         self._sub_misc = CollapsibleSubGroup("Miscellaneous Effects", default_collapsed=False)
         self._sub_misc.add_content_widget(_stub_label("(Item proc / pet buffs — future session)"))
         self.add_content_widget(self._sub_misc)
+
+    # ── Ground Effects widget builder ───────────────────────────────────────
+
+    def _build_ground_widget(self) -> QWidget:
+        w = QWidget()
+        lay = QHBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(6)
+
+        lbl = QLabel("Ground:")
+        lbl.setObjectName("passive_sub_header")
+        lay.addWidget(lbl)
+
+        self._ground_combo = QComboBox()
+        self._ground_combo.addItem("— (none)")
+        self._ground_combo.addItem("Volcano")
+        self._ground_combo.addItem("Deluge")
+        self._ground_combo.addItem("Violent Gale")
+        lay.addWidget(self._ground_combo)
+
+        lv_lbl = QLabel("Lv:")
+        lv_lbl.setObjectName("passive_sub_header")
+        lay.addWidget(lv_lbl)
+
+        self._ground_lv_spin = QSpinBox()
+        self._ground_lv_spin.setRange(1, 5)
+        self._ground_lv_spin.setValue(1)
+        self._ground_lv_spin.setFixedWidth(44)
+        self._ground_lv_spin.setEnabled(False)
+        lay.addWidget(self._ground_lv_spin)
+
+        note = QLabel("(requires matching armor element)")
+        note.setObjectName("passive_note")
+        lay.addWidget(note)
+        lay.addStretch()
+
+        self._ground_combo.currentIndexChanged.connect(self._on_ground_changed)
+        self._ground_lv_spin.valueChanged.connect(self._on_changed)
+        return w
+
+    def _on_ground_changed(self) -> None:
+        if self._ground_lv_spin is not None:
+            self._ground_lv_spin.setEnabled(self._ground_combo.currentIndex() != 0)
+        self._on_changed()
 
     # ── Song/Dance widget builders ─────────────────────────────────────────
 
@@ -525,6 +576,10 @@ class BuffsSection(Section):
             list(self._dance_level_spins.values()) +
             list(self._ensemble_spins.values())
         )
+        if self._ground_combo is not None:
+            _all_widgets.append(self._ground_combo)
+        if self._ground_lv_spin is not None:
+            _all_widgets.append(self._ground_lv_spin)
         for ov_d in self._song_ov_checks.values():
             _all_widgets.extend(ov_d.values())
         for ov_d in self._song_ov_spins.values():
@@ -572,6 +627,14 @@ class BuffsSection(Section):
                               _DANCER_DANCES)
         for sc_key, _, _ in _ENSEMBLES:
             self._ensemble_spins[sc_key].setValue(int(ss.get(sc_key, 0)))
+
+        # Ground effects
+        if self._ground_combo is not None and self._ground_lv_spin is not None:
+            ge = support.get("ground_effect")
+            ge_idx = _GROUND_SC_KEYS.index(ge) if ge in _GROUND_SC_KEYS else 0
+            self._ground_combo.setCurrentIndex(ge_idx)
+            self._ground_lv_spin.setValue(int(support.get("ground_effect_lv", 1)))
+            self._ground_lv_spin.setEnabled(ge_idx != 0)
 
         for w in _all_widgets:
             w.blockSignals(False)
@@ -635,6 +698,13 @@ class BuffsSection(Section):
                 if self._party_checks[sc_key].isChecked():
                     idx = self._party_combos[sc_key].currentIndex()
                     support[sc_key] = _ADRENALINE_VALUES[idx]
+
+        # Ground effects
+        support.pop("ground_effect", None)
+        support.pop("ground_effect_lv", None)
+        if self._ground_combo is not None and self._ground_combo.currentIndex() != 0:
+            support["ground_effect"] = _GROUND_SC_KEYS[self._ground_combo.currentIndex()]
+            support["ground_effect_lv"] = self._ground_lv_spin.value()
         build.support_buffs = support
 
         # Songs/dances → song_state

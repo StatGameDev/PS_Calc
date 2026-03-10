@@ -21,30 +21,36 @@ stands in the field or does not.
 
 ## Sage / Scholar Ground Elements — SA_*
 
-### SA_VOLCANO → SC_VOLCANO [explore]
+### SA_VOLCANO → SC_VOLCANO [confirmed]
 
-**Effect**: flat WATK bonus while in the fire-element field
-**Formula**: `watk += val2` — exact val2 formula [stub]
-**Hercules ref**: status.c ~4569–4570
-**Inputs needed**: checkbox
-
----
-
-### SA_DELUGE → SC_DELUGE [explore]
-
-**Effect**: MaxHP% bonus while in the water-element field
-**Formula**: `maxhp += maxhp * val2 / 100` — exact val2 formula [stub]
-**Hercules ref**: status.c ~4870–4871
-**Inputs needed**: checkbox
+**Effect**: flat WATK bonus while standing on Fire-element ground
+**Formula**: `val2 = skill_lv * 10; watk += val2`
+**Hercules ref**: status.c:7780 (init: `val2 = val1*10`); status.c:4569-4570 (apply: `watk += sc->data[SC_VOLCANO]->val2`)
+**Pre-renewal guard**: `#ifndef RENEWAL` — if player armor element ≠ Fire, val2 = 0 (status.c:7781-7783)
+**Calculator**: user's responsibility to apply only with matching armor element
+**Inputs**: QComboBox (Volcano selected) + level QSpinBox 1–5
 
 ---
 
-### SA_VIOLENTGALE → SC_VIOLENTGALE [explore]
+### SA_DELUGE → SC_DELUGE [confirmed]
 
-**Effect**: flat FLEE bonus while in the wind-element field
-**Formula**: `flee += val2` — exact val2 formula [stub]
-**Hercules ref**: status.c ~4870–4871, ~5667 (aspd penalty [explore] — verify)
-**Inputs needed**: checkbox
+**Effect**: MaxHP% bonus while standing on Water-element ground
+**Formula**: `val2 = deluge_eff[skill_lv-1]` = {5, 9, 12, 14, 15}%; `maxhp += maxhp * val2 / 100`
+**Hercules ref**: status.c:7793-7799 (init); status.c:5768-5769 (apply); skill.c:25192 (deluge_eff table)
+**Pre-renewal guard**: `#ifndef RENEWAL` — if player armor element ≠ Water, val2 = 0 (status.c:7795-7797)
+**Calculator**: MaxHP does not affect damage output — UI toggle present, no pipeline step
+**Inputs**: QComboBox (Deluge selected) + level QSpinBox 1–5
+
+---
+
+### SA_VIOLENTGALE → SC_VIOLENTGALE [confirmed]
+
+**Effect**: flat FLEE bonus while standing on Wind-element ground
+**Formula**: `val2 = skill_lv * 3; flee += val2`
+**Hercules ref**: status.c:7786-7790 (init: `val2 = val1*3`); status.c:4870-4871 (apply: `flee += sc->data[SC_VIOLENTGALE]->val2`)
+**Pre-renewal guard**: `#ifndef RENEWAL` — if player armor element ≠ Wind, val2 = 0 (status.c:7788-7790)
+**Calculator**: user's responsibility to apply only with matching armor element
+**Inputs**: QComboBox (Violent Gale selected) + level QSpinBox 1–5
 
 ---
 
@@ -97,6 +103,6 @@ Hercules trace before implementing. Deferred.
 
 | SC | Formula | Calculator | GUI |
 |----|---------|-----------|-----|
-| SC_VOLCANO | explore | not started | — |
-| SC_DELUGE | explore | not started | — |
-| SC_VIOLENTGALE | explore | not started | — |
+| SC_VOLCANO | confirmed (status.c:7780, 4570) | base_damage.py (Session O) | buffs_section Ground Effects combo |
+| SC_DELUGE | confirmed (status.c:7793, 5768; skill.c:25192) | N/A — MaxHP only, no damage effect | buffs_section Ground Effects combo |
+| SC_VIOLENTGALE | confirmed (status.c:7786, 4871) | status_calculator.py (Session O) | buffs_section Ground Effects combo |

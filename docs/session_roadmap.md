@@ -46,20 +46,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | M | Party Buffs: SC_BLESSING/INC_AGI/GLORIA/ANGELUS/IMPOSITIO/ADRENALINE; def_percent chain; bonus display "Buffs" column | G49~ |
 | M2 | Bard/Dancer songs: song_state on PlayerBuild; SC_ASSNCROS/WHISTLE/APPLEIDUN/POEMBRAGI/HUMMING/FORTUNE/SERVICEFORYU in StatusCalculator; SC_DRUMBATTLE+SC_NIBELUNGEN in base_damage.py; Bard Songs+Dancer Dances+Ensembles UI; job visibility filter | G9, G49~ |
 | N | Self-Buffs: 10 SCs in StatusCalculator (stat/BATK/CRI/HIT/FLEE/ASPD/MDEF); 3 ASPD bugs fixed (MADNESSCANCEL not in max pool, STEELBODY/DEFENDER scale corrected); 22 new _SELF_BUFFS rows in buffs_section.py | G49~ |
-
----
-
-## Session O — Weapon Endow + Ground Effects
-
-**Goal**: Properly document and integrate weapon endow + ground effect SCs.
-**Skills**: Weapon endow: ID 68, 138, 280–283, 425 (buff_skills.md).
-Ground effects: ID 285, 286, 287, 538 (buff_skills.md).
-**Prep**: Fill weapon_endow.md + ground_effects.md stubs (skill.c + item_db.json).
-**Weapon endow**: Already modelled via manual element override. Formalise SC→element
-mapping; may improve existing override UI by naming the SC source.
-**Ground effects**: SA_VOLCANO / SA_DELUGE / SA_VIOLENTGALE; AttrFix-adjacent.
-Ground Effects sub-group in buffs_section already scaffolded (Session M).
-**Estimated tokens**: 20–30k.
+| O | Ground Effects: SC_VOLCANO (base_damage.py, lv*10 WATK); SC_VIOLENTGALE (status_calculator.py, lv*3 FLEE); SC_DELUGE (UI only, MaxHP no damage effect); Ground Effects sub-group wired (QComboBox+QSpinBox). Endows deferred (manual element override sufficient). | G49~ |
 
 ---
 
@@ -108,6 +95,7 @@ debuff toggles (SC_PROVOKE, SC_DECREASEAGI, PR_LEXAETERNA, etc.).
 Wire `player_debuffs_section` (already scaffolded in M0) with actual debuff toggles
 (SC_ETERNALCHAOS, SC_CURSE, SC_BLIND, SC_DECREASEAGI).
 Toggles per debuff (PROVOKE, AGIDISCOUNT, etc.) + level spinbox.
+Readback regarding player/target differences in implementation (ideally re-use system for both)
 **Estimated tokens**: 30–40k (new architecture + UI).
 
 ---

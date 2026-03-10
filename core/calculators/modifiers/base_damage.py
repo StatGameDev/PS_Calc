@@ -91,6 +91,22 @@ class BaseDamage:
                 hercules_ref="status.c #ifndef RENEWAL line 4589: watk += sc->data[SC_NIBELUNGEN]->val2",
             )
 
+        # SC_VOLCANO (SA_VOLCANO): flat WATK bonus while standing on Fire-element ground
+        # val2 = skill_lv * 10; status.c:7780 (init), status.c:4569-4570 (apply: watk += val2)
+        # Pre-renewal (#ifndef RENEWAL): bonus = 0 if player's armor element is not Fire.
+        # Calculator: user is responsible for applying only when armor element matches.
+        if build.support_buffs.get("ground_effect") == "SC_VOLCANO":
+            vol_lv = int(build.support_buffs.get("ground_effect_lv", 1))
+            vol_bonus = vol_lv * 10
+            atkmax += vol_bonus
+            result.add_step(
+                name="SC_VOLCANO",
+                value=vol_bonus,
+                note=f"Volcano Lv{vol_lv}: +{vol_bonus} weapon ATK (Fire armor required)",
+                formula=f"skill_lv * 10 = {vol_lv} * 10 = {vol_bonus}",
+                hercules_ref="status.c:7780 val2=val1*10; status.c:4570 watk+=sc->data[SC_VOLCANO]->val2",
+            )
+
         # Arrow ATK: bow-type weapons add ammo ATK to weapon ATK
         # battle.c: sd->arrow_atk contributes to weapon ATK for arrow attacks
         if weapon.weapon_type == "Bow":
