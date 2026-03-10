@@ -70,6 +70,98 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
+## Session G54 — Double-Hit Procs + DPS Stat
+
+**Goal**: Model TF_DOUBLE and GS_CHAINACTION as separate proc-fires branches (like
+crit), and add a DPS row to SummarySection.
+**Gap ID**: G54.
+**No Hercules reads needed** — all formulas confirmed 2026-03-11 (see aspd.md, gaps.md).
+**Estimated tokens**: ~20–25k (pure Python + GUI, no investigation).
+
+### Work items
+
+1. **`_run_branch()` proc parameter** — add `proc_hit_count: int = 1` to `BattlePipeline._run_branch()`.
+   Pass it into `SkillRatio.calculate()` as a multiplier applied at the same position as
+   `hit_count` (i.e. `_scale_floor(pmf, proc_hit_count, 1)` after ratio scale).
+   This mirrors `damage_div_fix` at battle.c:5567 (#ifndef RENEWAL).
+
+2. **Proc branch in `BattlePipeline.calculate()`** — after the katar_second block,
+   add a proc eligibility check (`skill.id == 0` only):
+   - W_DAGGER + `build.mastery_levels.get("TF_DOUBLE", 0)` → `proc_chance = 5 * lv`
+   - W_REVOLVER + `build.mastery_levels.get("GS_CHAINACTION", 0)` → same formula
+   - If `lv > 0`: run `_run_branch(..., proc_hit_count=2)` for normal and (if eligible) crit branches
+     → store as `double_hit` / `double_hit_crit` on `BattleResult`
+
+3. **`BattleResult` fields** — add:
+   ```python
+   proc_chance: float = 0.0          # percent (0–100); 0 = not eligible
+   double_hit: Optional[DamageResult] = None
+   double_hit_crit: Optional[DamageResult] = None
+   ```
+
+4. **Effective crit chance** — crit and proc are mutually exclusive (battle.c:4926).
+   When `proc_chance > 0`, the displayed crit% in SummarySection must be scaled:
+   `effective_crit_chance = raw_crit_chance * (1 - proc_chance / 100)`
+   Store `effective_crit_chance` on `BattleResult` (or compute in summary_section).
+
+5. **DPS on `BattleResult`** — compute at end of `BattlePipeline.calculate()`:
+   ```python
+   amotion = 2000 - status.aspd * 10
+   attacks_per_sec = 500.0 / amotion
+   p = proc_chance / 100
+   c = effective_crit_chance / 100
+   crit_avg = result.crit.avg_damage if result.crit else result.normal.avg_damage
+   double_avg = result.double_hit.avg_damage if result.double_hit else 0
+   expected = p * double_avg + c * crit_avg + (1 - p - c) * result.normal.avg_damage
+   dps = expected * attacks_per_sec * (hit_chance / 100)
+   ```
+   Add `dps: float = 0.0` and `attacks_per_sec: float = 0.0` to `BattleResult`.
+
+6. **`SummarySection.refresh()`** — add two rows to the grid:
+   - **"Double" row** (row 3): shown only when `result.double_hit is not None`.
+     Min/Avg/Max of `double_hit`; column 4 label: `"X.X% proc"`.
+     Crit row's percentage label uses `effective_crit_chance` instead of raw.
+   - **"DPS" row** (row 4): always shown; single value spanning cols 1–3: `f"{result.dps:.1f}"`.
+
+---
+
+## Session G52 — Dual-Wield Pipeline
+
+**Goal**: Separate RH and LH damage branches for Assassin / Assassin Cross.
+**Gap ID**: G52.
+**Estimated tokens**: ~35–45k (requires Hercules reads + significant pipeline work).
+
+### Hercules reads needed (first thing in session)
+
+- `battle.c` ~5910–5940: full dual-wield branch — base multipliers for RH/LH without
+  mastery, how AS_RIGHT/AS_LEFT are applied, how LH weapon stats are sourced (`sstatus->lhw`).
+- Verify whether LH damage goes through a separate `calc_base_damage2` call or is derived
+  from the RH result.
+
+### Work items (pending source verification)
+
+1. **AS_RIGHT / AS_LEFT passive rows** — add to `passive_section.py`, job-filtered to
+   `_DUAL_WIELD_JOBS = {12, 4013}` (Assassin, Assassin Cross).
+
+2. **LH weapon in pipeline** — verify that `PlayerBuild.equipped["left_hand"]` is already
+   populated for dual-wield jobs (Session 5 F6). Resolve the LH weapon via
+   `BuildManager.resolve_weapon()` for the LH slot.
+
+3. **`BattlePipeline.calculate()` dual-wield branch** — detect dual-wield
+   (`job_id in _DUAL_WIELD_JOBS` and LH weapon present):
+   - RH branch: existing `_run_branch()` result, multiplied by `(50 + 10*AS_RIGHT_lv) // 100`
+     at the point confirmed by source (likely SkillRatio/base position).
+   - LH branch: `_run_branch()` with LH weapon substituted, multiplied by
+     `(30 + 10*AS_LEFT_lv) // 100`.
+   - Total: RH + LH stored as separate `DamageResult` fields on `BattleResult`.
+
+4. **`BattleResult` fields** — add `lh_normal`, `lh_crit` (Optional[DamageResult]).
+
+5. **`SummarySection`** — when `lh_normal` is present, show "RH: X + LH: Y = Total: Z"
+   for Normal and Crit rows.
+
+---
+
 ## Session R — Target Debuff System
 
 **Goal**: Allow debuffs from debuff_skills.md to be applied to the target before the

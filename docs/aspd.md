@@ -170,6 +170,37 @@ Tracked as G42 in gaps.md.
 
 ---
 
+## DPS Formula (confirmed 2026-03-11)
+
+`status.aspd` stores the display value: `(2000 - amotion) / 10` (float, e.g. 185.3).
+
+```python
+amotion          = 2000 - status.aspd * 10          # ms unit used internally
+attacks_per_sec  = 500.0 / amotion                  # = 1000 / (amotion * 2)
+```
+
+**Derivation:** The actual attack interval is `adelay = amotion * 2`. User-confirmed:
+190 ASPD → amotion = 100 → adelay = 200ms → 5 hits/s. ✓
+
+**Full DPS formula** (accounting for hit chance, crit, and double-hit proc):
+
+```python
+p = proc_chance / 100      # 0.0–1.0; 0 when proc not eligible
+c = effective_crit / 100   # = raw_crit_chance/100 * (1 - p); 0 when crit ineligible
+
+expected_per_hit = (p  * double_hit_avg
+                  + c  * crit_avg          # fallback to normal_avg when crit ineligible
+                  + (1 - p - c) * normal_avg)
+
+dps = expected_per_hit * attacks_per_sec * (hit_chance / 100)
+```
+
+Crit and proc are mutually exclusive — confirmed from battle.c:4926:
+`wd.type != BDT_MULTIHIT` gates the crit check. When a double-hit proc fires
+(sets BDT_MULTIHIT), the crit check is skipped entirely.
+
+---
+
 ## Remaining Open Items
 
 1. Consider making SC_ADRENALINE weapon-type-aware (restrict to axe/mace) when the
