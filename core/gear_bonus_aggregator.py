@@ -119,6 +119,9 @@ class GearBonusAggregator:
                 bonuses.ignore_mdef_rate[key] = bonuses.ignore_mdef_rate.get(key, 0) + val
             elif bt == "bSkillAtk":
                 bonuses.skill_atk[key] = bonuses.skill_atk.get(key, 0) + val
+            elif bt == "bCastrate":
+                # bonus2 bCastrate,skill_name,val — per-skill cast reduction (pc.c:3607)
+                bonuses.skill_castrate[key] = bonuses.skill_castrate.get(key, 0) + val
 
         # bonus3 and the rest — stored in all_effects only (tooltip use)
 
@@ -153,6 +156,11 @@ _BONUS1_ROUTES: dict[str, object] = {
     "bLongAtkDef":  lambda b, v: setattr(b, "long_atk_def_rate", b.long_atk_def_rate + v),
     "bMagicDefRate": lambda b, v: setattr(b, "magic_def_rate",   b.magic_def_rate   + v),
     "bAtkRate":     lambda b, v: setattr(b, "atk_rate",          b.atk_rate         + v),
+    # G59: skill timing bonuses
+    "bCastrate":    lambda b, v: setattr(b, "castrate",  b.castrate  + v),
+    # bVarCastrate (SP_VARCASTRATE) → same sd->castrate field in pre-renewal (pc.c:2639 #ifndef RENEWAL_CAST)
+    "bVarCastrate": lambda b, v: setattr(b, "castrate",  b.castrate  + v),
+    "bDelayrate":   lambda b, v: setattr(b, "delayrate", b.delayrate + v),
 }
 
 

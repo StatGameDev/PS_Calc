@@ -62,3 +62,15 @@ class GearBonuses:
     long_atk_def_rate: int = 0   # bLongAtkDef — % reduction vs ranged
     magic_def_rate:    int = 0   # bMagicDefRate — % reduction vs magic
     atk_rate:          int = 0   # bAtkRate — flat % bonus to physical ATK
+
+    # Skill timing (G59)
+    # castrate: sum of bCastrate / bVarCastrate val deltas.
+    #   sd->castrate in Hercules starts at 100; gear_bonuses.castrate is the delta.
+    #   Applied as: time = time * (100 + castrate) // 100  (pc.c:2639; skill.c:~17197)
+    castrate: int = 0
+    # delayrate: sum of bDelayrate val deltas. Same delta-from-100 convention.
+    #   Applied as: time = time * (100 + delayrate) // 100  (pc.c:3020; skill.c:~17506)
+    delayrate: int = 0
+    # skill_castrate: per-skill cast reduction from bonus2 bCastrate,skill_name,val.
+    #   Keys are skill constant name strings (e.g. "AL_HOLYLIGHT").  (pc.c:3607)
+    skill_castrate: Dict[str, int] = field(default_factory=dict)

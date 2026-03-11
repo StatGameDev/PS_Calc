@@ -147,7 +147,7 @@ Always grep first. Never load entire files.
     core/calculators/status_calculator.py      — StatusCalculator (HIT, FLEE, BATK, CRI, DEF, MATK, MDEF)
     core/calculators/modifiers/
         base_damage.py       — weapon ATK range, SizeFix, overrefine (battle_calc_base_damage2)
-        skill_ratio.py       — SkillRatio (battle_calc_skillratio); calculate_magic() for BF_MAGIC
+        skill_ratio.py       — SkillRatio (battle_calc_skillratio); calculate_magic() for BF_MAGIC; IMPLEMENTED_BF_WEAPON/MAGIC_SKILLS frozensets
         defense_fix.py       — DefenseFix: hard DEF % + VIT DEF rnd range; calculate_magic() for MDEF
         crit_atk_rate.py     — CritAtkRate (pre-defense crit bonus)
         active_status_bonus.py — SC_AURABLADE etc. (post-defense)
@@ -160,6 +160,7 @@ Always grep first. Never load entire files.
         crit_chance.py       — calculate_crit_chance, CRIT_ELIGIBLE_SKILLS
         hit_chance.py        — calculate_hit_chance (E1, Session 2/3)
         dps_calculator.py    — SelectionStrategy ABC, FormulaSelectionStrategy, calculate_dps()
+    core/calculators/skill_timing.py           — calculate_skill_timing(): cast+ACD per skill_castfix/skill_delay_fix (Q0)
 
 ### Core models (`core/models/`)
 

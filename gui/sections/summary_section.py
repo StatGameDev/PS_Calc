@@ -98,7 +98,7 @@ class SummarySection(Section):
         self._pdodge_pct.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         grid.addWidget(self._pdodge_pct, 4, 3, 1, 2)
 
-        # DPS row (row 5) — always visible
+        # DPS row (row 5) — always visible; shows "N/A" when skill ratio not yet implemented
         dps_lbl = QLabel("DPS")
         dps_lbl.setObjectName("summary_label")
         grid.addWidget(dps_lbl, 5, 0)
@@ -107,6 +107,17 @@ class SummarySection(Section):
         self._dps_val.setObjectName("summary_value")
         self._dps_val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         grid.addWidget(self._dps_val, 5, 1, 1, 3)
+
+        # Speed row (row 6) — actions per second (= 1000 / period_ms).
+        # More intuitive than raw period_ms: higher = faster attacking/casting.
+        spd_lbl = QLabel("Speed")
+        spd_lbl.setObjectName("summary_label")
+        grid.addWidget(spd_lbl, 6, 0)
+
+        self._spd_val = QLabel(_DASH)
+        self._spd_val.setObjectName("summary_value")
+        self._spd_val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        grid.addWidget(self._spd_val, 6, 1, 1, 3)
 
         grid.setColumnStretch(5, 1)
 
@@ -137,6 +148,7 @@ class SummarySection(Section):
             self._hit_pct.setText(_DASH)
             self._pdodge_pct.setText(_DASH)
             self._dps_val.setText(_DASH)
+            self._spd_val.setText(_DASH)
             return
 
         n = result.normal
@@ -206,5 +218,15 @@ class SummarySection(Section):
         self._hit_pct.setText(f"{result.hit_chance:.1f}%")
         self._pdodge_pct.setText(f"pdodge {result.perfect_dodge:.1f}%")
 
-        # DPS row — always shown; 0.0 before first calculation
-        self._dps_val.setText(f"{result.dps:.1f}")
+        # DPS — hidden as "N/A" when skill ratio is not yet implemented (dps_valid=False).
+        if result.dps_valid:
+            self._dps_val.setText(f"{result.dps:.1f}")
+        else:
+            self._dps_val.setText("N/A")
+
+        # Speed — actions per second (= 1000 / period_ms).
+        # Shows how fast the player can repeat the current attack/skill.
+        if result.period_ms > 0:
+            self._spd_val.setText(f"{1000.0 / result.period_ms:.2f}/s")
+        else:
+            self._spd_val.setText(_DASH)

@@ -4,6 +4,11 @@ from core.models.build import PlayerBuild
 from core.data_loader import loader
 from pmf.operations import _scale_floor, pmf_stats
 
+# BF_WEAPON skills with confirmed ratios implemented in this module.
+# Empty in Q0; Q1+ will add entries here as each job's skills are implemented.
+# BattlePipeline checks this set to set dps_valid=True only when ratio is known.
+IMPLEMENTED_BF_WEAPON_SKILLS: frozenset[str] = frozenset()
+
 # Pre-renewal magic skill ratios from battle_calc_skillratio BF_MAGIC switch.
 # Source: battle.c:1631-1785 #else not RENEWAL.
 # All unlisted skills use default ratio = 100.
@@ -25,6 +30,11 @@ _BF_MAGIC_RATIOS = {
     "HW_NAPALMVULCAN": lambda lv, tgt: 70 + 10 * lv,
     "WZ_VERMILION":    lambda lv, tgt: 80 + 20 * lv,   # pre-re: #else RENEWAL (20*lv-20)
 }
+
+# BF_MAGIC skills with confirmed ratios implemented above.
+# Derived from _BF_MAGIC_RATIOS keys; Q2+ will add more entries as ratios are verified.
+# BattlePipeline checks this set to set dps_valid=True for magic skills.
+IMPLEMENTED_BF_MAGIC_SKILLS: frozenset[str] = frozenset(_BF_MAGIC_RATIOS.keys())
 
 
 class SkillRatio:

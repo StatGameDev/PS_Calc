@@ -110,3 +110,11 @@ class BattleResult:
     #     use state_requirement/next_state on each AttackDefinition to solve
     #     steady-state via eigenvector when turn-sequence modelling is added.
     attacks: List["AttackDefinition"] = field(default_factory=list)
+    # Timing: minimum period between consecutive uses (ms).
+    # Auto-attack: adelay = 2 × amotion.  Skill: max(cast_ms + delay_ms, amotion).
+    # Source: status.c:2134 (adelay = 2×amotion); unit.c:1846 (period = max(cast+delay, amotion))
+    period_ms: float = 0.0
+    # True when the damage pipeline has a confirmed skill ratio for the selected skill.
+    # False for BF_WEAPON skills not yet in IMPLEMENTED_BF_WEAPON_SKILLS (pre-Q1).
+    # When False, DPS is hidden in the GUI (timing/Speed is still shown).
+    dps_valid: bool = True

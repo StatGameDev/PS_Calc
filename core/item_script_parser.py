@@ -89,6 +89,9 @@ _BONUS1_TEMPLATES: dict[str, object] = {
     "bLongAtkRate": lambda v: f"Long-range damage +{v}%." if v > 0 else f"Long-range damage {v}%.",
     "bShortWeaponDamageReturn": lambda v: f"Reflects {v}% melee physical damage back to attacker.",
     "bCastrate": lambda v: f"Casting time {'reduced' if v < 0 else 'increased'} by {abs(v)}%.",
+    # bVarCastrate (SP_VARCASTRATE) maps to the same sd->castrate field as bCastrate in pre-renewal.
+    # Source: pc.c:2639 (#ifndef RENEWAL_CAST: SP_VARCASTRATE falls through to SP_CASTRATE)
+    "bVarCastrate": lambda v: f"Casting time {'reduced' if v < 0 else 'increased'} by {abs(v)}%.",
     "bDelayrate": lambda v: f"After-cast delay {'reduced' if v < 0 else 'increased'} by {abs(v)}%.",
     "bHPrecovRate": lambda v: f"Natural HP recovery +{v}%." if v > 0 else f"Natural HP recovery {v}%.",
     "bSPrecovRate": lambda v: f"Natural SP recovery +{v}%." if v > 0 else f"Natural SP recovery {v}%.",

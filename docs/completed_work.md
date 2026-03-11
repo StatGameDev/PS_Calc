@@ -1443,3 +1443,44 @@ The ASPD block now detects dual-wield (job_id in {12,4013} + LH item equipped + 
 and applies the two-weapon formula. Single-weapon path unchanged.
 Note: the ×7/10 factor is the intrinsic speed penalty for swinging two weapons; AS_RIGHT/AS_LEFT and
 SC_ASSNCROS reduce `amotion` on top of this base.
+
+---
+
+## Session Q0 — Skill Timing Calculator (G56, G59, G60)
+
+**G59 — Gear cast/delay bonuses** (`core/models/gear_bonuses.py`, `core/item_script_parser.py`, `core/gear_bonus_aggregator.py`)
+Three new fields on GearBonuses: `castrate: int` (sum of bCastrate/bVarCastrate deltas), `delayrate: int` (sum of bDelayrate deltas), `skill_castrate: dict[str,int]` (per-skill cast reduction from bonus2 bCastrate).
+`bVarCastrate` added to item_script_parser display templates — maps to same sd->castrate as bCastrate in pre-renewal (pc.c:2639 #ifndef RENEWAL_CAST).
+`_BONUS1_ROUTES` in aggregator: bCastrate/bVarCastrate → castrate, bDelayrate → delayrate.
+`_apply()` arity-2: bCastrate → skill_castrate dict.
+
+**G56 — `calculate_skill_timing()`** (`core/calculators/skill_timing.py` — new file)
+Full cast + ACD pipeline per skill_castfix (skill.c:17176) and skill_delay_fix (skill.c:17414).
+Cast path: DEX reduction (castrate_dex_scale=150, skill.c:17181) → global gear castrate → per-skill gear castrate → SC_POEMBRAGI val2 (from status.cast_time_reduction_pct) → SC_SUFFRAGIUM val2 (15×lv, status.c:8485). Floor 0.
+Delay path: Monk combo reduction (4×agi+2×dex, skill.c:17437) → SC_POEMBRAGI val3 (from status.after_cast_delay_reduction_pct) → global gear delayrate. Floor 100ms (min_skill_delay_limit, skill.conf:48).
+_MONK_COMBO_SKILLS frozenset: MO_TRIPLEATTACK, MO_CHAINCOMBO, MO_COMBOFINISH, CH_TIGERFIST, CH_CHAINCRUSH.
+
+**G56 — DPS period wiring** (`core/calculators/battle_pipeline.py`)
+`amotion = max(100, int(2000 - status.aspd × 10))` computed at top of calculate().
+Auto-attack (skill.id==0): period = adelay = 2×amotion. BF_WEAPON skill: period = max(cast+delay, amotion).
+BF_MAGIC: period computed identically; DPS = avg_damage / period × 1000. Previously DPS was 0 for all magic.
+`dps_valid` gates DPS display: True for auto-attack and skills in IMPLEMENTED_BF_WEAPON/MAGIC_SKILLS; False otherwise.
+
+**G56 — IMPLEMENTED_BF_WEAPON/MAGIC_SKILLS frozensets** (`core/calculators/modifiers/skill_ratio.py`)
+`IMPLEMENTED_BF_WEAPON_SKILLS: frozenset = frozenset()` — empty in Q0; Q1+ populates.
+`IMPLEMENTED_BF_MAGIC_SKILLS: frozenset = frozenset(_BF_MAGIC_RATIOS.keys())` — all 15 confirmed magic skills.
+Both checked in BattlePipeline to set `dps_valid`.
+
+**G60 — SC_SUFFRAGIUM** (`gui/sections/buffs_section.py`)
+Added to _PARTY_BUFFS: `("SC_SUFFRAGIUM", "Suffragium", "spin", 0, 3)`.
+Stored as `support_buffs["SC_SUFFRAGIUM"] = level`. Consumed on cast; treated as always active for the cast being evaluated.
+
+**Summary section updates** (`gui/sections/summary_section.py`)
+New "Speed" row (row 6): shows `1000 / period_ms` formatted as "X.XX/s" — actions per second.
+DPS row: shows "N/A" when `result.dps_valid == False` (skill ratio unimplemented).
+Two new BattleResult fields: `period_ms: float = 0.0`, `dps_valid: bool = True`.
+
+**Design: dps_valid symmetry for BF_MAGIC**
+`dps_valid=True` only for magic skills in IMPLEMENTED_BF_MAGIC_SKILLS (keys of _BF_MAGIC_RATIOS).
+Unknown magic skills (non-damaging, non-ratio skills) correctly show N/A DPS.
+Same frozenset-gated pattern as BF_WEAPON so Q2 just populates both sets.

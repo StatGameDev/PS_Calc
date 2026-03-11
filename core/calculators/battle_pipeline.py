@@ -30,6 +30,8 @@ from core.calculators.modifiers.crit_atk_rate import CritAtkRate
 from core.calculators.modifiers.hit_chance import calculate_hit_chance
 from core.models.attack_definition import AttackDefinition
 from core.calculators.dps_calculator import calculate_dps, FormulaSelectionStrategy
+from core.calculators.skill_timing import calculate_skill_timing
+from core.calculators.modifiers.skill_ratio import IMPLEMENTED_BF_WEAPON_SKILLS, IMPLEMENTED_BF_MAGIC_SKILLS
 
 
 class BattlePipeline:
@@ -66,6 +68,11 @@ class BattlePipeline:
         """
         skill_data = loader.get_skill(skill.id)
         attack_type = skill_data.get("attack_type", "Weapon") if skill_data else "Weapon"
+        skill_name: str = skill_data.get("name", "") if skill_data else ""
+
+        # amotion = 2000 - aspd*10  (status.c:2112; status.c:2134: adelay = 2 × amotion)
+        # Floored at 100 to match cap_value(i, pc_max_aspd(sd), 2000) in Hercules.
+        amotion: int = max(100, int(2000 - status.aspd * 10))
 
         if attack_type == "Magic":
             magic_result = MagicPipeline(self.config).calculate(status, skill, target, build)
@@ -73,6 +80,19 @@ class BattlePipeline:
             # Monsters do not have perfect dodge vs player attacks; only player characters do.
             if build.target_mob_id is not None:
                 perfect_dodge = 0.0
+            # G56: compute period and DPS for magic skills.
+            # dps_valid=True only for skills with a confirmed ratio in IMPLEMENTED_BF_MAGIC_SKILLS.
+            if skill_data:
+                gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
+                GearBonusAggregator.apply_passive_bonuses(gb, build.mastery_levels)
+                cast_ms, delay_ms = calculate_skill_timing(
+                    skill_name, skill.level, skill_data, status, gb, build.support_buffs,
+                )
+                magic_period = max(cast_ms + delay_ms, amotion)
+            else:
+                magic_period = amotion
+            magic_dps = (magic_result.avg_damage / magic_period * 1000
+                         if magic_period > 0 else 0.0)
             return BattleResult(
                 normal=magic_result,   # mirrored so GUI shows steps without changes
                 magic=magic_result,
@@ -80,9 +100,13 @@ class BattlePipeline:
                 crit_chance=0.0,
                 hit_chance=hit_chance,
                 perfect_dodge=perfect_dodge,
+                dps=magic_dps,
+                period_ms=float(magic_period),
+                dps_valid=skill_name in IMPLEMENTED_BF_MAGIC_SKILLS,
             )
 
-        # skill_data is loaded inside _run_branch where it is used (ForgeBonus div)
+        # skill_data above is used for attack_type / skill_name / skill timing.
+        # _run_branch loads it again independently for ForgeBonus div.
 
         # Crit eligibility and chance
         is_eligible, crit_chance = calculate_crit_chance(status, weapon, skill, target, self.config)
@@ -174,9 +198,23 @@ class BattlePipeline:
                     double_hit_crit = self._apply_dualwield_rate(double_hit_crit, rh_rate, "RH", as_right_lv)
 
         # DPS calculation.
-        # adelay: (2000 - aspd*10)*2 ms; floored at 200ms to guard against ASPD overflow.
-        # TF_DOUBLE / GS_CHAINACTION proc fires within the same swing, same adelay.
-        adelay = max(200.0, (2000.0 - status.aspd * 10.0) * 2.0)
+        # adelay = 2 × amotion (floored at 200ms = 2×100ms min amotion).
+        # TF_DOUBLE / GS_CHAINACTION proc fires within the same swing, same period.
+        adelay = float(2 * amotion)  # = max(200, (2000 - aspd*10)*2)
+
+        # G56: skill period — auto-attack uses adelay; skills use max(cast+delay, amotion).
+        if skill.id == 0:
+            period = adelay
+            dps_valid = True
+        else:
+            gb_timing = GearBonusAggregator.compute(build.equipped, build.refine_levels)
+            GearBonusAggregator.apply_passive_bonuses(gb_timing, build.mastery_levels)
+            cast_ms, delay_ms = calculate_skill_timing(
+                skill_name, skill.level, skill_data, status, gb_timing, build.support_buffs,
+            ) if skill_data else (0, 0)
+            period = float(max(cast_ms + delay_ms, amotion))
+            dps_valid = skill_name in IMPLEMENTED_BF_WEAPON_SKILLS
+
         p        = proc_chance / 100.0
         eff_crit = crit_chance / 100.0 * (1.0 - p)  # crit and proc mutually exclusive
         h        = hit_chance / 100.0
@@ -193,14 +231,14 @@ class BattlePipeline:
 
         # Probability tree — sums to 1.0:
         #   crits auto-hit (bypass FLEE), so weight = eff_crit, NOT eff_crit * h.
-        #   proc can miss — proc-miss is zero damage but still consumes the full adelay.
+        #   proc can miss — proc-miss is zero damage but still consumes the full period.
         # Future sessions: append AttackDefinition entries here; do not add named fields.
         attacks = [
-            AttackDefinition(normal_avg, 0.0, adelay, (1.0 - p - eff_crit) * h),        # normal hit
-            AttackDefinition(0.0,        0.0, adelay, (1.0 - p - eff_crit) * (1.0 - h)), # normal miss
-            AttackDefinition(crit_avg,   0.0, adelay, eff_crit),                          # crit (auto-hit)
-            AttackDefinition(double_avg, 0.0, adelay, p * h),                             # proc hit
-            AttackDefinition(0.0,        0.0, adelay, p * (1.0 - h)),                     # proc miss
+            AttackDefinition(normal_avg, 0.0, period, (1.0 - p - eff_crit) * h),        # normal hit
+            AttackDefinition(0.0,        0.0, period, (1.0 - p - eff_crit) * (1.0 - h)), # normal miss
+            AttackDefinition(crit_avg,   0.0, period, eff_crit),                          # crit (auto-hit)
+            AttackDefinition(double_avg, 0.0, period, p * h),                             # proc hit
+            AttackDefinition(0.0,        0.0, period, p * (1.0 - h)),                     # proc miss
         ]
         dps = calculate_dps(attacks, FormulaSelectionStrategy())
 
@@ -219,6 +257,8 @@ class BattlePipeline:
             lh_crit=lh_crit,
             dps=dps,
             attacks=attacks,
+            period_ms=period,
+            dps_valid=dps_valid,
         )
 
     @staticmethod

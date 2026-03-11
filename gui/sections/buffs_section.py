@@ -98,12 +98,15 @@ _SELF_BUFFS: list[tuple] = [
 #                "check" = QCheckBox only
 #                "adrenaline" = QCheckBox + QComboBox (special case)
 _PARTY_BUFFS: list[tuple] = [
-    ("SC_BLESSING",  "Blessing",       "spin",       0, 10),
-    ("SC_INC_AGI",   "Increase AGI",   "spin",       0, 10),
-    ("SC_GLORIA",    "Gloria",         "check",      0,  0),
-    ("SC_ANGELUS",   "Angelus",        "spin",       0, 10),
-    ("SC_IMPOSITIO", "Impositio Manus","spin",        0,  5),
-    ("SC_ADRENALINE","Adrenaline Rush","adrenaline",  0,  0),
+    ("SC_BLESSING",   "Blessing",        "spin",       0, 10),
+    ("SC_INC_AGI",    "Increase AGI",    "spin",       0, 10),
+    ("SC_GLORIA",     "Gloria",          "check",      0,  0),
+    ("SC_ANGELUS",    "Angelus",         "spin",       0, 10),
+    ("SC_IMPOSITIO",  "Impositio Manus", "spin",       0,  5),
+    ("SC_ADRENALINE", "Adrenaline Rush", "adrenaline", 0,  0),
+    # SC_SUFFRAGIUM: val2 = 15×lv % cast time reduction (status.c:8485; skill.c:17244)
+    # Consumed on cast; treated as always active for the cast being calculated.
+    ("SC_SUFFRAGIUM", "Suffragium",      "spin",       0,  3),
 ]
 # SC_ADRENALINE QComboBox options: index 0 = Self (val3=300), index 1 = Party (val3=200)
 _ADRENALINE_VALUES = (300, 200)

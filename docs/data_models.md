@@ -116,6 +116,10 @@ near_atk_def_rate: int = 0  # bNearAtkDef — reduce incoming melee physical
 long_atk_def_rate: int = 0  # bLongAtkDef — reduce incoming ranged physical
 magic_def_rate: int = 0     # bMagicDefRate — reduce incoming magic
 atk_rate: int = 0           # bAtkRate — generic ATK% (currently consumed in CardFix; should move before SkillRatio — G10)
+# Added Session Q0:
+castrate: int = 0           # sum of bCastrate/bVarCastrate deltas; sd->castrate = 100 + castrate
+delayrate: int = 0          # sum of bDelayrate deltas; sd->delayrate = 100 + delayrate
+skill_castrate: dict = {}   # {skill_name: pct_delta} from bonus2 bCastrate,skill_name,val
 ```
 
 ### Fields to add [NEW]:
@@ -237,6 +241,9 @@ BattleResult:
     double_hit_crit: Optional[DamageResult] = None
     dps: float = 0.0                           # Σ(chance×dmg)/Σ(chance×delay) × 1000
     attacks: List[AttackDefinition] = []       # full distribution; append to extend; Markov seam
+    # Added Session Q0:
+    period_ms: float = 0.0                     # period between consecutive uses (ms); adelay for auto, max(cast+delay,amotion) for skill
+    dps_valid: bool = True                     # False when BF_WEAPON skill ratio not yet in IMPLEMENTED_BF_WEAPON_SKILLS
 ```
 
 ### Fields to add for full product [NEW]:
