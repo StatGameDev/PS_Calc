@@ -182,22 +182,30 @@ attacks_per_sec  = 500.0 / amotion                  # = 1000 / (amotion * 2)
 **Derivation:** The actual attack interval is `adelay = amotion * 2`. User-confirmed:
 190 ASPD → amotion = 100 → adelay = 200ms → 5 hits/s. ✓
 
-**Full DPS formula** (accounting for hit chance, crit, and double-hit proc):
+**Correct DPS formula** — ratio of expected damage to expected time per attack cycle:
 
-```python
-p = proc_chance / 100      # 0.0–1.0; 0 when proc not eligible
-c = effective_crit / 100   # = raw_crit_chance/100 * (1 - p); 0 when crit ineligible
-
-expected_per_hit = (p  * double_hit_avg
-                  + c  * crit_avg          # fallback to normal_avg when crit ineligible
-                  + (1 - p - c) * normal_avg)
-
-dps = expected_per_hit * attacks_per_sec * (hit_chance / 100)
 ```
+dps = Σ(chance_i × avg_damage_i) / Σ(chance_i × (pre_delay_i + post_delay_i))
+```
+
+Do NOT use `Σ(chance_i × dps_i)` — mathematically incorrect when delays differ
+between attack types (e.g. a normal auto-attack vs a skill with a cast time).
+
+For auto-attacks (no cast time): `pre_delay = 0`, `post_delay = adelay = amotion * 2`.
+Since all auto-attack variants share the same delay, `Σ(chance_i × delay_i) = adelay`
+and the formula reduces to `Σ(chance_i × damage_i) / adelay * 1000`.
 
 Crit and proc are mutually exclusive — confirmed from battle.c:4926:
 `wd.type != BDT_MULTIHIT` gates the crit check. When a double-hit proc fires
 (sets BDT_MULTIHIT), the crit check is skipped entirely.
+
+**Architecture** — implemented in Session G54 via `AttackDefinition` +
+`SelectionStrategy` abstraction (see `core/models/attack_definition.py`,
+`core/calculators/dps_calculator.py`). The strategy pattern is the seam
+for a future Markov Chain model: `FormulaSelectionStrategy` (stateless,
+chance values treated as steady-state weights) will be replaced by
+`MarkovSelectionStrategy` (eigenvector solution over state graph) without
+changing the DPS calculator or any call sites.
 
 ---
 

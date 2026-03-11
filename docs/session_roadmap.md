@@ -104,20 +104,74 @@ crit), and add a DPS row to SummarySection.
    `effective_crit_chance = raw_crit_chance * (1 - proc_chance / 100)`
    Store `effective_crit_chance` on `BattleResult` (or compute in summary_section).
 
-5. **DPS on `BattleResult`** — compute at end of `BattlePipeline.calculate()`:
+5. **DPS architecture** — create two new files:
+
+   **`core/models/attack_definition.py`**:
    ```python
-   amotion = 2000 - status.aspd * 10
-   attacks_per_sec = 500.0 / amotion
+   @dataclass
+   class AttackDefinition:
+       avg_damage: float
+       pre_delay:  float    # ms — cast/startup time before hit (0 for auto-attacks)
+       post_delay: float    # ms — after-delay before next action (adelay)
+       chance:     float    # steady-state probability weight; must sum to 1.0 across list
+       # Future Markov: state_requirement: Optional[str] = None
+       # Future Markov: next_state: Optional[str] = None
+   ```
+
+   **`core/calculators/dps_calculator.py`**:
+   ```python
+   class SelectionStrategy(ABC):
+       @abstractmethod
+       def compute_weights(self, attacks: list[AttackDefinition]) -> list[AttackDefinition]:
+           """Return attacks with chance values representing steady-state probability.
+           # Future Markov: replace with eigenvector solution over the state graph."""
+           ...
+
+   class FormulaSelectionStrategy(SelectionStrategy):
+       """Stateless: AttackDefinition.chance values are the steady-state weights.
+       Replace with MarkovSelectionStrategy when turn-sequence modelling is added."""
+       def compute_weights(self, attacks):
+           return attacks
+
+   def calculate_dps(attacks: list[AttackDefinition],
+                     strategy: SelectionStrategy) -> float:
+       """Correct formula: Σ(chance_i × damage_i) / Σ(chance_i × (pre_i + post_i)).
+       Do NOT use Σ(chance_i × dps_i) — incorrect when delays differ between attacks."""
+       weighted   = strategy.compute_weights(attacks)
+       total_dmg  = sum(a.chance * a.avg_damage               for a in weighted)
+       total_time = sum(a.chance * (a.pre_delay + a.post_delay) for a in weighted)
+       if total_time == 0:
+           return 0.0
+       return total_dmg / total_time * 1000   # ms → per-second
+   ```
+
+   **Building the attack list in `BattlePipeline.calculate()`**:
+   ```python
+   adelay = (2000 - status.aspd * 10) * 2   # ms; pre_delay=0 for auto-attacks
    p = proc_chance / 100
    c = effective_crit_chance / 100
-   crit_avg = result.crit.avg_damage if result.crit else result.normal.avg_damage
-   double_avg = result.double_hit.avg_damage if result.double_hit else 0
-   expected = p * double_avg + c * crit_avg + (1 - p - c) * result.normal.avg_damage
-   dps = expected * attacks_per_sec * (hit_chance / 100)
+   crit_avg   = result.crit.avg_damage if result.crit else result.normal.avg_damage
+   double_avg = result.double_hit.avg_damage if result.double_hit else 0.0
+   # Miss modelled as zero-damage variant of normal (keeps delay in denominator correct)
+   attacks = [
+       AttackDefinition(result.normal.avg_damage, 0, adelay, (1-p-c) * hit_chance/100),
+       AttackDefinition(result.normal.avg_damage, 0, adelay, (1-p-c) * (1-hit_chance/100)),  # miss
+       AttackDefinition(crit_avg,   0, adelay, c   * hit_chance/100),
+       AttackDefinition(double_avg, 0, adelay, p   * hit_chance/100),
+   ]
+   # Future skills: pre_delay = cast_time_ms, post_delay = skill_adelay_ms.
+   result.dps = calculate_dps(attacks, FormulaSelectionStrategy())
    ```
-   Add `dps: float = 0.0` and `attacks_per_sec: float = 0.0` to `BattleResult`.
+   Add `dps: float = 0.0` to `BattleResult`. Drop `attacks_per_sec` — not needed as a
+   stored field; it's an intermediate inside `calculate_dps`.
 
-6. **`SummarySection.refresh()`** — add two rows to the grid:
+6. **Unit tests — `tests/test_dps.py`** (create `tests/` directory):
+   - Basic: single attack type, verify `dps = damage / delay * 1000`.
+   - With crit: verify effective_crit_chance scaling.
+   - **Unequal-delay edge case**: two attack types with different total delays; assert
+     correct result differs from `Σ(chance_i × dps_i)`. Guards against regression.
+
+7. **`SummarySection.refresh()`** — add two rows to the grid:
    - **"Double" row** (row 3): shown only when `result.double_hit is not None`.
      Min/Avg/Max of `double_hit`; column 4 label: `"X.X% proc"`.
      Crit row's percentage label uses `effective_crit_chance` instead of raw.
