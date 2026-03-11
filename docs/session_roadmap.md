@@ -54,24 +54,35 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
-## Session Q0 — Skill Timing Calculator (G56)
+## Session Q0 — Skill Timing Calculator (G56, G59, G60)
 
-**Goal**: Implement `calculate_skill_timing()` and wire into `calculate_dps()` so DPS is correct for skill selections before Q1 lands skill ratios.
-**Gap**: G56
+**Goal**: Implement `calculate_skill_timing()` and wire into `calculate_dps()` so DPS is correct for skill selections before Q1 lands skill ratios. Includes gear cast/delay bonuses (G59) and SC_SUFFRAGIUM party buff (G60).
+**Gaps**: G56, G59, G60
 **Source**: All mechanics confirmed and documented in `docs/skill_timing.md`. No new Hercules reads required.
-**Estimated tokens**: ~15–20k (pure Python, no Hercules reads).
+**Estimated tokens**: ~25–35k (Python + one new buff row + GearBonuses fields).
 
 ### Work items
 
-1. Add `calculate_skill_timing(skill_name, skill_lv, status, gear_bonuses) → (cast_ms, delay_ms)` to `core/calculators/modifiers/dps_calculator.py` (or a new `skill_timing.py`).
-   - `cast_ms = cast_time[lv-1] * max(0, 150 - dex) // 150` (IgnoreDex flag skips this)
-   - `delay_ms = after_cast_act_delay[lv-1]`; Monk combo exception: `delay_ms -= (4*agi + 2*dex)`; floor at 100
-   - SC_POEMBRAGI: `delay_ms -= delay_ms * val3 // 100` (read from `support_buffs`)
-   - `sd->castrate` and `sd->delayrate` not yet tracked; stub at 100
-2. Update `calculate_dps()` to accept a `(cast_ms, delay_ms)` pair and use `max(cast_ms + delay_ms, amotion)` as the period (replacing current `adelay`-only path when skill_id != 0).
-3. For `skill_id == 0` (auto-attack) keep the existing `adelay` period unchanged.
-4. Update `BattleResult` or `DPS` display path to show `period_ms` so the user can see timing.
-5. Hide or mark DPS as "N/A — select Normal Attack" when skill ratio is unimplemented and skill_id != 0 (skill_ratio returns 1.0 fallback).
+1. Add `castrate: int` (default 0) and `delayrate: int` (default 0) to `GearBonuses` (gear_bonuses.py).
+   - `bonus bCastrate, val` → `castrate += val`; `bonus bVarCastrate, val` → same in pre-renewal.
+   - `bonus bDelayrate, val` → `delayrate += val`.
+   - `bonus2 bCastrate, skill_id, val` → per-skill; store in a new `dict[int,int]` field `skill_castrate`.
+   - Wire parsing in `item_script_parser.py` and accumulation in `gear_bonus_aggregator.py`.
+   - Source: pc.c:2639 (castrate), pc.c:3020 (delayrate), pc.c:3607 (per-skill).
+
+2. Add `SC_SUFFRAGIUM` to `support_buffs` dict and Party Buffs UI sub-group.
+   - Level spinbox 1–3. val2 = 15×lv % cast reduction (status.c:8485). Consumed on cast.
+   - One-shot semantics: for calculator purposes, treat as always active for the cast being calculated (the user can toggle it off if desired).
+
+3. Add `calculate_skill_timing(skill_name, skill_lv, status, gear_bonuses, support_buffs) → (cast_ms, delay_ms)` to `core/calculators/skill_timing.py` (new file).
+   - Cast time path (in order): DEX reduction → global `castrate` → per-skill `skill_castrate` → SC_POEMBRAGI val2 → SC_SUFFRAGIUM val2. Floor at 0.
+   - Delay path: Monk combo reduction → SC_POEMBRAGI val3 → global `delayrate`. Floor at 100.
+   - See `docs/skill_timing.md` Implementation Plan for full pseudocode.
+
+4. Update `calculate_dps()` to use `max(cast_ms + delay_ms, amotion)` as the period when `skill_id != 0`, instead of current `adelay`-only path.
+5. For `skill_id == 0` (auto-attack) keep the existing `adelay` period unchanged.
+6. Update `BattleResult` or `DPS` display path to show `period_ms` so the user can see timing.
+7. Hide or mark DPS as "N/A — select Normal Attack" when skill ratio is unimplemented and skill_id != 0 (skill_ratio returns 1.0 fallback).
 
 **Note**: `amotion = adelay // 2` for players (confirmed status.c:2134). Current code exposes `adelay`; must derive `amotion` from it.
 
@@ -83,8 +94,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 **Classes**: Swordsman, Crusader, Merchant, Blacksmith, Thief, Acolyte, Monk.
 **Source**: skill.c → `calc_skillratio` BF_WEAPON path.
 **Estimated tokens**: 35–45k.
-**Note**: DPS row will show auto-attack DPS for skill selections until G56 (skill timing
-data) is implemented. Consider hiding DPS row when skill_id != 0 as part of this session.
+**Note**: Skill timing (cast+delay→period) is implemented in Q0. Q1 must pass `skill_name` and `skill_lv` into `calculate_dps()` for the new period to apply.
 
 ---
 
