@@ -13,13 +13,8 @@ from PySide6.QtWidgets import (
 
 from core.models.build import PlayerBuild
 from gui.section import Section
+from gui.widgets import NoWheelCombo, NoWheelSpin
 from gui.widgets.collapsible_sub_group import CollapsibleSubGroup
-
-
-class _NoWheelCombo(QComboBox):
-    """QComboBox that ignores scroll wheel events."""
-    def wheelEvent(self, event) -> None:
-        event.ignore()
 
 # Pre-renewal job IDs — Hercules constants.conf Job_* values.
 _JOB_NAMES: list[tuple[int, str]] = [
@@ -113,7 +108,7 @@ class BuildHeaderSection(Section):
         job_layout.setSpacing(6)
 
         job_layout.addWidget(QLabel("Job:"))
-        self._job_combo = _NoWheelCombo()
+        self._job_combo = NoWheelCombo()
         for job_id, job_name in _JOB_NAMES:
             self._job_combo.addItem(job_name, job_id)
         self._job_combo.currentIndexChanged.connect(self._emit_job_changed)
@@ -121,7 +116,7 @@ class BuildHeaderSection(Section):
 
         job_layout.addSpacing(8)
         job_layout.addWidget(QLabel("Base Lv:"))
-        self._base_lv = QSpinBox()
+        self._base_lv = NoWheelSpin()
         self._base_lv.setRange(1, 99)
         self._base_lv.setFixedWidth(55)
         self._base_lv.valueChanged.connect(self.level_changed)
@@ -129,7 +124,7 @@ class BuildHeaderSection(Section):
 
         job_layout.addSpacing(8)
         job_layout.addWidget(QLabel("Job Lv:"))
-        self._job_lv = QSpinBox()
+        self._job_lv = NoWheelSpin()
         self._job_lv.setRange(1, 70)
         self._job_lv.setFixedWidth(55)
         self._job_lv.valueChanged.connect(self.level_changed)
@@ -162,7 +157,7 @@ class BuildHeaderSection(Section):
             lbl = QLabel(display + ":")
             lbl.setObjectName("flat_bonus_label")
             grid.addWidget(lbl, row, col_base)
-            spin = QSpinBox()
+            spin = NoWheelSpin()
             spin.setRange(min_v, max_v)
             spin.setValue(0)
             spin.setFixedWidth(65)

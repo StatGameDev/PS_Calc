@@ -1549,3 +1549,51 @@ Added `_BF_WEAPON_HIT_COUNT_FN` dict: maps skill name → `(lv, tgt) → int` fo
 `KN_PIERCE` entry: `tgt.size + 1` (Small=1, Medium=2, Large=3); falls back to 3 when target=None (battle.c:4719-4722).
 In `calculate()`: checks `_BF_WEAPON_HIT_COUNT_FN` before `number_of_hits` from JSON.
 `IMPLEMENTED_BF_WEAPON_SKILLS` = 31.
+
+---
+
+## Session GUI-Rework — 2026-03-11 — Widget Architecture Cleanup
+
+**Skill browser fixes** (`gui/dialogs/skill_browser.py`, `gui/sections/combat_controls.py`):
+- Crash fix: element field was list, not str — `_fmt_type` now handles list input
+- Columns restructured to ID | Name | Type | Description(—)
+- Filter to `_IMPLEMENTED_SKILLS` only (BF_WEAPON ∪ BF_MAGIC)
+- Skill combo shows `description` (in-game name) with `name` fallback
+- "List" button fixed width 52px
+
+**`gui/widgets/level_widget.py`** (new file):
+- `NoWheelCombo(QComboBox)`: hover-delay 0.1s before scroll wheel accepted
+- `NoWheelSpin(QSpinBox)`: same hover-delay pattern
+- `LevelWidget(NoWheelCombo)`: `value()`/`setValue()`/`valueChanged` API; `item_prefix` param
+
+**`gui/widgets/__init__.py`**: exports all three classes.
+
+**9 files swept** — `_NoWheelCombo`/`_NoWheelSpin` local class definitions removed, `NoWheelCombo`/`NoWheelSpin` imported from `gui.widgets`:
+- `gui/main_window.py`, `gui/dialogs/monster_browser.py`, `gui/dialogs/new_build_dialog.py`
+- `gui/sections/build_header.py`, `gui/sections/equipment_section.py`, `gui/sections/incoming_damage.py`
+- `gui/sections/active_items_section.py`, `gui/sections/manual_adj_section.py`, `gui/sections/stats_section.py`
+
+**`gui/sections/combat_controls.py`**:
+- `_level_spin` (QSpinBox) replaced with `_level_widget = LevelWidget(10, include_off=False, item_prefix="Lv ")`
+- `_on_skill_changed()` + `_sync_level_widget()` added: repopulates level widget items 1..max_lv from skill data on skill change, clamping previous selection
+- `_repopulate_skill_combo()` calls `_sync_level_widget()` after rebuilding combo
+- `get_skill_instance()` updated to use `_level_widget.value()`
+- `QSpinBox` and `QComboBox` removed from Qt imports
+
+**`gui/sections/passive_section.py`**:
+- `_NoWheelCombo` local class removed
+- Mastery combos use `LevelWidget(max_lv, include_off=True)` with `valueChanged` signal
+- `_get_mastery_value`: `currentData() or 0` → `combo.value()`
+- `_set_mastery_value`: `findData`/`setCurrentIndex` → `combo.setValue(value)`
+- Type annotation: `dict[str, QComboBox]` → `dict[str, LevelWidget]`
+
+**`gui/sections/buffs_section.py`**:
+- `_NoWheelCombo`, `_NoWheelSpin` local classes removed
+- `_make_level_combo()` helper removed — all callers use `LevelWidget(...)`
+- `_set_combo_value()` helper removed — callers use `.setValue()` / `.value()`
+- All `currentIndexChanged` on level combos → `valueChanged`; `currentData()` → `.value()`
+- `_make_caster_row()`: `lesson_key`/`lesson_label` params replaced with `lesson_widget: LevelWidget`; lesson no longer stored in `caster_store`
+- `_bard_lesson` / `_dancer_lesson` (`LevelWidget`) created in `_build_bard_widget` / `_build_dancer_widget` and passed to `_make_caster_row`
+- `_load_song_group` / `_collect_song_group`: `isinstance(QComboBox)` guard eliminated; all `caster_store` values are now `NoWheelSpin`
+- `load_build` / `collect_into`: lesson load/collect via `_bard_lesson.setValue/value()` and `_dancer_lesson.setValue/value()`
+- Type annotations updated throughout; `QComboBox`/`QSpinBox` removed from Qt imports

@@ -14,30 +14,37 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from core.calculators.modifiers.skill_ratio import (
+    IMPLEMENTED_BF_MAGIC_SKILLS,
+    IMPLEMENTED_BF_WEAPON_SKILLS,
+)
 from core.data_loader import loader
 
-_COLUMNS = ["Name", "ID", "Type", "Element", "Max Lv"]
+_IMPLEMENTED_SKILLS: frozenset[str] = IMPLEMENTED_BF_WEAPON_SKILLS | IMPLEMENTED_BF_MAGIC_SKILLS
+
+_COLUMNS = ["ID", "Name", "Type", "Description"]
 
 
-def _fmt_type(t: str) -> str:
+def _fmt_type(t) -> str:
+    if isinstance(t, list):
+        t = t[0] if t else ""
     return t.replace("skill_type_", "").replace("_", " ").title() if t else "—"
 
 
-def _fmt_element(e: str) -> str:
-    return e.replace("Ele_", "") if e else "—"
-
-
 class SkillBrowserDialog(QDialog):
-    """Filterable skill list. Returns the selected skill ID string."""
+    """Filterable skill list. Returns the selected skill ID."""
 
-    def __init__(self, current_skill_id: Optional[str] = None, parent=None) -> None:
+    def __init__(self, current_skill_id: Optional[int] = None, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Select Skill")
-        self.setMinimumSize(600, 520)
+        self.setMinimumSize(640, 520)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
-        self._result: Optional[str] = current_skill_id
-        self._skills: list = loader.get_all_skills()
+        self._result: Optional[int] = current_skill_id
+        self._skills: list = [
+            s for s in loader.get_all_skills()
+            if s["name"] in _IMPLEMENTED_SKILLS
+        ]
 
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
@@ -88,18 +95,17 @@ class SkillBrowserDialog(QDialog):
         self._table.setSortingEnabled(False)
         self._table.setRowCount(len(skills))
         for row, s in enumerate(skills):
-            name_item = self._make_item(s.get("name", ""))
-            name_item.setData(Qt.ItemDataRole.UserRole, s.get("id"))
-            self._table.setItem(row, 0, name_item)
-            self._table.setItem(row, 1, self._make_item(str(s.get("id", ""))))
+            id_item = self._make_item(str(s.get("id", "")))
+            id_item.setData(Qt.ItemDataRole.UserRole, s.get("id"))
+            self._table.setItem(row, 0, id_item)
+            self._table.setItem(row, 1, self._make_item(s.get("description") or s.get("name", "")))
             self._table.setItem(row, 2, self._make_item(_fmt_type(s.get("skill_type", ""))))
-            self._table.setItem(row, 3, self._make_item(_fmt_element(s.get("element", ""))))
-            self._table.setItem(row, 4, self._make_item(str(s.get("max_level", ""))))
+            self._table.setItem(row, 3, self._make_item("—"))
 
         self._table.resizeColumnsToContents()
         self._table.setSortingEnabled(True)
 
-    def _select_row(self, skill_id: str) -> None:
+    def _select_row(self, skill_id: int) -> None:
         for row in range(self._table.rowCount()):
             item = self._table.item(row, 0)
             if item and item.data(Qt.ItemDataRole.UserRole) == skill_id:
@@ -112,7 +118,8 @@ class SkillBrowserDialog(QDialog):
     def _on_filter(self, text: str) -> None:
         query = text.strip().lower()
         filtered = self._skills if not query else [
-            s for s in self._skills if query in s.get("name", "").lower()
+            s for s in self._skills
+            if query in (s.get("description") or s.get("name", "")).lower()
         ]
         self._populate(filtered)
 
@@ -129,5 +136,5 @@ class SkillBrowserDialog(QDialog):
 
     # ── Public API ─────────────────────────────────────────────────────────
 
-    def selected_skill_id(self) -> Optional[str]:
+    def selected_skill_id(self) -> Optional[int]:
         return self._result

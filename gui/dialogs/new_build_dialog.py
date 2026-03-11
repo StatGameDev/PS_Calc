@@ -16,12 +16,7 @@ from PySide6.QtWidgets import (
 
 from core.build_manager import BuildManager
 from core.models.build import PlayerBuild
-
-
-class _NoWheelCombo(QComboBox):
-    """QComboBox that ignores scroll wheel events."""
-    def wheelEvent(self, event) -> None:
-        event.ignore()
+from gui.widgets import NoWheelCombo, NoWheelSpin
 
 # Matches the list in build_header.py exactly.
 _JOB_NAMES: list[tuple[int, str]] = [
@@ -85,12 +80,12 @@ class NewBuildDialog(QDialog):
         self._name_edit.setPlaceholderText("e.g. my_knight")
         form.addRow("Name:", self._name_edit)
 
-        self._job_combo = _NoWheelCombo()
+        self._job_combo = NoWheelCombo()
         for job_id, job_name in _JOB_NAMES:
             self._job_combo.addItem(job_name, userData=job_id)
         form.addRow("Job:", self._job_combo)
 
-        self._level_spin = QSpinBox()
+        self._level_spin = NoWheelSpin()
         self._level_spin.setRange(1, 99)
         self._level_spin.setValue(1)
         form.addRow("Base Level:", self._level_spin)

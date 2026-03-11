@@ -6,7 +6,6 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
-    QComboBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -17,6 +16,7 @@ from PySide6.QtWidgets import (
 from core.data_loader import loader
 from core.models.build import PlayerBuild
 from gui.section import Section
+from gui.widgets import LevelWidget
 
 # Self-buff rows have moved to buffs_section.py (Session M0).
 # passive_section now contains only: Passives (masteries) + Flags.
@@ -60,12 +60,6 @@ _PASSIVES: list[tuple] = [
 ]
 
 
-class _NoWheelCombo(QComboBox):
-    """QComboBox that ignores scroll wheel events."""
-    def wheelEvent(self, event) -> None:
-        event.ignore()
-
-
 def _make_sub_header(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setObjectName("passive_sub_header")
@@ -84,7 +78,7 @@ class PassiveSection(Section):
         self._compact_summary_lbl: QLabel | None = None
         self._current_job_id: int = 0
 
-        self._mastery_combos: dict[str, QComboBox]  = {}  # max_lv > 1 → dropdown
+        self._mastery_combos: dict[str, LevelWidget] = {}  # max_lv > 1 → dropdown
         self._mastery_checks: dict[str, QCheckBox]  = {}  # max_lv == 1 → toggle
         self._mastery_labels: dict[str, QLabel]     = {}
 
@@ -110,14 +104,10 @@ class PassiveSection(Section):
                 mastery_grid.addWidget(chk, row, col_base + 1)
                 chk.toggled.connect(self._on_passives_changed)
             else:
-                combo = _NoWheelCombo()
-                combo.addItem("Off", 0)
-                for lv in range(1, max_lv + 1):
-                    combo.addItem(str(lv), lv)
-                combo.setCurrentIndex(0)
+                combo = LevelWidget(max_lv, include_off=True)
                 self._mastery_combos[m_key] = combo
                 mastery_grid.addWidget(combo, row, col_base + 1)
-                combo.currentIndexChanged.connect(self._on_passives_changed)
+                combo.valueChanged.connect(self._on_passives_changed)
 
         self.add_content_widget(mastery_widget)
 
@@ -169,15 +159,13 @@ class PassiveSection(Section):
         if m_key in self._mastery_checks:
             return 1 if self._mastery_checks[m_key].isChecked() else 0
         combo = self._mastery_combos.get(m_key)
-        return (combo.currentData() or 0) if combo else 0
+        return combo.value() if combo else 0
 
     def _set_mastery_value(self, m_key: str, value: int) -> None:
         if m_key in self._mastery_checks:
             self._mastery_checks[m_key].setChecked(value > 0)
         elif m_key in self._mastery_combos:
-            combo = self._mastery_combos[m_key]
-            idx = combo.findData(value)
-            combo.setCurrentIndex(idx if idx >= 0 else 0)
+            self._mastery_combos[m_key].setValue(value)
 
     # ── Public API (job visibility) ────────────────────────────────────────
 

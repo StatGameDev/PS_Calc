@@ -317,3 +317,4 @@ sections of this file (rules, file structure, pipeline order).
 - `docs/gui_plan.md` — update if GUI design changes were decided upon
 - `CLAUDE.md` — update Pipeline Step Order and modifiers list if steps added/reordered, update project structure if files added/deleted/moved
 - **DO NOT touch `docs/current_state.md`** — only written on explicit user command `handoff`. Do not read or write it as part of routine session start or end.
+- **DO NOT touch `docs/context_log.md`** — user-maintained only. Never write to it during EOS maintenance or at any other time unless explicitly asked.

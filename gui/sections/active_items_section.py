@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from core.models.build import PlayerBuild
 from gui.section import Section
+from gui.widgets import NoWheelSpin
 
 # (display_label, dict_key, min_val, max_val)
 _STATS: list[tuple[str, str, int, int]] = [
@@ -72,7 +73,7 @@ class ActiveItemsSection(Section):
             lbl.setObjectName("flat_bonus_label")
             grid.addWidget(lbl, row, col_base)
 
-            spin = QSpinBox()
+            spin = NoWheelSpin()
             spin.setRange(min_v, max_v)
             spin.setValue(0)
             spin.setFixedWidth(65)

@@ -5,7 +5,6 @@ from typing import Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDialog,
     QGridLayout,
     QHBoxLayout,
@@ -14,21 +13,21 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
+from core.calculators.modifiers.skill_ratio import (
+    IMPLEMENTED_BF_MAGIC_SKILLS,
+    IMPLEMENTED_BF_WEAPON_SKILLS,
+)
 from core.data_loader import loader
 from core.models.build import PlayerBuild
 from core.models.skill import SkillInstance
 from gui.section import Section
+from gui.widgets import LevelWidget, NoWheelCombo
 
-
-class _NoWheelCombo(QComboBox):
-    """QComboBox that ignores scroll wheel events."""
-    def wheelEvent(self, event) -> None:
-        event.ignore()
+_IMPLEMENTED_SKILLS: frozenset[str] = IMPLEMENTED_BF_WEAPON_SKILLS | IMPLEMENTED_BF_MAGIC_SKILLS
 
 # Jobs that can use plagiarised skills from other jobs (Rogue=17, Stalker=34)
 _PLAGIARISM_JOBS: frozenset[int] = frozenset({17, 34})
@@ -65,22 +64,20 @@ class CombatControlsSection(Section):
         skill_row = QHBoxLayout()
         skill_row.setSpacing(6)
 
-        self._skill_combo = _NoWheelCombo()
+        self._skill_combo = NoWheelCombo()
         self._skill_combo.setMinimumWidth(160)
         skill_row.addWidget(self._skill_combo, stretch=1)
 
-        self._level_spin = QSpinBox()
-        self._level_spin.setRange(1, 10)
-        self._level_spin.setPrefix("Lv ")
-        self._level_spin.setFixedWidth(68)
-        skill_row.addWidget(self._level_spin)
+        self._level_widget = LevelWidget(10, include_off=False, item_prefix="Lv ")
+        self._level_widget.setFixedWidth(68)
+        skill_row.addWidget(self._level_widget)
 
         self._skill_show_all = QCheckBox("All")
         self._skill_show_all.setToolTip("Show skills for all jobs")
         skill_row.addWidget(self._skill_show_all)
 
-        skill_browse_btn = QPushButton("…")
-        skill_browse_btn.setFixedWidth(28)
+        skill_browse_btn = QPushButton("List")
+        skill_browse_btn.setFixedWidth(52)
         skill_browse_btn.setToolTip("Browse skills")
         skill_browse_btn.clicked.connect(self._open_skill_browser)
         skill_row.addWidget(skill_browse_btn)
@@ -147,8 +144,8 @@ class CombatControlsSection(Section):
         self._repopulate_skill_combo(job_id=0, preserve_selection=False)
 
         # ── Connections ───────────────────────────────────────────────────
-        self._skill_combo.currentIndexChanged.connect(self._emit_changed)
-        self._level_spin.valueChanged.connect(self._emit_changed)
+        self._skill_combo.currentIndexChanged.connect(self._on_skill_changed)
+        self._level_widget.valueChanged.connect(self._emit_changed)
         self._skill_show_all.stateChanged.connect(self._on_show_all_toggled)
         self._mode_btn.toggled.connect(self._on_mode_toggled)
         self._search_edit.textChanged.connect(self._on_search_changed)
@@ -185,12 +182,16 @@ class CombatControlsSection(Section):
         self._skill_combo.addItem("Normal Attack  (id=0)", userData={"id": 0, "name": "Normal Attack"})
         restore_idx = 0
         for s in self._all_skills:
+            if s["name"] not in _IMPLEMENTED_SKILLS:
+                continue
             if allowed is None or s["name"] in allowed:
-                self._skill_combo.addItem(f"{s['name']}  (id={s['id']})", userData=s)
+                display = s.get("description") or s["name"]
+                self._skill_combo.addItem(display, userData=s)
                 if s["id"] == current_id:
                     restore_idx = self._skill_combo.count() - 1
         self._skill_combo.setCurrentIndex(restore_idx)
         self._skill_combo.blockSignals(False)
+        self._sync_level_widget()
         # Only emit if the selected skill changed
         if preserve_selection:
             new_idx = self._skill_combo.currentIndex()
@@ -324,6 +325,23 @@ class CombatControlsSection(Section):
             else:
                 self._target_display.setText("None selected")
 
+    def _on_skill_changed(self) -> None:
+        self._sync_level_widget()
+        self._emit_changed()
+
+    def _sync_level_widget(self) -> None:
+        """Repopulate _level_widget based on the current skill's max_level."""
+        idx = self._skill_combo.currentIndex()
+        s = self._skill_combo.itemData(idx) if idx >= 0 else None
+        max_lv = s.get("max_level", 1) if s and s.get("id", 0) != 0 else 1
+        cur = self._level_widget.value() or 1
+        self._level_widget.blockSignals(True)
+        self._level_widget.clear()
+        for lv in range(1, max_lv + 1):
+            self._level_widget.addItem(f"Lv {lv}", lv)
+        self._level_widget.blockSignals(False)
+        self._level_widget.setValue(min(cur, max_lv))
+
     # ── Internal ──────────────────────────────────────────────────────────
 
     def _emit_changed(self) -> None:
@@ -337,7 +355,7 @@ class CombatControlsSection(Section):
             return SkillInstance(id=0, level=1)
         s = self._skill_combo.itemData(idx)
         skill_id = s["id"] if s else 0
-        return SkillInstance(id=skill_id, level=self._level_spin.value())
+        return SkillInstance(id=skill_id, level=self._level_widget.value() or 1)
 
     def get_target_mob_id(self) -> Optional[int]:
         """Return selected mob ID in mob mode, or None in player mode."""

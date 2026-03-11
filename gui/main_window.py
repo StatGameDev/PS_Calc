@@ -47,12 +47,7 @@ from gui.sections.incoming_damage import IncomingDamageSection
 from gui.sections.step_breakdown import StepBreakdownSection
 from gui.sections.summary_section import SummarySection
 from gui.sections.target_section import TargetSection
-
-
-class _NoWheelCombo(QComboBox):
-    """QComboBox that ignores scroll wheel events."""
-    def wheelEvent(self, event) -> None:
-        event.ignore()
+from gui.widgets import NoWheelCombo
 
 
 class MainWindow(QMainWindow):
@@ -138,7 +133,7 @@ class MainWindow(QMainWindow):
         layout.addSpacing(8)
 
         layout.addWidget(QLabel("Build:"))
-        self._build_combo = _NoWheelCombo()
+        self._build_combo = NoWheelCombo()
         self._build_combo.setMinimumWidth(200)
         self._build_combo.currentIndexChanged.connect(self._on_build_index_changed)
         layout.addWidget(self._build_combo)

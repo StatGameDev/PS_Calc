@@ -53,6 +53,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | G52 | Dual-wield pipeline (complete): AS_RIGHT/AS_LEFT passives, LH forge fields+widgets, lh_normal/lh_crit, dual-wield branch, LH card EQP fix, perfect_dodge=0, proc×RH-only + ATK_RATER on double_hit branches, ASPD (RH+LH)×7/10. | G52 |
 | Q0 | Skill timing calculator: calculate_skill_timing() (new file); GearBonuses castrate/delayrate/skill_castrate; bCastrate/bVarCastrate/bDelayrate routed; SC_SUFFRAGIUM party buff; amotion period for skills; BF_MAGIC DPS; dps_valid frozensets; Speed (actions/s) in SummarySection. | G56, G59, G60 |
 | Q1 | 31 BF_WEAPON ratios in `_BF_WEAPON_RATIOS` + `_BF_WEAPON_HIT_COUNT_FN`. All level-linear skills + KN_PIERCE (hit_count=tgt.size+1, battle.c:4719-4722). IMPLEMENTED_BF_WEAPON_SKILLS=31. Deferred to Q3: AS_SPLASHER (+mastery), RG_BACKSTAP (bow split), BF_MISC traps/TF_THROWSTONE/BA_DISSONANCE. | G61 |
+| GUI-Rework | `gui/widgets/` package: `NoWheelCombo`, `NoWheelSpin`, `LevelWidget`. 9 files swept. `combat_controls`: `_sync_level_widget` + `_on_skill_changed`. `passive_section`: `LevelWidget` for masteries. `buffs_section`: full overhaul — lesson combos extracted to `_bard_lesson`/`_dancer_lesson`, `isinstance` guard eliminated. | — |
 
 ---
 
@@ -141,6 +142,11 @@ both need Q1/Q2 infrastructure fully in place first.
 **Source**: skill.c `calc_skillratio` (NJ_* and GS_* cases).
 **Estimated tokens**: 35–45k.
 
+**Also in Q3 — BF_MISC skill filter wiring**: When implementing the deferred BF_MISC skills,
+add `_BF_MISC_RATIOS: dict = {}` + `IMPLEMENTED_BF_MISC_SKILLS =
+frozenset(_BF_MISC_RATIOS.keys())` to `skill_ratio.py`, then add `IMPLEMENTED_BF_MISC_SKILLS`
+to `_IMPLEMENTED_SKILLS` in both `combat_controls.py` and `skill_browser.py`.
+
 ---
 
 ## Session R — Target Debuff System
@@ -158,32 +164,6 @@ Wire `player_debuffs_section` (already scaffolded in M0) with actual debuff togg
 Toggles per debuff (PROVOKE, AGIDISCOUNT, etc.) + level spinbox.
 Readback regarding player/target differences in implementation (ideally re-use system for both)
 **Estimated tokens**: 30–40k (new architecture + UI).
-
----
-
-## Session GUI-Rework — Widget Architecture Cleanup
-
-**Goal**: Replace all level-selector widgets with a shared `LevelWidget` class;
-consolidate the 9 duplicate `_NoWheelCombo`/`_NoWheelSpin` local definitions into
-`gui/widgets/`; fix the `isinstance` guard in `_load_song_group` introduced by the
-lesson combo living in the caster-spins dict.
-
-**Motivation**: The GUI-Adj session converted all spinboxes to dropdowns but left each
-file with its own copy of `_NoWheelCombo` and a bespoke `_make_level_combo` helper.
-Future widget-type changes still require touching every call site.
-
-**Work items** (see `docs/gui_plan.md` → LevelWidget Refactor for full spec):
-1. Create `gui/widgets/level_widget.py` — `LevelWidget(QComboBox)` with `value()`,
-   `setValue()`, `valueChanged` matching QSpinBox API.
-2. Export `LevelWidget`, `NoWheelCombo`, `NoWheelSpin` from `gui/widgets/__init__.py`;
-   remove the 9 local `_NoWheelCombo`/`_NoWheelSpin` class definitions.
-3. Update `passive_section.py` and `buffs_section.py` to use `LevelWidget`; remove
-   `_make_level_combo()` helper.
-4. Move `mus_lesson` / `dance_lesson` out of `_bard_caster_spins` / `_dancer_caster_spins`
-   into dedicated `_bard_lesson: LevelWidget` / `_dancer_lesson: LevelWidget` attributes
-   (eliminates the `isinstance` guard in `_load_song_group`).
-
-**Estimated tokens**: ~20–25k (pure GUI, no Hercules reads).
 
 ---
 

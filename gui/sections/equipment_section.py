@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from core.data_loader import loader
 from core.models.build import PlayerBuild
 from gui.section import Section
+from gui.widgets import NoWheelCombo, NoWheelSpin
 
 # Weapon types that occupy both hands (F5: disables left_hand slot).
 # These use loc=EQP_ARMS in item_db and block the left hand entirely.
@@ -130,7 +131,7 @@ def _resolve_card_label(card_id: Optional[int]) -> str:
     return name[:10] if len(name) > 10 else name
 
 
-class _NoWheelCombo(QComboBox):
+class NoWheelCombo(QComboBox):
     """QComboBox that never reacts to the scroll wheel (prevents accidental slot changes)."""
 
     def wheelEvent(self, event) -> None:
@@ -189,7 +190,7 @@ class EquipmentSection(Section):
             name_col_layout.setSpacing(2)
 
             # G39: inline quick-select combo (replaces static name label)
-            combo = _NoWheelCombo()
+            combo = NoWheelCombo()
             combo.setObjectName("equip_inline_combo")
             combo.addItem("— Empty —", None)
             for item_name, item_id in _load_slot_items(slot_key):  # no job filter at construction
@@ -216,7 +217,7 @@ class EquipmentSection(Section):
                 forge_layout.setSpacing(4)
 
                 forge_layout.addWidget(QLabel("Crumbs:"))
-                sc_spin = QSpinBox()
+                sc_spin = NoWheelSpin()
                 sc_spin.setRange(0, 3)
                 sc_spin.setFixedWidth(40)
                 sc_spin.valueChanged.connect(self.equipment_changed)
@@ -229,7 +230,7 @@ class EquipmentSection(Section):
                 self._forge_ranked_chks[slot_key] = ranked_chk
 
                 forge_layout.addWidget(QLabel("Ele:"))
-                ele_combo = _NoWheelCombo()
+                ele_combo = NoWheelCombo()
                 for ele_idx, ele_name in enumerate(_ELEMENT_NAMES):
                     ele_combo.addItem(ele_name, ele_idx)
                 ele_combo.currentIndexChanged.connect(self.equipment_changed)
@@ -254,7 +255,7 @@ class EquipmentSection(Section):
             grid.addWidget(name_container, row_i, 1)
 
             if has_refine:
-                refine_spin = QSpinBox()
+                refine_spin = NoWheelSpin()
                 refine_spin.setRange(0, 10)
                 refine_spin.setValue(0)
                 refine_spin.setFixedWidth(58)
@@ -283,7 +284,7 @@ class EquipmentSection(Section):
         elem_layout.setContentsMargins(0, 4, 0, 0)
         elem_layout.setSpacing(6)
         elem_layout.addWidget(QLabel("Weapon Element:"))
-        self._element_combo = _NoWheelCombo()
+        self._element_combo = NoWheelCombo()
         self._element_combo.addItem("From Item", None)
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._element_combo.addItem(name, idx)
@@ -298,7 +299,7 @@ class EquipmentSection(Section):
         armor_elem_layout.setContentsMargins(0, 0, 0, 0)
         armor_elem_layout.setSpacing(6)
         armor_elem_layout.addWidget(QLabel("Armor Element:"))
-        self._armor_element_combo = _NoWheelCombo()
+        self._armor_element_combo = NoWheelCombo()
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._armor_element_combo.addItem(name, idx)
         self._armor_element_combo.currentIndexChanged.connect(self.equipment_changed)

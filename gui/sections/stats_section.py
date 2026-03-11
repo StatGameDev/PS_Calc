@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
 from gui.section import Section
+from gui.widgets import NoWheelSpin
 
 # (display_label, key, base_attr, gb_attr)
 # gb_attr: attribute name on GearBonuses, or None if not tracked there
@@ -105,7 +106,7 @@ class StatsSection(Section):
             name_lbl.setObjectName("stat_row_label")
             grid.addWidget(name_lbl, row, 0)
 
-            base_spin = QSpinBox()
+            base_spin = NoWheelSpin()
             base_spin.setRange(1, 99)
             base_spin.setValue(1)
             base_spin.setFixedWidth(58)
