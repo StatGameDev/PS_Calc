@@ -156,15 +156,21 @@ Always grep first. Never load entire files.
         final_rate_bonus.py  — FinalRateBonus: short/long damage rates
         crit_chance.py       — calculate_crit_chance, CRIT_ELIGIBLE_SKILLS
         hit_chance.py        — calculate_hit_chance (E1, Session 2/3)
+        dps_calculator.py    — SelectionStrategy ABC, FormulaSelectionStrategy, calculate_dps()
 
 ### Core models (`core/models/`)
 
-    build.py    — PlayerBuild dataclass
-    weapon.py   — Weapon dataclass, RANGED_WEAPON_TYPES
-    target.py   — Target dataclass (mirror of tstatus for damage calc)
-    status.py   — StatusData dataclass (output of StatusCalculator)
-    damage.py   — DamageRange, DamageStep, DamageResult, BattleResult
-    skill.py    — SkillInstance
+    build.py             — PlayerBuild dataclass
+    weapon.py            — Weapon dataclass, RANGED_WEAPON_TYPES
+    target.py            — Target dataclass (mirror of tstatus for damage calc)
+    status.py            — StatusData dataclass (output of StatusCalculator)
+    damage.py            — DamageRange, DamageStep, DamageResult, BattleResult
+    skill.py             — SkillInstance
+    attack_definition.py — AttackDefinition dataclass (DPS distribution; Markov seam)
+
+### Tests (`tests/`)
+
+    test_dps.py  — calculate_dps unit tests (3 cases incl. unequal-delay regression guard)
 
 ### Data files (`core/data/pre-re/`)
 

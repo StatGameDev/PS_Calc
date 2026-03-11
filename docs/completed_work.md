@@ -1340,3 +1340,36 @@ Note: "Shuriken" string assumed from naming convention — unverified (G55).
 - G53: Falcon/Blitz Beat system (HT_STEELCROW)
 - G54: Proc/extra-hit system (GS_CHAINACTION, TF_DOUBLE)
 - G55: NJ_TOBIDOUGU "Shuriken" weapon_type string verification
+
+---
+
+## Session G54 — Double-Hit Procs + DPS Stat
+
+**G54-1 — BattleResult new fields** (`core/models/damage.py`)
+Added `proc_chance`, `double_hit`, `double_hit_crit`, `dps`, `attacks` fields.
+`attacks: List[AttackDefinition]` is the extensible DPS distribution — future branches
+append here; Markov seam via `state_requirement`/`next_state` on `AttackDefinition`.
+
+**G54-2 — AttackDefinition model** (`core/models/attack_definition.py`) — new file.
+Dataclass: avg_damage, pre_delay (ms), post_delay (ms), chance (steady-state weight).
+Markov fields `state_requirement`/`next_state` are commented stubs for future.
+
+**G54-3 — DPS calculator** (`core/calculators/dps_calculator.py`) — new file.
+`SelectionStrategy` ABC + `FormulaSelectionStrategy` (pass-through) + `calculate_dps()`.
+Correct formula: Σ(chance×dmg) / Σ(chance×delay) × 1000 — NOT Σ(chance×dps_i).
+
+**G54-4 — BattlePipeline proc branches + DPS** (`core/calculators/battle_pipeline.py`)
+`_run_branch()` gains `proc_hit_count: int = 1` — applied after SkillRatio (battle.c:5567).
+`calculate()` proc block: Knife+TF_DOUBLE and Revolver+GS_CHAINACTION, `proc_chance = 5×lv`.
+Probability tree (sums to 1.0): normal-hit, normal-miss, crit (auto-hit, no ×h), proc-hit, proc-miss.
+Katar second hit summed into normal_avg/crit_avg before attack list construction.
+adelay floored at 200ms. `attacks` stored on `BattleResult`.
+
+**G54-5 — Unit tests** (`tests/test_dps.py`) — new file, new `tests/` directory.
+Three tests: single attack, crit scaling, unequal-delay regression guard (asserts
+Σ(chance×dps) ≠ correct result — prevents future formula regression).
+
+**G54-6 — SummarySection** (`gui/sections/summary_section.py`)
+Double row (pre-allocated, hidden until proc_chance > 0): Min/Avg/Max + "X.X% proc".
+Crit% label uses effective_crit = crit_chance × (1 − proc_chance/100).
+DPS row (always visible): single value spanning cols 1–3, "0.0" before first result.

@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.models.attack_definition import AttackDefinition
 
 
 @dataclass
@@ -88,3 +91,18 @@ class BattleResult:
     # katar_second = second hit of non-crit branch; katar_second_crit = second hit of crit branch.
     katar_second: Optional["DamageResult"] = None
     katar_second_crit: Optional["DamageResult"] = None
+    # G54: TF_DOUBLE (Knife) / GS_CHAINACTION (Revolver) proc branches.
+    # proc_chance: percent probability per auto-attack swing (0 = not eligible).
+    # double_hit / double_hit_crit: full 2-hit pipeline result for the proc swing.
+    # Crit and proc are mutually exclusive (battle.c:4926).
+    proc_chance: float = 0.0
+    double_hit: Optional["DamageResult"] = None
+    double_hit_crit: Optional["DamageResult"] = None
+    # DPS stat: Σ(chance_i × damage_i) / Σ(chance_i × delay_i) × 1000  (dmg/s)
+    dps: float = 0.0
+    # Full attack distribution used to compute dps. Stored on BattleResult so:
+    #   - future branches (skills, procs) just append without touching this class
+    #   - FormulaSelectionStrategy passes through; MarkovSelectionStrategy will
+    #     use state_requirement/next_state on each AttackDefinition to solve
+    #     steady-state via eigenvector when turn-sequence modelling is added.
+    attacks: List["AttackDefinition"] = field(default_factory=list)

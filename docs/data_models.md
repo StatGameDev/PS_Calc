@@ -227,7 +227,16 @@ BattleResult:
     hit_chance: float
     perfect_dodge: float
     # Added Session B:
-    magic: Optional[DamageResult] = None   # BF_MAGIC outgoing result (mirrored to .normal for GUI)
+    magic: Optional[DamageResult] = None       # BF_MAGIC outgoing (mirrored to .normal for GUI)
+    # Added Session K:
+    katar_second: Optional[DamageResult] = None
+    katar_second_crit: Optional[DamageResult] = None
+    # Added Session G54:
+    proc_chance: float = 0.0                   # 0 = not eligible
+    double_hit: Optional[DamageResult] = None  # TF_DOUBLE / GS_CHAINACTION proc branch
+    double_hit_crit: Optional[DamageResult] = None
+    dps: float = 0.0                           # Σ(chance×dmg)/Σ(chance×delay) × 1000
+    attacks: List[AttackDefinition] = []       # full distribution; append to extend; Markov seam
 ```
 
 ### Fields to add for full product [NEW]:

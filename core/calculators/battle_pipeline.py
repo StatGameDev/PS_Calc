@@ -24,6 +24,8 @@ from core.calculators.modifiers.final_rate_bonus import FinalRateBonus
 from core.calculators.modifiers.crit_chance import calculate_crit_chance, CRIT_ELIGIBLE_SKILLS
 from core.calculators.modifiers.crit_atk_rate import CritAtkRate
 from core.calculators.modifiers.hit_chance import calculate_hit_chance
+from core.models.attack_definition import AttackDefinition
+from core.calculators.dps_calculator import calculate_dps, FormulaSelectionStrategy
 
 
 class BattlePipeline:
@@ -99,6 +101,55 @@ class BattlePipeline:
             if crit is not None:
                 katar_second_crit = self._katar_second_hit(crit, tf_level)
 
+        # G54: TF_DOUBLE (Knife) / GS_CHAINACTION (Revolver) double-hit proc branches.
+        # Only eligible on normal auto-attacks (skill.id == 0).
+        # Crit and proc are mutually exclusive (battle.c:4926).
+        # proc_chance = 5 * skill_level  (percent).
+        # Source: pc.c pc_checkskill; battle.c:4926 proc vs crit mutex.
+        proc_chance = 0.0
+        double_hit = None
+        double_hit_crit = None
+        if skill.id == 0:
+            tf_level = build.mastery_levels.get("TF_DOUBLE", 0)
+            gs_level = build.mastery_levels.get("GS_CHAINACTION", 0)
+            if weapon.weapon_type == "Knife" and tf_level > 0:
+                proc_chance = 5.0 * tf_level
+            elif weapon.weapon_type == "Revolver" and gs_level > 0:
+                proc_chance = 5.0 * gs_level
+            if proc_chance > 0:
+                double_hit = self._run_branch(
+                    status, weapon, skill, target, build, is_crit=False, proc_hit_count=2)
+                if is_eligible:
+                    double_hit_crit = self._run_branch(
+                        status, weapon, skill, target, build, is_crit=True, proc_hit_count=2)
+
+        # DPS calculation.
+        # adelay: (2000 - aspd*10)*2 ms; floored at 200ms to guard against ASPD overflow.
+        # TF_DOUBLE / GS_CHAINACTION proc fires within the same swing, same adelay.
+        adelay = max(200.0, (2000.0 - status.aspd * 10.0) * 2.0)
+        p        = proc_chance / 100.0
+        eff_crit = crit_chance / 100.0 * (1.0 - p)  # crit and proc mutually exclusive
+        h        = hit_chance / 100.0
+
+        # Katar: both hits land in the same action — sum for DPS.
+        normal_avg = float(normal.avg_damage) + (float(katar_second.avg_damage) if katar_second else 0.0)
+        crit_avg   = ((float(crit.avg_damage) + (float(katar_second_crit.avg_damage) if katar_second_crit else 0.0))
+                      if crit else normal_avg)
+        double_avg = float(double_hit.avg_damage) if double_hit else 0.0
+
+        # Probability tree — sums to 1.0:
+        #   crits auto-hit (bypass FLEE), so weight = eff_crit, NOT eff_crit * h.
+        #   proc can miss — proc-miss is zero damage but still consumes the full adelay.
+        # Future sessions: append AttackDefinition entries here; do not add named fields.
+        attacks = [
+            AttackDefinition(normal_avg, 0.0, adelay, (1.0 - p - eff_crit) * h),        # normal hit
+            AttackDefinition(0.0,        0.0, adelay, (1.0 - p - eff_crit) * (1.0 - h)), # normal miss
+            AttackDefinition(crit_avg,   0.0, adelay, eff_crit),                          # crit (auto-hit)
+            AttackDefinition(double_avg, 0.0, adelay, p * h),                             # proc hit
+            AttackDefinition(0.0,        0.0, adelay, p * (1.0 - h)),                     # proc miss
+        ]
+        dps = calculate_dps(attacks, FormulaSelectionStrategy())
+
         return BattleResult(
             normal=normal,
             crit=crit,
@@ -107,6 +158,11 @@ class BattlePipeline:
             perfect_dodge=perfect_dodge,
             katar_second=katar_second,
             katar_second_crit=katar_second_crit,
+            proc_chance=proc_chance,
+            double_hit=double_hit,
+            double_hit_crit=double_hit_crit,
+            dps=dps,
+            attacks=attacks,
         )
 
     @staticmethod
@@ -142,7 +198,8 @@ class BattlePipeline:
                     skill: SkillInstance,
                     target: Target,
                     build: PlayerBuild,
-                    is_crit: bool) -> DamageResult:
+                    is_crit: bool,
+                    proc_hit_count: int = 1) -> DamageResult:
         """Run a single damage branch (normal or crit) through the full modifier chain."""
         result = DamageResult()
         gear_bonuses = GearBonusAggregator.compute(build.equipped, build.refine_levels)
@@ -194,6 +251,21 @@ class BattlePipeline:
 
         # === SKILL RATIO ===
         pmf = SkillRatio.calculate(skill, pmf, build, result)
+
+        # === PROC HIT COUNT — mirrors damage_div_fix at battle.c:5567 (#ifndef RENEWAL) ===
+        # For TF_DOUBLE / GS_CHAINACTION proc branches: proc_hit_count=2 doubles the total.
+        # Normal auto-attacks and skill branches keep the default proc_hit_count=1 (no-op).
+        if proc_hit_count > 1:
+            pmf = _scale_floor(pmf, proc_hit_count, 1)
+            mn, mx, av = pmf_stats(pmf)
+            result.add_step(
+                "Proc ×2",
+                value=av, min_value=mn, max_value=mx,
+                multiplier=float(proc_hit_count),
+                note=f"Double-hit proc: ×{proc_hit_count} hits",
+                formula=f"dmg * {proc_hit_count}",
+                hercules_ref="battle.c:5567 (#ifndef RENEWAL): damage_div_fix",
+            )
 
         # === CRIT ATK RATE — pre-defense, crit branch only (battle.c:5333) ===
         if is_crit:

@@ -1030,3 +1030,55 @@ Extra reads (debug/investigation not in plan):
 
 Total est_tokens: ~9000 content + ~6k fixed overhead ≈ 15k
 Notes: Pure GUI session, no Hercules reads, no calculator changes.
+
+---
+
+## Session G54  2026-03-11  claude-sonnet-4-6
+ctx_used: ___%   (fill in after session)
+
+Work items completed:
+- G54: TF_DOUBLE + GS_CHAINACTION proc branches in BattlePipeline (proc_hit_count, double_hit/double_hit_crit)
+- G54: DPS stat — AttackDefinition + SelectionStrategy + calculate_dps(); correct probability tree
+- G54: BattleResult.attacks stored (extensible; Markov seam)
+- G54: SummarySection Double row + DPS row
+- G54: tests/test_dps.py (3 tests, unequal-delay regression guard)
+- G56/G57: new gaps filed (skill timing data, Markov chain DPS)
+- Architecture review: crit auto-hit fix, proc-miss fix, katar combined in DPS, adelay floor
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md | 183 | ~732 |
+| docs/gaps.md (partial) | ~50 | ~200 |
+| docs/context_log.md (partial) | ~50 | ~200 |
+| core/calculators/battle_pipeline.py | 249 | ~1,743 |
+| core/models/damage.py | 99 | ~693 |
+| gui/sections/summary_section.py | 138 | ~966 |
+| core/models/status.py (grep) | 1 | ~7 |
+| tools/import_item_db.py (grep) | ~5 | ~35 |
+| docs/completed_work.md (tail) | ~100 | ~400 |
+| **subtotal reads** | **~975** | **~4,976** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| core/models/damage.py | +13 | ~91 |
+| core/calculators/battle_pipeline.py | +45 | ~315 |
+| gui/sections/summary_section.py | rewrite ~175 | ~1,225 |
+| docs/gaps.md | +4 rows | ~80 |
+| docs/data_models.md | +10 | ~60 |
+| docs/session_roadmap.md | -100 net | ~200 |
+| docs/completed_work.md | +40 | ~160 |
+| CLAUDE.md | +6 | ~42 |
+| docs/context_log.md | +this entry | ~150 |
+
+Files created:
+| file | lines | est_tok |
+|---|---|---|
+| core/models/attack_definition.py | 22 | ~154 |
+| core/calculators/dps_calculator.py | 44 | ~308 |
+| tests/test_dps.py | 58 | ~406 |
+
+Total est_tokens: ~4,976 reads + ~2,829 edits + ~868 creates + 6,000 fixed + ~30,000 conv ≈ 45,000
+Notes: Extended due to architecture discussion (hardcoded attack list → stored on BattleResult;
+crit auto-hit bug + proc-miss omission found and fixed; katar DPS correction). No Hercules reads.

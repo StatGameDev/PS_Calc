@@ -32,7 +32,7 @@ class SummarySection(Section):
             hdr.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             grid.addWidget(hdr, 0, col)
 
-        # Normal row
+        # Normal row (row 1)
         normal_lbl = QLabel("Normal")
         normal_lbl.setObjectName("summary_label")
         grid.addWidget(normal_lbl, 1, 0)
@@ -44,7 +44,7 @@ class SummarySection(Section):
         grid.addWidget(self._n_avg, 1, 2)
         grid.addWidget(self._n_max, 1, 3)
 
-        # Crit row
+        # Crit row (row 2)
         crit_lbl = QLabel("Crit")
         crit_lbl.setObjectName("summary_label")
         grid.addWidget(crit_lbl, 2, 0)
@@ -61,19 +61,52 @@ class SummarySection(Section):
         self._crit_pct.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         grid.addWidget(self._crit_pct, 2, 4)
 
-        # Hit row
+        # Double-hit proc row (row 3) — hidden until a proc branch is present
+        self._double_lbl = QLabel("Double")
+        self._double_lbl.setObjectName("summary_label")
+        grid.addWidget(self._double_lbl, 3, 0)
+
+        self._d_min = self._make_val()
+        self._d_avg = self._make_val()
+        self._d_max = self._make_val()
+        grid.addWidget(self._d_min, 3, 1)
+        grid.addWidget(self._d_avg, 3, 2)
+        grid.addWidget(self._d_max, 3, 3)
+
+        self._proc_pct = QLabel(_DASH)
+        self._proc_pct.setObjectName("summary_crit_pct")
+        self._proc_pct.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        grid.addWidget(self._proc_pct, 3, 4)
+
+        self._double_row_widgets = [
+            self._double_lbl, self._d_min, self._d_avg, self._d_max, self._proc_pct,
+        ]
+        for w in self._double_row_widgets:
+            w.setVisible(False)
+
+        # Hit row (row 4)
         hit_lbl = QLabel("Hit")
         hit_lbl.setObjectName("summary_label")
-        grid.addWidget(hit_lbl, 3, 0)
+        grid.addWidget(hit_lbl, 4, 0)
 
         self._hit_pct = QLabel(_DASH)
         self._hit_pct.setObjectName("summary_hit_pct")
-        grid.addWidget(self._hit_pct, 3, 1, 1, 2)
+        grid.addWidget(self._hit_pct, 4, 1, 1, 2)
 
         self._pdodge_pct = QLabel(_DASH)
         self._pdodge_pct.setObjectName("summary_hit_pct")
         self._pdodge_pct.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        grid.addWidget(self._pdodge_pct, 3, 3, 1, 2)
+        grid.addWidget(self._pdodge_pct, 4, 3, 1, 2)
+
+        # DPS row (row 5) — always visible
+        dps_lbl = QLabel("DPS")
+        dps_lbl.setObjectName("summary_label")
+        grid.addWidget(dps_lbl, 5, 0)
+
+        self._dps_val = QLabel(_DASH)
+        self._dps_val.setObjectName("summary_value")
+        self._dps_val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        grid.addWidget(self._dps_val, 5, 1, 1, 3)
 
         grid.setColumnStretch(5, 1)
 
@@ -99,8 +132,11 @@ class SummarySection(Section):
             self._c_avg.setText(_DASH)
             self._c_max.setText(_DASH)
             self._crit_pct.setText(_DASH)
+            for w in self._double_row_widgets:
+                w.setVisible(False)
             self._hit_pct.setText(_DASH)
             self._pdodge_pct.setText(_DASH)
+            self._dps_val.setText(_DASH)
             return
 
         n = result.normal
@@ -126,12 +162,30 @@ class SummarySection(Section):
                 self._c_min.setText(str(c.min_damage))
                 self._c_avg.setText(str(c.avg_damage))
                 self._c_max.setText(str(c.max_damage))
-            self._crit_pct.setText(f"{result.crit_chance:.1f}% crit")
+            # Effective crit%: crit and proc are mutually exclusive (battle.c:4926).
+            eff_crit = result.crit_chance * (1.0 - result.proc_chance / 100.0)
+            self._crit_pct.setText(f"{eff_crit:.1f}% crit")
         else:
             self._c_min.setText(_DASH)
             self._c_avg.setText(_DASH)
             self._c_max.setText(_DASH)
             self._crit_pct.setText("—")
 
+        # G54: Double-hit proc row — show only when proc branch is present
+        if result.double_hit is not None:
+            d = result.double_hit
+            self._d_min.setText(str(d.min_damage))
+            self._d_avg.setText(str(d.avg_damage))
+            self._d_max.setText(str(d.max_damage))
+            self._proc_pct.setText(f"{result.proc_chance:.1f}% proc")
+            for w in self._double_row_widgets:
+                w.setVisible(True)
+        else:
+            for w in self._double_row_widgets:
+                w.setVisible(False)
+
         self._hit_pct.setText(f"{result.hit_chance:.1f}%")
         self._pdodge_pct.setText(f"pdodge {result.perfect_dodge:.1f}%")
+
+        # DPS row — always shown; 0.0 before first calculation
+        self._dps_val.setText(f"{result.dps:.1f}")
