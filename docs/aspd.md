@@ -190,6 +190,15 @@ Tracked as G42 in gaps.md.
 
 ---
 
+## Skill Timing (Cast Time + After-Cast Delay)
+
+Skill DPS period uses `amotion` as its floor (not `adelay`).
+Full mechanics documented in `docs/skill_timing.md`.
+
+Key relation: `period = max(effective_cast + effective_delay, amotion)`.
+
+---
+
 ## DPS Formula (confirmed 2026-03-11)
 
 `status.aspd` stores the display value: `(2000 - amotion) / 10` (float, e.g. 185.3).

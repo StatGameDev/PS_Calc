@@ -54,6 +54,29 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
+## Session Q0 — Skill Timing Calculator (G56)
+
+**Goal**: Implement `calculate_skill_timing()` and wire into `calculate_dps()` so DPS is correct for skill selections before Q1 lands skill ratios.
+**Gap**: G56
+**Source**: All mechanics confirmed and documented in `docs/skill_timing.md`. No new Hercules reads required.
+**Estimated tokens**: ~15–20k (pure Python, no Hercules reads).
+
+### Work items
+
+1. Add `calculate_skill_timing(skill_name, skill_lv, status, gear_bonuses) → (cast_ms, delay_ms)` to `core/calculators/modifiers/dps_calculator.py` (or a new `skill_timing.py`).
+   - `cast_ms = cast_time[lv-1] * max(0, 150 - dex) // 150` (IgnoreDex flag skips this)
+   - `delay_ms = after_cast_act_delay[lv-1]`; Monk combo exception: `delay_ms -= (4*agi + 2*dex)`; floor at 100
+   - SC_POEMBRAGI: `delay_ms -= delay_ms * val3 // 100` (read from `support_buffs`)
+   - `sd->castrate` and `sd->delayrate` not yet tracked; stub at 100
+2. Update `calculate_dps()` to accept a `(cast_ms, delay_ms)` pair and use `max(cast_ms + delay_ms, amotion)` as the period (replacing current `adelay`-only path when skill_id != 0).
+3. For `skill_id == 0` (auto-attack) keep the existing `adelay` period unchanged.
+4. Update `BattleResult` or `DPS` display path to show `period_ms` so the user can see timing.
+5. Hide or mark DPS as "N/A — select Normal Attack" when skill ratio is unimplemented and skill_id != 0 (skill_ratio returns 1.0 fallback).
+
+**Note**: `amotion = adelay // 2` for players (confirmed status.c:2134). Current code exposes `adelay`; must derive `amotion` from it.
+
+---
+
 ## Session Q1 — Offensive Skill Ratios (Melee Classes)
 
 **Goal**: Complete skill_ratio.py for melee-class offensive skills.
