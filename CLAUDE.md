@@ -28,6 +28,9 @@ verified source. Before writing any formula or value into code:
 3. Never derive a formula by reasoning about code you haven't read. If the
    implementation requires understanding a function's full logic (e.g. how a
    variable maps to an output), read that function — do not infer it.
+4. If a new feature request arrives mid-implementation of a related feature, stop
+   and treat it as a fresh source requirement. Prior reads from the same session
+   do not transfer — each distinct mechanic claim needs its own source line read.
 
 **Save confirmed facts with file + line number so the next session can skip the grep:**
 

@@ -140,12 +140,18 @@ class SummarySection(Section):
             return
 
         n = result.normal
-        # G16: Katar second hit — show "first + second" when present
+        # G16: Katar second hit — show "first + second" when present.
+        # G52: Dual-wield — show "rh + lh" when LH branch present.
         if result.katar_second is not None:
             k = result.katar_second
             self._n_min.setText(f"{n.min_damage} + {k.min_damage}")
             self._n_avg.setText(f"{n.avg_damage} + {k.avg_damage}")
             self._n_max.setText(f"{n.max_damage} + {k.max_damage}")
+        elif result.lh_normal is not None:
+            lh = result.lh_normal
+            self._n_min.setText(f"{n.min_damage} + {lh.min_damage}")
+            self._n_avg.setText(f"{n.avg_damage} + {lh.avg_damage}")
+            self._n_max.setText(f"{n.max_damage} + {lh.max_damage}")
         else:
             self._n_min.setText(str(n.min_damage))
             self._n_avg.setText(str(n.avg_damage))
@@ -158,6 +164,11 @@ class SummarySection(Section):
                 self._c_min.setText(f"{c.min_damage} + {kc.min_damage}")
                 self._c_avg.setText(f"{c.avg_damage} + {kc.avg_damage}")
                 self._c_max.setText(f"{c.max_damage} + {kc.max_damage}")
+            elif result.lh_crit is not None:
+                lhc = result.lh_crit
+                self._c_min.setText(f"{c.min_damage} + {lhc.min_damage}")
+                self._c_avg.setText(f"{c.avg_damage} + {lhc.avg_damage}")
+                self._c_max.setText(f"{c.max_damage} + {lhc.max_damage}")
             else:
                 self._c_min.setText(str(c.min_damage))
                 self._c_avg.setText(str(c.avg_damage))

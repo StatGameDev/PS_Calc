@@ -50,6 +50,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | GUI-Adj | Spinbox→dropdowns/toggles, no-wheel on all combos, refine cap +10 | — |
 | P | Passive skills: hp/sp regen in StatusData+StatusCalculator+DerivedSection; 16 new passive_section rows; stat/HIT/FLEE/ASPD/regen passives in StatusCalculator; GearBonusAggregator.apply_passive_bonuses() (sub_ele/add_race/sub_race); NJ_TOBIDOUGU in mastery_fix.py. Deferred: G52 dual-wield, G53 falcon, G55 Shuriken type verify. | G50~ |
 | G54 | Double-hit procs (TF_DOUBLE/GS_CHAINACTION) + DPS stat: AttackDefinition + SelectionStrategy (Markov seam); correct probability tree; katar combined; DPS row in SummarySection. New gaps G56 (skill timing) + G57 (Markov). | G54 |
+| G52 | Dual-wield pipeline (partial): AS_RIGHT/AS_LEFT passives, LH forge fields+widgets, lh_normal/lh_crit on BattleResult, dual-wield branch in BattlePipeline, LH card browser EQP fix, monster perfect_dodge=0. Remaining: proc interaction with dual-wield (needs source read). | G52 |
 
 ---
 
@@ -73,40 +74,27 @@ data) is implemented. Consider hiding DPS row when skill_id != 0 as part of this
 
 ---
 
-## Session G52 — Dual-Wield Pipeline
+## Session G52-cont — Dual-Wield: Double-Attack Procs (remaining)
 
-**Goal**: Separate RH and LH damage branches for Assassin / Assassin Cross.
-**Gap ID**: G52.
-**Estimated tokens**: ~35–45k (requires Hercules reads + significant pipeline work).
+**Gap ID**: G52 [~] — partial. Core dual-wield pipeline done. Proc interaction not yet implemented.
 
-### Hercules reads needed (first thing in session)
+### Confirmed Hercules facts (read in Session G52)
+- LH base damage: separate `calc_base_damage2(sstatus, &sstatus->lhw, ...)` call (battle.c:5304)
+- RH rate: `wd.damage * (50 + AS_RIGHT_lv*10) / 100` (battle.c:5923-5926, ATK_RATER)
+- LH rate: `wd.damage2 * (30 + AS_LEFT_lv*10) / 100` (battle.c:5929-5932, ATK_RATEL)
+- Pre-renewal floor 1 for both (battle.c:5937-5938, #else branch)
+- LH element independent: `s_ele_ = sstatus->lhw.ele` (battle.c:4811)
+- Dual-wield is normal attack only; skills always use RH (battle.c:4855-4859)
 
-- `battle.c` ~5910–5940: full dual-wield branch — base multipliers for RH/LH without
-  mastery, how AS_RIGHT/AS_LEFT are applied, how LH weapon stats are sourced (`sstatus->lhw`).
-- Verify whether LH damage goes through a separate `calc_base_damage2` call or is derived
-  from the RH result.
+### Remaining work — read source BEFORE writing any code
 
-### Work items (pending source verification)
+Read battle.c around TF_DOUBLE proc block (~4920-4930) and the dual-wield + proc region:
+- Does `flag.lh` affect TF_DOUBLE eligibility?
+- Is the proc triggered on RH swing only, or can LH also trigger it?
+- Does `wd.damage2` (LH) get multiplied by proc_hit_count, or is LH excluded from proc?
+- Does the dual-wield rate (ATK_RATER/ATK_RATEL) also apply to the proc branch?
 
-1. **AS_RIGHT / AS_LEFT passive rows** — add to `passive_section.py`, job-filtered to
-   `_DUAL_WIELD_JOBS = {12, 4013}` (Assassin, Assassin Cross).
-
-2. **LH weapon in pipeline** — verify that `PlayerBuild.equipped["left_hand"]` is already
-   populated for dual-wield jobs (Session 5 F6). Resolve the LH weapon via
-   `BuildManager.resolve_weapon()` for the LH slot.
-
-3. **`BattlePipeline.calculate()` dual-wield branch** — detect dual-wield
-   (`job_id in _DUAL_WIELD_JOBS` and LH weapon present):
-   - RH branch: existing `_run_branch()` result, multiplied by `(50 + 10*AS_RIGHT_lv) // 100`
-     at the point confirmed by source (likely SkillRatio/base position).
-   - LH branch: `_run_branch()` with LH weapon substituted, multiplied by
-     `(30 + 10*AS_LEFT_lv) // 100`.
-   - Total: RH + LH stored as separate `DamageResult` fields on `BattleResult`.
-
-4. **`BattleResult` fields** — add `lh_normal`, `lh_crit` (Optional[DamageResult]).
-
-5. **`SummarySection`** — when `lh_normal` is present, show "RH: X + LH: Y = Total: Z"
-   for Normal and Crit rows.
+Only implement after reading those source lines.
 
 ---
 

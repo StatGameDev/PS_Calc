@@ -102,6 +102,7 @@ class EquipmentBrowserDialog(QDialog):
         current_item_id: Optional[int] = None,
         job_id: int = 0,
         item_type_override: Optional[str] = None,
+        eqp_override: Optional[set] = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -121,8 +122,9 @@ class EquipmentBrowserDialog(QDialog):
 
         # Load and filter items for this slot.
         # item_type_override="IT_CARD" restricts the list to cards valid for this slot.
+        # eqp_override: replaces the slot's default EQP filter (used for LH weapon cards).
         item_type = item_type_override if item_type_override else _SLOT_ITEM_TYPE.get(slot_key, "IT_ARMOR")
-        valid_eqp = _SLOT_EQP.get(slot_key, set())
+        valid_eqp = eqp_override if eqp_override is not None else _SLOT_EQP.get(slot_key, set())
         all_items = loader.get_items_by_type(item_type)
         self._items: list = [
             it for it in all_items

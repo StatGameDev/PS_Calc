@@ -1373,3 +1373,54 @@ Three tests: single attack, crit scaling, unequal-delay regression guard (assert
 Double row (pre-allocated, hidden until proc_chance > 0): Min/Avg/Max + "X.X% proc".
 Crit% label uses effective_crit = crit_chance × (1 − proc_chance/100).
 DPS row (always visible): single value spanning cols 1–3, "0.0" before first result.
+
+---
+
+## Session G52 — Dual-Wield Pipeline (PARTIAL — G52 [~])
+
+**G52-1 — AS_RIGHT / AS_LEFT passive rows** (`gui/sections/passive_section.py`)
+Added to `_PASSIVES` list with max_lv=5 and source_skill matching the key.
+Job-filtered automatically via `get_skills_for_job` (Assassin / Assassin Cross only).
+
+**G52-2 — LH forge fields on PlayerBuild** (`core/models/build.py`)
+Added `lh_is_forged`, `lh_forge_sc_count`, `lh_forge_ranked`, `lh_forge_element` after the RH forge block.
+Same semantics as RH block; no `weapon_element` override for LH (uses item_db / forge_element).
+
+**G52-3 — Per-slot forge widgets in equipment_section** (`gui/sections/equipment_section.py`)
+Converted forge attributes from single-instance to per-slot dicts:
+`_forge_toggles`, `_forge_controls_rows`, `_forge_sc_spins`, `_forge_ranked_chks`, `_forge_element_combos`.
+Slot loop guard changed from `slot_key == "right_hand"` to `slot_key in ("right_hand", "left_hand")`.
+`_on_forge_toggled(slot_key, checked)` — takes slot_key arg; connected via lambda.
+`_refresh_card_slots` uses `_forge_toggles.get(slot_key)` for suppression.
+`load_build` restores forge state for both slots via `_forge_state` dict.
+`collect_into` uses `_get_forge(slot)` helper for both slots.
+`_update_left_hand_state` hides LH forge toggle/controls when 2H weapon blocks slot.
+
+**G52-4 — lh_normal / lh_crit on BattleResult** (`core/models/damage.py`)
+Added `lh_normal: Optional[DamageResult] = None` and `lh_crit: Optional[DamageResult] = None`.
+
+**G52-5 — Dual-wield branch in BattlePipeline** (`core/calculators/battle_pipeline.py`)
+`_DUAL_WIELD_JOBS = frozenset({12, 4013})` at module level.
+`_apply_dualwield_rate(source, numerator, hand, skill_lv)` static helper: scales PMF by numerator/100, floors to min 1, adds DamageStep citing battle.c:5923-5938.
+`calculate()` dual-wield block: resolves LH weapon, applies RH rate (50+AS_RIGHT×10)/100 to existing normal/crit, runs separate LH branches and applies LH rate (30+AS_LEFT×10)/100.
+DPS `normal_avg`/`crit_avg` sums both hands.
+BattleResult returned with `lh_normal=lh_normal, lh_crit=lh_crit`.
+
+**G52-6 — SummarySection RH+LH display** (`gui/sections/summary_section.py`)
+Normal and Crit rows show "rh + lh" format when `lh_normal` / `lh_crit` present (same pattern as katar second hit).
+
+**G52-7 — LH card browser EQP fix** (`gui/sections/equipment_section.py`, `gui/dialogs/equipment_browser.py`)
+`_open_card_browser` checks if left_hand item has `EQP_WEAPON` in its loc; if so passes `eqp_override={"EQP_WEAPON"}` to dialog.
+`EquipmentBrowserDialog.__init__` gains `eqp_override: Optional[set] = None` parameter; overrides `valid_eqp` when provided.
+
+**G52-8 — Monster perfect_dodge fix** (`core/calculators/battle_pipeline.py`)
+After `calculate_hit_chance()`, set `perfect_dodge = 0.0` when `build.target_mob_id is not None`.
+Monsters have no perfect dodge vs player attacks; only player characters have flee2/perfect_dodge.
+Applies to both BF_WEAPON and BF_MAGIC call sites.
+
+**REMAINING (G52 not yet done)**
+TF_DOUBLE / GS_CHAINACTION proc interaction with dual-wield is not implemented.
+Specifically: does the proc fire once (RH weapon only) or independently per hand?
+Does the existing `double_hit` branch already handle RH correctly if the RH weapon is a Knife, or does the dual-wield rate need to also be applied to the proc branch?
+This requires reading the relevant battle.c block before any code is written.
+See gaps.md G52 REMAINING note.

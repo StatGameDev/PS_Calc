@@ -1,4 +1,8 @@
-from core.build_manager import effective_is_ranged
+from core.build_manager import BuildManager, effective_is_ranged
+
+# G52: Jobs that can dual-wield (Assassin, Assassin Cross).
+# Source: battle.c:4855-4859 — skills always use RH only; dual-wield is normal attack only.
+_DUAL_WIELD_JOBS: frozenset = frozenset({12, 4013})
 from core.models.damage import DamageResult, BattleResult
 from pmf.operations import _scale_floor, pmf_stats
 from core.calculators.magic_pipeline import MagicPipeline
@@ -66,6 +70,9 @@ class BattlePipeline:
         if attack_type == "Magic":
             magic_result = MagicPipeline(self.config).calculate(status, skill, target, build)
             hit_chance, perfect_dodge = calculate_hit_chance(status, target, self.config)
+            # Monsters do not have perfect dodge vs player attacks; only player characters do.
+            if build.target_mob_id is not None:
+                perfect_dodge = 0.0
             return BattleResult(
                 normal=magic_result,   # mirrored so GUI shows steps without changes
                 magic=magic_result,
@@ -81,6 +88,9 @@ class BattlePipeline:
         is_eligible, crit_chance = calculate_crit_chance(status, weapon, skill, target, self.config)
 
         hit_chance, perfect_dodge = calculate_hit_chance(status, target, self.config)
+        # Monsters do not have perfect dodge vs player attacks; only player characters do.
+        if build.target_mob_id is not None:
+            perfect_dodge = 0.0
 
         normal = self._run_branch(status, weapon, skill, target, build, is_crit=False)
         crit = (self._run_branch(status, weapon, skill, target, build, is_crit=True)
@@ -123,6 +133,39 @@ class BattlePipeline:
                     double_hit_crit = self._run_branch(
                         status, weapon, skill, target, build, is_crit=True, proc_hit_count=2)
 
+        # G52: Dual-wield branch — normal attack only, Assassin / Assassin Cross.
+        # ATK_RATER: RH damage *= (50 + AS_RIGHT_lv*10) / 100  (battle.c:5923-5926)
+        # ATK_RATEL: LH damage *= (30 + AS_LEFT_lv*10) / 100   (battle.c:5929-5932)
+        # Both have pre-renewal floor of 1 (battle.c:5937-5938, #else branch).
+        # LH active when lhw.atk != 0 (battle.c:4861) → Unarmed fallback means atk=0 → skip.
+        lh_normal = None
+        lh_crit   = None
+        if build.job_id in _DUAL_WIELD_JOBS and skill.id == 0:
+            as_right_lv = build.mastery_levels.get("AS_RIGHT", 0)
+            as_left_lv  = build.mastery_levels.get("AS_LEFT", 0)
+            lh_weapon = BuildManager.resolve_weapon(
+                build.equipped.get("left_hand"),
+                build.refine_levels.get("left_hand", 0),
+                element_override=None,
+                is_forged=build.lh_is_forged,
+                forge_sc_count=build.lh_forge_sc_count,
+                forge_ranked=build.lh_forge_ranked,
+                forge_element=build.lh_forge_element,
+            )
+            if lh_weapon.weapon_type != "Unarmed":
+                # Apply RH penalty rate to existing normal/crit results.
+                rh_rate = 50 + as_right_lv * 10
+                normal = self._apply_dualwield_rate(normal, rh_rate, "RH", as_right_lv)
+                if crit is not None:
+                    crit = self._apply_dualwield_rate(crit, rh_rate, "RH", as_right_lv)
+                # Compute LH branches and apply LH penalty rate.
+                lh_rate = 30 + as_left_lv * 10
+                lh_normal_raw = self._run_branch(status, lh_weapon, skill, target, build, is_crit=False)
+                lh_normal = self._apply_dualwield_rate(lh_normal_raw, lh_rate, "LH", as_left_lv)
+                if is_eligible:
+                    lh_crit_raw = self._run_branch(status, lh_weapon, skill, target, build, is_crit=True)
+                    lh_crit = self._apply_dualwield_rate(lh_crit_raw, lh_rate, "LH", as_left_lv)
+
         # DPS calculation.
         # adelay: (2000 - aspd*10)*2 ms; floored at 200ms to guard against ASPD overflow.
         # TF_DOUBLE / GS_CHAINACTION proc fires within the same swing, same adelay.
@@ -132,8 +175,11 @@ class BattlePipeline:
         h        = hit_chance / 100.0
 
         # Katar: both hits land in the same action — sum for DPS.
-        normal_avg = float(normal.avg_damage) + (float(katar_second.avg_damage) if katar_second else 0.0)
-        crit_avg   = ((float(crit.avg_damage) + (float(katar_second_crit.avg_damage) if katar_second_crit else 0.0))
+        # Dual-wield: both hands land in the same swing — sum RH + LH.
+        normal_avg = (float(normal.avg_damage) + (float(katar_second.avg_damage) if katar_second else 0.0)
+                      + (float(lh_normal.avg_damage) if lh_normal else 0.0))
+        crit_avg   = ((float(crit.avg_damage) + (float(katar_second_crit.avg_damage) if katar_second_crit else 0.0)
+                       + (float(lh_crit.avg_damage) if lh_crit else float(lh_normal.avg_damage) if lh_normal else 0.0))
                       if crit else normal_avg)
         double_avg = float(double_hit.avg_damage) if double_hit else 0.0
 
@@ -161,6 +207,8 @@ class BattlePipeline:
             proc_chance=proc_chance,
             double_hit=double_hit,
             double_hit_crit=double_hit_crit,
+            lh_normal=lh_normal,
+            lh_crit=lh_crit,
             dps=dps,
             attacks=attacks,
         )
@@ -189,6 +237,42 @@ class BattlePipeline:
             note=f"TF_DOUBLE lv{tf_level}: damage × (1+{tf_level}×2)÷100, min 1",
             formula=f"max(1, damage * {factor} // 100)",
             hercules_ref="battle.c:5941-5952 (#ifndef RENEWAL): wd.damage2 = wd.damage*(1+(TF_DOUBLE*2))/100",
+        )
+        return dr
+
+    @staticmethod
+    def _apply_dualwield_rate(source: DamageResult, numerator: int, hand: str, skill_lv: int) -> DamageResult:
+        """Scale a branch's PMF by the dual-wield hand rate, floor each output to min 1.
+
+        Formula: damage = damage * numerator / 100  (integer division), then max(1, result).
+        RH: numerator = 50 + AS_RIGHT_lv*10 (ATK_RATER macro, battle.c:5923-5926)
+        LH: numerator = 30 + AS_LEFT_lv*10  (ATK_RATEL macro, battle.c:5929-5932)
+        Pre-renewal floor of 1: battle.c:5937-5938 (#else branch, not RENEWAL).
+        """
+        out_pmf: dict = {}
+        for dmg, prob in source.pmf.items():
+            scaled = max(1, dmg * numerator // 100)
+            out_pmf[scaled] = out_pmf.get(scaled, 0.0) + prob
+        mn, mx, av = pmf_stats(out_pmf)
+        dr = DamageResult()
+        dr.pmf = out_pmf
+        dr.min_damage = mn
+        dr.max_damage = mx
+        dr.avg_damage = av
+        # Copy existing steps so the StepsBar shows the full chain.
+        dr.steps = list(source.steps)
+        skill_key = "AS_RIGHT" if hand == "RH" else "AS_LEFT"
+        dr.add_step(
+            f"Dual-Wield {hand} Rate",
+            value=av, min_value=mn, max_value=mx,
+            multiplier=numerator / 100,
+            note=f"{skill_key} lv{skill_lv}: damage × {numerator} ÷ 100, floor 1",
+            formula=f"max(1, damage * {numerator} // 100)",
+            hercules_ref=(
+                "battle.c:5923-5926 ATK_RATER: wd.damage * (50+AS_RIGHT*10)/100"
+                if hand == "RH" else
+                "battle.c:5929-5932 ATK_RATEL: wd.damage2 * (30+AS_LEFT*10)/100"
+            ),
         )
         return dr
 

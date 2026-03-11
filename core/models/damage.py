@@ -98,6 +98,10 @@ class BattleResult:
     proc_chance: float = 0.0
     double_hit: Optional["DamageResult"] = None
     double_hit_crit: Optional["DamageResult"] = None
+    # G52: Dual-wield left-hand branches (normal-attack only; skill_id == 0).
+    # None when not dual-wielding. Independent element + forge chain from LH weapon.
+    lh_normal: Optional["DamageResult"] = None
+    lh_crit: Optional["DamageResult"] = None
     # DPS stat: Σ(chance_i × damage_i) / Σ(chance_i × delay_i) × 1000  (dmg/s)
     dps: float = 0.0
     # Full attack distribution used to compute dps. Stored on BattleResult so:

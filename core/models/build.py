@@ -82,13 +82,20 @@ class PlayerBuild:
     # Same key set as active_items_bonuses.
     manual_adj_bonuses: Dict[str, int] = field(default_factory=dict)
 
-    # G17: Forged weapon properties (right_hand only for now).
+    # G17: Forged weapon properties — right_hand.
     # is_forged=True hides card slots and activates forge_element in resolve_weapon.
     # forge_element: element from forge process (int 0-9); overridden by weapon_element if set.
     is_forged: bool = False
     forge_sc_count: int = 0    # star crumb count (0–3)
     forge_ranked: bool = False  # forger was ranked blacksmith (+10 star)
     forge_element: int = 0     # element from elemental stone (0=Neutral/none)
+
+    # G52: Forged weapon properties — left_hand (dual-wield only).
+    # Same semantics as above; no weapon_element override for LH (uses item_db / forge_element).
+    lh_is_forged: bool = False
+    lh_forge_sc_count: int = 0
+    lh_forge_ranked: bool = False
+    lh_forge_element: int = 0
 
     # M0: Party/outgoing buffs and target-applied debuffs received by the player's team.
     # Keys added per-session as sub-groups are implemented (M, M2, O, R).
