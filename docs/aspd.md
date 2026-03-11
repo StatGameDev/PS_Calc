@@ -191,9 +191,16 @@ dps = Σ(chance_i × avg_damage_i) / Σ(chance_i × (pre_delay_i + post_delay_i)
 Do NOT use `Σ(chance_i × dps_i)` — mathematically incorrect when delays differ
 between attack types (e.g. a normal auto-attack vs a skill with a cast time).
 
-For auto-attacks (no cast time): `pre_delay = 0`, `post_delay = adelay = amotion * 2`.
-Since all auto-attack variants share the same delay, `Σ(chance_i × delay_i) = adelay`
-and the formula reduces to `Σ(chance_i × damage_i) / adelay * 1000`.
+For a plain auto-attack: `pre_delay = 0`, `post_delay = adelay = amotion * 2`.
+
+TF_DOUBLE and GS_CHAINACTION set `wd.type = BDT_MULTIHIT` and stay within the same
+attack action — their `post_delay` is the same auto-attack `adelay`. The formula
+therefore reduces to `Σ(chance_i × damage_i) / adelay * 1000` for these specific procs.
+
+Not all auto-attack procs share the same delay. MO_TRIPLEATTACK (Monk) fires as a
+skill with its own action delay, not the base auto-attack adelay — it requires a
+separate `AttackDefinition` with its own `post_delay` value. Never assume equal delays
+across proc types; always use the delay that applies to each specific attack action.
 
 Crit and proc are mutually exclusive — confirmed from battle.c:4926:
 `wd.type != BDT_MULTIHIT` gates the crit check. When a double-hit proc fires

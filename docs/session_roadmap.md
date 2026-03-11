@@ -147,19 +147,21 @@ crit), and add a DPS row to SummarySection.
 
    **Building the attack list in `BattlePipeline.calculate()`**:
    ```python
-   adelay = (2000 - status.aspd * 10) * 2   # ms; pre_delay=0 for auto-attacks
+   adelay = (2000 - status.aspd * 10) * 2   # ms; TF_DOUBLE/GS_CHAINACTION stay in same
+                                             # action so use the same adelay as normal hit
    p = proc_chance / 100
    c = effective_crit_chance / 100
    crit_avg   = result.crit.avg_damage if result.crit else result.normal.avg_damage
    double_avg = result.double_hit.avg_damage if result.double_hit else 0.0
-   # Miss modelled as zero-damage variant of normal (keeps delay in denominator correct)
+   # Miss modelled as zero-damage variant (delay still consumed)
    attacks = [
        AttackDefinition(result.normal.avg_damage, 0, adelay, (1-p-c) * hit_chance/100),
-       AttackDefinition(result.normal.avg_damage, 0, adelay, (1-p-c) * (1-hit_chance/100)),  # miss
-       AttackDefinition(crit_avg,   0, adelay, c   * hit_chance/100),
-       AttackDefinition(double_avg, 0, adelay, p   * hit_chance/100),
+       AttackDefinition(0,                        0, adelay, (1-p-c) * (1-hit_chance/100)),  # miss
+       AttackDefinition(crit_avg,   0, adelay, c * hit_chance/100),
+       AttackDefinition(double_avg, 0, adelay, p * hit_chance/100),
    ]
-   # Future skills: pre_delay = cast_time_ms, post_delay = skill_adelay_ms.
+   # NOTE: procs that fire as skills (e.g. MO_TRIPLEATTACK) have their own post_delay
+   # and must NOT reuse adelay — add them as separate AttackDefinitions when implemented.
    result.dps = calculate_dps(attacks, FormulaSelectionStrategy())
    ```
    Add `dps: float = 0.0` to `BattleResult`. Drop `attacks_per_sec` — not needed as a
