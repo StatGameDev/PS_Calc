@@ -45,8 +45,8 @@ class ActiveItemsSection(Section):
 
     bonuses_changed = Signal()
 
-    def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
-        super().__init__(key, display_name, default_collapsed, compact_mode, parent)
+    def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
+        super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
         note_lbl = QLabel(
             "Temporary catch-all for consumable effects (foods, potions, etc.).\n"

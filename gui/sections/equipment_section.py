@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from core.data_loader import loader
 from core.models.build import PlayerBuild
 from gui.section import Section
-from gui.widgets import NoWheelCombo, NoWheelSpin
+from gui.widgets import NoScrollCombo, NoWheelSpin
 
 # Weapon types that occupy both hands (F5: disables left_hand slot).
 # These use loc=EQP_ARMS in item_db and block the left hand entirely.
@@ -131,20 +131,13 @@ def _resolve_card_label(card_id: Optional[int]) -> str:
     return name[:10] if len(name) > 10 else name
 
 
-class NoWheelCombo(QComboBox):
-    """QComboBox that never reacts to the scroll wheel (prevents accidental slot changes)."""
-
-    def wheelEvent(self, event) -> None:
-        event.ignore()
-
-
 class EquipmentSection(Section):
     """Phase 1.4 — Equipment slots with item name, refine spinners, Edit button."""
 
     equipment_changed = Signal()
 
-    def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
-        super().__init__(key, display_name, default_collapsed, compact_mode, parent)
+    def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
+        super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
         self._compact_widget: QWidget | None = None
         self._compact_weapon_lbl: QLabel | None = None
@@ -190,7 +183,7 @@ class EquipmentSection(Section):
             name_col_layout.setSpacing(2)
 
             # G39: inline quick-select combo (replaces static name label)
-            combo = NoWheelCombo()
+            combo = NoScrollCombo()
             combo.setObjectName("equip_inline_combo")
             combo.addItem("— Empty —", None)
             for item_name, item_id in _load_slot_items(slot_key):  # no job filter at construction
@@ -230,7 +223,7 @@ class EquipmentSection(Section):
                 self._forge_ranked_chks[slot_key] = ranked_chk
 
                 forge_layout.addWidget(QLabel("Ele:"))
-                ele_combo = NoWheelCombo()
+                ele_combo = NoScrollCombo()
                 for ele_idx, ele_name in enumerate(_ELEMENT_NAMES):
                     ele_combo.addItem(ele_name, ele_idx)
                 ele_combo.currentIndexChanged.connect(self.equipment_changed)
@@ -284,7 +277,7 @@ class EquipmentSection(Section):
         elem_layout.setContentsMargins(0, 4, 0, 0)
         elem_layout.setSpacing(6)
         elem_layout.addWidget(QLabel("Weapon Element:"))
-        self._element_combo = NoWheelCombo()
+        self._element_combo = NoScrollCombo()
         self._element_combo.addItem("From Item", None)
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._element_combo.addItem(name, idx)
@@ -299,7 +292,7 @@ class EquipmentSection(Section):
         armor_elem_layout.setContentsMargins(0, 0, 0, 0)
         armor_elem_layout.setSpacing(6)
         armor_elem_layout.addWidget(QLabel("Armor Element:"))
-        self._armor_element_combo = NoWheelCombo()
+        self._armor_element_combo = NoScrollCombo()
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._armor_element_combo.addItem(name, idx)
         self._armor_element_combo.currentIndexChanged.connect(self.equipment_changed)
@@ -540,24 +533,15 @@ class EquipmentSection(Section):
         filled = sum(1 for v in self._item_ids.values() if v is not None)
         self._compact_summary_lbl.setText(f"{filled}/{len(_SLOTS)} slots filled")  # type: ignore[union-attr]
 
-    def _enter_compact_view(self) -> None:
-        self._pre_compact_collapsed = self._is_collapsed
+    def _enter_slim(self) -> None:
         if self._compact_widget is None:
             self._build_compact_widget()
         self._update_compact_labels()
-        self._content_frame.setVisible(False)
         self._compact_widget.setVisible(True)
-        self._is_collapsed = False
-        self._arrow.setText("▼")
 
-    def _exit_compact_view(self) -> None:
+    def _exit_slim(self) -> None:
         if self._compact_widget is not None:
             self._compact_widget.setVisible(False)
-        restored = self._pre_compact_collapsed if self._pre_compact_collapsed is not None else False
-        self._pre_compact_collapsed = None
-        self._is_collapsed = restored
-        self._content_frame.setVisible(not restored)
-        self._arrow.setText("▶" if restored else "▼")
 
     # ── Public API ────────────────────────────────────────────────────────
 

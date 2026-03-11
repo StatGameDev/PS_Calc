@@ -21,8 +21,8 @@ class PlayerDebuffsSection(Section):
 
     changed = Signal()
 
-    def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
-        super().__init__(key, display_name, default_collapsed, compact_mode, parent)
+    def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
+        super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
         self._compact_widget: QWidget | None = None
         self._compact_summary_lbl: QLabel | None = None
@@ -48,23 +48,14 @@ class PlayerDebuffsSection(Section):
         self._compact_widget = w
         self.layout().addWidget(w)
 
-    def _enter_compact_view(self) -> None:
-        self._pre_compact_collapsed = self._is_collapsed
+    def _enter_slim(self) -> None:
         if self._compact_widget is None:
             self._build_compact_widget()
-        self._content_frame.setVisible(False)
         self._compact_widget.setVisible(True)
-        self._is_collapsed = False
-        self._arrow.setText("▼")
 
-    def _exit_compact_view(self) -> None:
+    def _exit_slim(self) -> None:
         if self._compact_widget is not None:
             self._compact_widget.setVisible(False)
-        restored = self._pre_compact_collapsed if self._pre_compact_collapsed is not None else False
-        self._pre_compact_collapsed = None
-        self._is_collapsed = restored
-        self._content_frame.setVisible(not restored)
-        self._arrow.setText("▶" if restored else "▼")
 
     # ── Public API ─────────────────────────────────────────────────────────
 

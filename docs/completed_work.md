@@ -1597,3 +1597,48 @@ In `calculate()`: checks `_BF_WEAPON_HIT_COUNT_FN` before `number_of_hits` from 
 - `_load_song_group` / `_collect_song_group`: `isinstance(QComboBox)` guard eliminated; all `caster_store` values are now `NoWheelSpin`
 - `load_build` / `collect_into`: lesson load/collect via `_bard_lesson.setValue/value()` and `_dancer_lesson.setValue/value()`
 - Type annotations updated throughout; `QComboBox`/`QSpinBox` removed from Qt imports
+
+---
+
+## GUI — Compact Mode Architecture Rework (GUI-CompactRework2)
+
+Complete replacement of the single-string `compact_mode` system with two independent
+boolean flags. No Hercules source reads. Pure architectural improvement.
+
+**`gui/section.py`** — full rewrite of compact mode logic:
+- Constructor param: `compact_mode: str` → `compact_modes: list[str]`
+- Three boolean flags extracted: `_has_hidden`, `_has_header_summary`, `_has_slim_content`
+- Optional `_header_summary_lbl: QLabel` added to header layout when `"header_summary"` present
+- `_is_compact` → `_is_slim`; `set_compact_mode()` → `set_slim_mode()` with correct state machine:
+  - `slim_content`: entering slim while expanded hides full content, calls `_enter_slim()`; exiting slim while expanded calls `_exit_slim()`, shows full content; toggle in slim cycles collapsed ↔ compact widget (never full content)
+  - `header_summary`: auto-collapses on entering slim, restores on exit; header label always visible
+- `_enter_compact_view` / `_exit_compact_view` → `_enter_slim` / `_exit_slim` (hooks)
+- `_enter_slim` fallback: shows full content (graceful degradation for unimplemented stubs)
+- `set_header_summary(text: str)` public API
+- Old string values auto-convert in constructor for backward compat (`"compact_view"` → `["slim_content"]` etc.)
+- New doc: `docs/compact_modes.md`
+
+**`gui/layout_config.json`**:
+- All `"compact_mode"` keys → `"compact_modes"` lists
+- `compact_view` → `["slim_content"]` for stats, derived, equipment, player_debuffs, target
+- `compact_view` → `["header_summary"]` for passive, buffs
+- `hidden` → `["hidden"]`; `none` → `[]`
+
+**`gui/panel_container.py`**:
+- Reads `compact_modes` list from config; passes to section constructor as `compact_modes=`
+- `sec.set_compact_mode(...)` → `sec.set_slim_mode(...)`
+
+**All 14 section `__init__` signatures**: `compact_mode` param → `compact_modes`
+
+**`slim_content` subclasses** (stats, derived, equipment, player_debuffs, target):
+- `_enter_compact_view` → `_enter_slim`; `_exit_compact_view` → `_exit_slim`
+- Removed from each: `self._pre_compact_collapsed = ...`, `self._content_frame.setVisible(False)`,
+  `self._is_collapsed = False`, `self._arrow.setText("▼")` — base class now owns these
+
+**`passive_section.py`** (→ `header_summary`):
+- Removed: `_compact_widget`, `_compact_summary_lbl`, `_build_compact_widget()`, `_enter_slim()`, `_exit_slim()`
+- All update sites (`_on_passives_changed`, `load_build`) → `set_header_summary(self._build_summary())`
+- Initial call added at end of `__init__`
+
+**`buffs_section.py`** (→ `header_summary`):
+- Same pattern as passive_section; three update sites (`_on_changed`, `load_build`) + initial `__init__` call

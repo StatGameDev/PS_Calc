@@ -221,13 +221,25 @@ QSpinBox:hover { border-color: #505669; }
 QSpinBox:focus { border-color: #4d8fff; }
 
 QSpinBox::up-button, QSpinBox::down-button {
-    width: 14px;
+    width: 16px;
     border: none;
     background: #252830;
 }
 
 QSpinBox::up-button:hover, QSpinBox::down-button:hover {
     background: #3a3f50;
+}
+
+QSpinBox::up-arrow {
+    image: url(gui/themes/icons/plus.svg);
+    width: 8px;
+    height: 8px;
+}
+
+QSpinBox::down-arrow {
+    image: url(gui/themes/icons/minus.svg);
+    width: 8px;
+    height: 8px;
 }
 
 /* ── LineEdit ────────────────────────────────────────────────────────────── */
@@ -260,6 +272,7 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background-color: #1a3a5c;
     border-color: #4d8fff;
+    image: url(gui/themes/icons/check.svg);
 }
 
 QCheckBox::indicator:hover { border-color: #505669; }

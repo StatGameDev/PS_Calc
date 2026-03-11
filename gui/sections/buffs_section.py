@@ -155,11 +155,9 @@ class BuffsSection(Section):
 
     changed = Signal()
 
-    def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
-        super().__init__(key, display_name, default_collapsed, compact_mode, parent)
+    def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
+        super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
-        self._compact_widget: QWidget | None = None
-        self._compact_summary_lbl: QLabel | None = None
         self._current_job_id: int = 0
 
         # Storage for Self Buffs
@@ -301,6 +299,7 @@ class BuffsSection(Section):
         self._sub_misc = CollapsibleSubGroup("Miscellaneous Effects", default_collapsed=False)
         self._sub_misc.add_content_widget(_stub_label("(Item proc / pet buffs — future session)"))
         self.add_content_widget(self._sub_misc)
+        self.set_header_summary(self._build_summary())
 
     # ── Ground Effects widget builder ───────────────────────────────────────
 
@@ -494,8 +493,7 @@ class BuffsSection(Section):
 
     def _on_changed(self) -> None:
         self.changed.emit()
-        if self._compact_summary_lbl is not None:
-            self._compact_summary_lbl.setText(self._build_summary())
+        self.set_header_summary(self._build_summary())
 
     def _build_summary(self) -> str:
         parts: list[str] = []
@@ -507,39 +505,6 @@ class BuffsSection(Section):
                 else:
                     parts.append(display)
         return "  ·  ".join(parts) if parts else "No active buffs"
-
-    # ── Compact API ────────────────────────────────────────────────────────
-
-    def _build_compact_widget(self) -> None:
-        w = QWidget()
-        layout = QHBoxLayout(w)
-        layout.setContentsMargins(4, 4, 4, 4)
-        self._compact_summary_lbl = QLabel(self._build_summary())
-        self._compact_summary_lbl.setObjectName("passive_compact_summary")
-        self._compact_summary_lbl.setWordWrap(True)
-        layout.addWidget(self._compact_summary_lbl)
-        w.setVisible(False)
-        self._compact_widget = w
-        self.layout().addWidget(w)
-
-    def _enter_compact_view(self) -> None:
-        self._pre_compact_collapsed = self._is_collapsed
-        if self._compact_widget is None:
-            self._build_compact_widget()
-        self._compact_summary_lbl.setText(self._build_summary())  # type: ignore[union-attr]
-        self._content_frame.setVisible(False)
-        self._compact_widget.setVisible(True)
-        self._is_collapsed = False
-        self._arrow.setText("▼")
-
-    def _exit_compact_view(self) -> None:
-        if self._compact_widget is not None:
-            self._compact_widget.setVisible(False)
-        restored = self._pre_compact_collapsed if self._pre_compact_collapsed is not None else False
-        self._pre_compact_collapsed = None
-        self._is_collapsed = restored
-        self._content_frame.setVisible(not restored)
-        self._arrow.setText("▶" if restored else "▼")
 
     # ── Public API ─────────────────────────────────────────────────────────
 
@@ -631,8 +596,7 @@ class BuffsSection(Section):
         self._current_job_id = build.job_id
         self.update_job(build.job_id)
 
-        if self._compact_summary_lbl is not None:
-            self._compact_summary_lbl.setText(self._build_summary())
+        self.set_header_summary(self._build_summary())
 
     def _load_song_group(self, ss: dict,
                          caster_store: dict[str, NoWheelSpin],

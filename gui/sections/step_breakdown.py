@@ -40,8 +40,8 @@ class StepBreakdownSection(Section):
     The StepsBar in Panel handles compact-state step display.
     """
 
-    def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
-        super().__init__(key, display_name, default_collapsed, compact_mode, parent)
+    def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
+        super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
         # ── Controls row ──────────────────────────────────────────────────
         ctrl_row = QHBoxLayout()

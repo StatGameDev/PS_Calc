@@ -116,7 +116,8 @@ _Status: [ ] open, [x] done, [~] partial_
 | G63 | [ ] | BF_WEAPON/BF_MAGIC skill ratios Q3: Ninja hybrid (NJ_* BF_WEAPON + BF_MAGIC) and Gunslinger (all GS_* BF_WEAPON + GS_MAGICALBULLET BF_MAGIC). | Q3 |
 | G64 | [ ] | Job Stat Bonuses: Every Job gains bonus stats depending on Job Level, requires Job Bonus table. |
 | G65 | [ ] | Stat Bonuses etc. missing from Base Stats section's Bonus Stat display |
-| G66 | [ ] | Blacksmith Weaponry Mastery missing ATK Bonus; Overthrust goes to 10 instead of 5, should be party buff; Adrenaline Rush update: self->Self Buffs, party->Party Buffs; Skin Tempering does nothing right now, add Def increas, implement resistance. Cart Revolution is missing from Skill List, Mammonite does nothing.|
+| G66 | [ ] | Blacksmith Weaponry Mastery missing ATK Bonus; Overthrust goes to 10 instead of 5, should be party buff; Adrenaline Rush update: self->Self Buffs, party->Party Buffs; Skin Tempering does nothing right now, add Def increas, implement resistance. Cart Revolution is missing from Skill List, Mammonite does nothing; Loud->Loud Exclamation.|
+| G67 | [ ] | Equipment section: Widen card fields, rework card selection in general->Make List useful, allow editing multiple through List dialogue? |
 
 ---
 

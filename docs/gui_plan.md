@@ -29,13 +29,18 @@ User edits widget
 - Free drag doesn't change compact state — only FOCUS buttons and snap do.
 - Step breakdown expand nudge: +5% to combat panel width, not a named state.
 
-### compact_mode values (layout_config.json)
-| Value | Behavior |
+### compact_modes values (layout_config.json)
+`compact_modes` is a `list[str]` — flags are independent and combinable.
+
+| Flag | Behavior |
 |---|---|
-| `"none"` | No change when panel is compact |
-| `"hidden"` | Section hidden entirely |
-| `"collapsed"` | Collapses to header; user can re-expand |
-| `"compact_view"` | Subclass swaps content via `_enter_compact_view()` |
+| `[]` | No change when panel is slim |
+| `["hidden"]` | Section hidden entirely when slim |
+| `["slim_content"]` | Compact widget shown in slim mode; toggle between collapsed and compact (full content never shown while slim). Subclass overrides `_enter_slim()` / `_exit_slim()`. |
+| `["header_summary"]` | Always-visible summary label in header. Section auto-collapses when slim. Subclass calls `set_header_summary(text)` on any data change. |
+| `["slim_content", "header_summary"]` | Both: compact widget + always-visible header text. |
+
+See `docs/compact_modes.md` for implementation guide.
 
 ---
 
@@ -43,59 +48,41 @@ User edits widget
 
 **Builder panel** (`layout_config.json` — as implemented):
 
-| # | Key | Display Name | compact_mode | default_collapsed |
-|---|-----|-------------|-------------|------------------|
-| 1 | `build_header` | Build | none | false |
-| 2 | `stats_section` | Base Stats | compact_view | false |
-| 3 | `derived_section` | Derived Stats | compact_view | false |
-| 4 | `equipment_section` | Equipment | compact_view | false |
-| 5 | `passive_section` | Passives & Buffs | compact_view | false |
-| 6 | `active_items_section` | Active Items | hidden | true |
-| 7 | `manual_adj_section` | Manual Adjustments | hidden | true |
+| # | Key | Display Name | compact_modes | default_collapsed |
+|---|-----|-------------|--------------|------------------|
+| 1 | `build_header` | Build | `[]` | false |
+| 2 | `stats_section` | Base Stats | `["slim_content"]` | false |
+| 3 | `derived_section` | Derived Stats | `["slim_content"]` | false |
+| 4 | `equipment_section` | Equipment | `["slim_content"]` | false |
+| 5 | `passive_section` | Passives | `["header_summary"]` | false |
+| 6 | `buffs_section` | Buffs | `["header_summary"]` | true |
+| 7 | `player_debuffs_section` | Player Debuffs | `["slim_content"]` | true |
+| 8 | `active_items_section` | Active Items | `["hidden"]` | true |
 
 **Combat panel** (`layout_config.json` — as implemented):
 
-| # | Key | Display Name | compact_mode | default_collapsed |
-|---|-----|-------------|-------------|------------------|
-| 1 | `combat_controls` | Combat Controls | none | false |
-| 2 | `target_section` | Target Info | compact_view | false |
-| 3 | `summary_section` | Summary | none | false |
-| 4 | `step_breakdown` | Step Breakdown | hidden | false |
-| 5 | `incoming_damage` | Incoming Damage | hidden | true |
+| # | Key | Display Name | compact_modes | default_collapsed |
+|---|-----|-------------|--------------|------------------|
+| 1 | `combat_controls` | Combat Controls | `[]` | false |
+| 2 | `target_section` | Target Info | `["slim_content"]` | false |
+| 3 | `summary_section` | Summary | `[]` | false |
+| 4 | `step_breakdown` | Step Breakdown | `["hidden"]` | false |
+| 5 | `incoming_damage` | Incoming Damage | `["hidden"]` | true |
 
 ---
 
-## Planned Layout Changes (Sessions M–R)
-
-**Builder panel** — after Sessions M0–N:
-
-| # | Key | Display Name | compact_mode | default_collapsed |
-|---|-----|-------------|-------------|------------------|
-| 1 | `build_header` | Build | none | false |
-| 2 | `stats_section` | Base Stats | compact_view | false |
-| 3 | `derived_section` | Derived Stats | compact_view | false |
-| 4 | `equipment_section` | Equipment | compact_view | false |
-| 5 | `passive_section` | Passives | compact_view | false |
-| 6 | `buffs_section` | Buffs | compact_view | true |
-| 7 | `player_debuffs_section` | Player Debuffs | compact_view | true |
-| 8 | `active_items_section` | Active Items | hidden | true |
-
-Changes vs current:
-- `manual_adj_section` removed as standalone → becomes `CollapsibleSubGroup` inside `build_header`
-- `passive_section` display name: "Passives & Buffs" → "Passives" (self-buff rows migrate to `buffs_section`)
-- New `buffs_section` added at position 6 — **player buffs only**
-- New `player_debuffs_section` added at position 7 — debuffs applied to the player (for incoming damage calcs)
+## Planned Layout Changes (Session R+)
 
 **Combat panel** — after Session R:
 
-| # | Key | Display Name | compact_mode | default_collapsed |
-|---|-----|-------------|-------------|------------------|
-| 1 | `combat_controls` | Combat Controls | none | false |
-| 2 | `target_section` | Target Info | compact_view | false |
-| 3 | `summary_section` | Summary | none | false |
-| 4 | `target_state_section` | Target State | none | true |
-| 5 | `step_breakdown` | Step Breakdown | hidden | false |
-| 6 | `incoming_damage` | Incoming Damage | hidden | true |
+| # | Key | Display Name | compact_modes | default_collapsed |
+|---|-----|-------------|--------------|------------------|
+| 1 | `combat_controls` | Combat Controls | `[]` | false |
+| 2 | `target_section` | Target Info | `["slim_content"]` | false |
+| 3 | `summary_section` | Summary | `[]` | false |
+| 4 | `target_state_section` | Target State | `[]` | true |
+| 5 | `step_breakdown` | Step Breakdown | `["hidden"]` | false |
+| 6 | `incoming_damage` | Incoming Damage | `["hidden"]` | true |
 
 Changes vs current:
 - New `target_state_section` added at position 4, below Summary — **target debuffs + monster state**

@@ -86,8 +86,8 @@ class BuildHeaderSection(Section):
     level_changed = Signal()
     bonuses_changed = Signal()
 
-    def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
-        super().__init__(key, display_name, default_collapsed, compact_mode, parent)
+    def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
+        super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
         # ── Name row ──────────────────────────────────────────────────────
         name_row = QWidget()

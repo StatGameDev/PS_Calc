@@ -1125,3 +1125,43 @@ Files created: none
 
 Total est_tokens: ~8,781 reads + ~1,434 edits + 6,000 fixed + ~20,000 conv ≈ 36,000
 Notes: Light session — planning-heavy. 1 Hercules read (battle.c battle_range_type BF_LONG threshold).
+
+---
+
+## Session GUI-Rework  2026-03-11  claude-sonnet-4-6
+ctx_used: ___%   (fill in after session)
+
+Work items completed:
+- gui/widgets/level_widget.py + __init__.py: NoWheelCombo, NoWheelSpin, LevelWidget
+- 9 files swept: _NoWheelCombo/_NoWheelSpin removed, NoWheelCombo/NoWheelSpin imported
+- skill_browser.py: crash fix, column restructure, implemented-skills filter
+- combat_controls.py: LevelWidget + _on_skill_changed + _sync_level_widget + get_skill_instance fix
+- passive_section.py: LevelWidget for mastery combos, _NoWheelCombo removed
+- buffs_section.py: full overhaul — _make_level_combo/_set_combo_value helpers removed,
+  _bard_lesson/_dancer_lesson extracted, isinstance guard eliminated
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| memory/gui_rework_state.md | 87 | ~348 |
+| docs/session_roadmap.md | ~170 | ~680 |
+| gui/sections/combat_controls.py | 387 | ~2,709 |
+| gui/sections/passive_section.py | 316 | ~2,212 |
+| gui/sections/buffs_section.py | 755 | ~5,285 |
+| gui/widgets/level_widget.py | 69 | ~483 |
+| **subtotal reads** | **~1,784** | **~11,717** |
+
+Files edited:
+| file | lines_changed | est_tok |
+|---|---|---|
+| gui/sections/combat_controls.py | +20 net | ~140 |
+| gui/sections/passive_section.py | -15 net | ~105 |
+| gui/sections/buffs_section.py | -60 net | ~420 |
+| docs/completed_work.md | +70 | ~280 |
+| docs/session_roadmap.md | +5 net | ~20 |
+| docs/context_log.md | +this | ~200 |
+
+Files created: none (gui/widgets/ created prior session)
+
+Total est_tokens: ~11,717 reads + ~1,165 edits + 6,000 fixed + ~18,000 conv ≈ 37,000
+Notes: Pure GUI session — no Hercules reads. Split across two instances (context ran out mid-session).

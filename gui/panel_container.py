@@ -51,7 +51,7 @@ class PanelContainer(QSplitter):
     - Instantiates all Section widgets from layout_config and places them in
       the correct panel.
     - Manages focus states (builder_focused / combat_focused): adjusts splitter
-      ratio and calls set_compact_mode on all sections.
+      ratio and calls set_slim_mode on all sections.
     - Debounced drag-to-snap: after the user stops dragging, snaps to the
       nearest named focus state if within snap_threshold.
     - Step breakdown nudge: temporarily widens the combat panel on
@@ -92,7 +92,7 @@ class PanelContainer(QSplitter):
                 key=key,
                 display_name=sec_def["display_name"],
                 default_collapsed=sec_def.get("default_collapsed", False),
-                compact_mode=sec_def.get("compact_mode", "none"),
+                compact_modes=sec_def.get("compact_modes", []),
             )
 
             panel_name = sec_def.get("panel", "builder")
@@ -133,7 +133,7 @@ class PanelContainer(QSplitter):
 
         focused_panel = "builder" if state == "builder_focused" else "combat"
         for key, sec in self._sections.items():
-            sec.set_compact_mode(self._section_panel[key] != focused_panel)
+            sec.set_slim_mode(self._section_panel[key] != focused_panel)
 
         # Show/hide the combat panel's steps sidebar (G40: persists expanded state)
         show_bar = focused_panel == "builder"

@@ -224,11 +224,11 @@ Always grep first. Never load entire files.
     main_window.py          — QMainWindow, signal routing, pipeline triggers
     panel_container.py      — PanelContainer(QSplitter), focus states, snap
     panel.py                — Panel(QWidget), StepsBar
-    section.py              — Section base class, compact_mode protocol
+    section.py              — Section base class, compact_modes protocol (slim_content/header_summary/hidden flags)
     sections/               — one file per section key (see layout_config.json)
     dialogs/                — EquipmentBrowserDialog, SkillBrowserDialog, etc.
     themes/dark.qss         — all styling (no inline styles anywhere)
-    layout_config.json      — section registry: key, panel, compact_mode
+    layout_config.json      — section registry: key, panel, compact_modes list
 
 ---
 

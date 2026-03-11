@@ -71,11 +71,9 @@ class PassiveSection(Section):
 
     passives_changed = Signal()
 
-    def __init__(self, key, display_name, default_collapsed, compact_mode, parent=None):
-        super().__init__(key, display_name, default_collapsed, compact_mode, parent)
+    def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
+        super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
-        self._compact_widget: QWidget | None = None
-        self._compact_summary_lbl: QLabel | None = None
         self._current_job_id: int = 0
 
         self._mastery_combos: dict[str, LevelWidget] = {}  # max_lv > 1 → dropdown
@@ -152,6 +150,7 @@ class PassiveSection(Section):
 
         flags_layout.addWidget(ranged_row, 1, 1, 1, 2)
         self.add_content_widget(flags_widget)
+        self.set_header_summary(self._build_summary())
 
     # ── Value helpers ──────────────────────────────────────────────────────
 
@@ -191,8 +190,7 @@ class PassiveSection(Section):
 
     def _on_passives_changed(self) -> None:
         self.passives_changed.emit()
-        if self._compact_summary_lbl is not None:
-            self._compact_summary_lbl.setText(self._build_summary())
+        self.set_header_summary(self._build_summary())
 
     def _build_summary(self) -> str:
         parts: list[str] = []
@@ -212,39 +210,6 @@ class PassiveSection(Section):
         if flags:
             parts.append(f"[{', '.join(flags)}]")
         return "  ·  ".join(parts) if parts else "No active passives"
-
-    # ── Compact API ────────────────────────────────────────────────────────
-
-    def _build_compact_widget(self) -> None:
-        w = QWidget()
-        layout = QHBoxLayout(w)
-        layout.setContentsMargins(4, 4, 4, 4)
-        self._compact_summary_lbl = QLabel(self._build_summary())
-        self._compact_summary_lbl.setObjectName("passive_compact_summary")
-        self._compact_summary_lbl.setWordWrap(True)
-        layout.addWidget(self._compact_summary_lbl)
-        w.setVisible(False)
-        self._compact_widget = w
-        self.layout().addWidget(w)
-
-    def _enter_compact_view(self) -> None:
-        self._pre_compact_collapsed = self._is_collapsed
-        if self._compact_widget is None:
-            self._build_compact_widget()
-        self._compact_summary_lbl.setText(self._build_summary())  # type: ignore[union-attr]
-        self._content_frame.setVisible(False)
-        self._compact_widget.setVisible(True)
-        self._is_collapsed = False
-        self._arrow.setText("▼")
-
-    def _exit_compact_view(self) -> None:
-        if self._compact_widget is not None:
-            self._compact_widget.setVisible(False)
-        restored = self._pre_compact_collapsed if self._pre_compact_collapsed is not None else False
-        self._pre_compact_collapsed = None
-        self._is_collapsed = restored
-        self._content_frame.setVisible(not restored)
-        self._arrow.setText("▶" if restored else "▼")
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -284,8 +249,7 @@ class PassiveSection(Section):
         self._current_job_id = build.job_id
         self.update_job(build.job_id)
 
-        if self._compact_summary_lbl is not None:
-            self._compact_summary_lbl.setText(self._build_summary())
+        self.set_header_summary(self._build_summary())
 
     def collect_into(self, build: PlayerBuild) -> None:
         build.mastery_levels = {
