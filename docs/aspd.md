@@ -13,14 +13,34 @@ Computes the raw base amotion (delay) before SC modifiers.
 #ifdef RENEWAL_ASPD
     // ... complex renewal formula using floats ...
 #else
-    // PRE-RENEWAL PATH:
-    amotion = aspd_base[job][weapontype];  // dual-wield: (w1+w2)*7/10
+    // PRE-RENEWAL PATH (status.c:3699-3701):
+    // Single weapon:
+    amotion = aspd_base[job][weapontype];
+    // Dual-wield (sd->weapontype > MAX_SINGLE_WEAPON_TYPE):
+    amotion = (aspd_base[job][weapontype1] + aspd_base[job][weapontype2]) * 7 / 10;
+
     amotion -= amotion * (4*agi + dex) / 1000;  // stat reduction
     amotion += sd->bonus.aspd_add;  // flat bAspd bonus
     // Angra Manyu: return 0
 #endif
 return amotion;
 ```
+
+#### Dual-Wield ASPD (G52-cont — implemented)
+
+For Assassin / Assassin Cross (`_DUAL_WIELD_JOBS = {12, 4013}`) with a LH weapon equipped,
+the base amotion is **(aspd_base[RH_type] + aspd_base[LH_type]) × 7 / 10** — NOT just aspd_base[RH].
+
+Source: `status.c:3699-3701` (`#else`, not `RENEWAL_ASPD`):
+```c
+amotion = (sd->weapontype < MAX_SINGLE_WEAPON_TYPE)
+    ? aspd_base[class][weapontype]                                       // single weapon
+    : (aspd_base[class][weapontype1] + aspd_base[class][weapontype2]) * 7 / 10;  // dual-wield
+```
+
+The ×7/10 factor is the inherent ASPD penalty for swinging two weapons simultaneously.
+SC_ASSNCROS, AS_RIGHT/AS_LEFT, and stat reductions apply on top of this base.
+Implemented in `status_calculator.py` ASPD block (detects dual-wield from `job_id` + LH item).
 
 ### status_calc_aspd (line 5431) — RENEWAL_ASPD ONLY, returns 0 pre-renewal
 
@@ -116,9 +136,9 @@ NOT applied to W_BOW / W_REVOLVER / W_RIFLE / W_GATLING / W_SHOTGUN / W_GRENADE.
 
 ---
 
-## Current Implementation (Session C)
+## Current Implementation (Sessions C, N, G52-cont)
 
-File: `core/calculators/status_calculator.py` lines 65-91.
+File: `core/calculators/status_calculator.py` ASPD block.
 
 ```python
 # Uses status_calc_aspd_rate approach (1000-scale):
