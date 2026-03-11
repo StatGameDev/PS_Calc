@@ -52,65 +52,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | G54 | Double-hit procs (TF_DOUBLE/GS_CHAINACTION) + DPS stat: AttackDefinition + SelectionStrategy (Markov seam); correct probability tree; katar combined; DPS row in SummarySection. New gaps G56 (skill timing) + G57 (Markov). | G54 |
 | G52 | Dual-wield pipeline (complete): AS_RIGHT/AS_LEFT passives, LH forge fields+widgets, lh_normal/lh_crit, dual-wield branch, LH card EQP fix, perfect_dodge=0, proc×RH-only + ATK_RATER on double_hit branches, ASPD (RH+LH)×7/10. | G52 |
 | Q0 | Skill timing calculator: calculate_skill_timing() (new file); GearBonuses castrate/delayrate/skill_castrate; bCastrate/bVarCastrate/bDelayrate routed; SC_SUFFRAGIUM party buff; amotion period for skills; BF_MAGIC DPS; dps_valid frozensets; Speed (actions/s) in SummarySection. | G56, G59, G60 |
-
----
-
-## Session Q1 — BF_WEAPON Standard Ratios (All Classes)
-
-**Goal**: Populate `_BF_WEAPON_RATIOS` with confirmed skill.c ratios for all standard
-BF_WEAPON skills (ratio = constant or level-linear, no stat/HP/SP/weight dependency).
-`IMPLEMENTED_BF_WEAPON_SKILLS` derives automatically from dict keys — DPS unlocks per skill.
-
-**Infrastructure (done in preparatory session)**:
-- `_BF_WEAPON_RATIOS: dict` + `calculate()` dict lookup (target param, hit_count fix)
-- `_resolve_is_ranged(build, weapon, skill)`: explicit skill range ≥ 5 → BF_LONG, 0–4 → BF_SHORT,
-  negative → inherit from weapon. Source: battle.c:3789-3792 battle_range_type.
-
-**Skills** (verify ratio in skill.c, add lambda, add note on is_ranged if non-obvious):
-
-| Constant | ID | Notes |
-|---|---|---|
-| SM_BASH | 5 | |
-| SM_MAGNUM | 7 | BF_LONG (explicit range 9); note fire endow is SC handled separately |
-| KN_PIERCE | 56 | hit_count = 1/2/3 by target Small/Med/Large; ratio per level |
-| KN_BRANDISHSPEAR | 57 | |
-| KN_SPEARSTAB | 58 | |
-| KN_SPEARBOOMERANG | 59 | range=[3,5,7,9,11] — BF_LONG from lv2 |
-| KN_BOWLINGBASH | 62 | |
-| CR_SHIELDCHARGE | 250 | |
-| CR_SHIELDBOOMERANG | 251 | range=[3,5,7,9,11] — BF_LONG from lv2 |
-| CR_HOLYCROSS | 253 | dual-element hit mechanic; check Hercules |
-| MC_MAMMONITE | 42 | |
-| TF_POISON | 52 | |
-| TF_SPRINKLESAND | 149 | |
-| TF_THROWSTONE | 152 | |
-| AS_SONICBLOW | 136 | 8 cosmetic hits in number_of_hits; ratio encodes total |
-| AS_GRIMTOOTH | 137 | |
-| AS_SPLASHER | 141 | |
-| AS_VENOMKNIFE | 1004 | |
-| RG_BACKSTAP | 212 | |
-| RG_RAID | 214 | |
-| RG_INTIMIDATE | 219 | copies another skill's ratio at runtime; stub or special-case |
-| AC_DOUBLE | 46 | BF_LONG (range=-9 → bow; bow is ranged weapon) |
-| AC_SHOWER | 47 | BF_LONG (range=-9 → bow) |
-| AC_CHARGEARROW | 148 | BF_LONG |
-| HT_PHANTASMIC | 1009 | BF_LONG |
-| HT_LANDMINE | 116 | trap — BF_WEAPON; check if hit_count/ratio differs by target |
-| HT_BLASTMINE | 122 | trap |
-| HT_CLAYMORETRAP | 123 | trap |
-| MO_CHAINCOMBO | 272 | combo; ratio only; no stat dep |
-| MO_COMBOFINISH | 273 | combo |
-| MO_BALKYOUNG | 1016 | |
-| BA_MUSICALSTRIKE | 316 | BF_LONG (range=9) |
-| BA_DISSONANCE | 317 | BF_LONG; also S category |
-| DC_THROWARROW | 324 | BF_LONG (range=9) |
-| TK_STORMKICK | 413 | |
-| TK_DOWNKICK | 415 | |
-| TK_TURNKICK | 417 | |
-| TK_COUNTER | 419 | |
-
-**Source**: skill.c `calc_skillratio` BF_WEAPON switch (batch grep by class).
-**Estimated tokens**: 35–45k.
+| Q1 | 31 BF_WEAPON ratios in `_BF_WEAPON_RATIOS` + `_BF_WEAPON_HIT_COUNT_FN`. All level-linear skills + KN_PIERCE (hit_count=tgt.size+1, battle.c:4719-4722). IMPLEMENTED_BF_WEAPON_SKILLS=31. Deferred to Q3: AS_SPLASHER (+mastery), RG_BACKSTAP (bow split), BF_MISC traps/TF_THROWSTONE/BA_DISSONANCE. | G61 |
 
 ---
 
@@ -124,7 +66,7 @@ or has special mechanics — plus BF_MAGIC ratios not covered in Session B.
 | Constant | ID | Special mechanic |
 |---|---|---|
 | KN_AUTOCOUNTER | 61 | counter-attack; ratio may differ |
-| KN_CHARGEATK | 1001 | ratio scales with charge distance |
+| KN_CHARGEATK | 1001 | ratio scales with charge distance, should have a dropdown for distance |
 | MC_CARTREVOLUTION | 153 | damage scales with cart weight; needs weight input widget |
 | MO_INVESTIGATE | 266 | ratio depends on target DEF — tgt param in lambda |
 | MO_FINGEROFFENSIVE | 267 | spirit sphere count (build.mastery_levels or active count) |

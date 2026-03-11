@@ -5,11 +5,104 @@ from core.data_loader import loader
 from pmf.operations import _scale_floor, pmf_stats
 
 # Pre-renewal BF_WEAPON skill ratios from battle_calc_skillratio BF_WEAPON switch.
-# Source: skill.c calc_skillratio (BF_WEAPON path). Each lambda: (lv, tgt) → int ratio %.
+# Source: battle.c:2039 battle_calc_skillratio, case BF_WEAPON. Each lambda: (lv, tgt) → int ratio %.
 # tgt is a Target instance (or None for skills that don't depend on target stats).
-# Populated in Q1/Q2 sessions. Skills not listed fall back to ratio_base / ratio_per_level
-# in skills.json, or default 100 if those fields are absent.
-_BF_WEAPON_RATIOS: dict = {}
+# Skills not listed fall back to ratio_base / ratio_per_level in skills.json, or default 100.
+#
+# Deferred to Q3 (special mechanics — not simple level-linear):
+#   KN_PIERCE     — hit_count = tgt.size+1 (1/2/3 for Small/Med/Large, battle.c:4721); ratio only is 100+10*lv
+#   AS_SPLASHER   — ratio 500+50*lv but adds 20*AS_POISONREACT mastery (battle.c:2249-2252); BF_WEAPON #ifndef RENEWAL (skill.c:5200)
+#   RG_BACKSTAP   — ratio 300+40*lv but bow+penalty = 200+20*lv (battle.c:2152-2156)
+#   BA_DISSONANCE — BF_MISC, not BF_WEAPON; flat 30+10*lv +MUSICALLESSON (battle.c:4260-4263)
+#   TF_THROWSTONE — BF_MISC, flat 50 damage (battle.c:4257-4258)
+#   HT_LANDMINE   — BF_MISC, lv*(dex+75)*(100+int)/100 (battle.c:4228-4230)
+#   HT_BLASTMINE  — BF_MISC, lv*(dex/2+50)*(100+int)/100 (battle.c:4232-4233)
+#   HT_CLAYMORETRAP — BF_MISC, lv*(dex/2+75)*(100+int)/100 (battle.c:4235-4236)
+_BF_WEAPON_RATIOS: dict = {
+    # --- Swordman / Knight / Crusader ---
+    # battle.c:2042-2044
+    "SM_BASH":           lambda lv, tgt: 100 + 30 * lv,
+    # battle.c:2046-2048; BF_LONG (range=9 in skill_db); fire endow handled separately via SC
+    "SM_MAGNUM":         lambda lv, tgt: 100 + 20 * lv,
+    # battle.c:2091-2095; primary target only (flag=0); AoE ring cells use flag 1/2/3 (Q3)
+    "KN_BRANDISHSPEAR":  lambda lv, tgt: 100 + 20 * lv,
+    # battle.c:2085-2086
+    "KN_SPEARSTAB":      lambda lv, tgt: 100 + 20 * lv,
+    # battle.c:2088-2089; BF_LONG from lv2 (range=[3,5,7,9,11])
+    "KN_SPEARBOOMERANG": lambda lv, tgt: 100 + 50 * lv,
+    # battle.c:2078-2080; hit_count overridden by _BF_WEAPON_HIT_COUNT_FN below (tgt.size+1)
+    "KN_PIERCE":         lambda lv, tgt: 100 + 10 * lv,
+    # battle.c:2104-2106
+    "KN_BOWLINGBASH":    lambda lv, tgt: 100 + 40 * lv,
+    # battle.c:2164-2165
+    "CR_SHIELDCHARGE":   lambda lv, tgt: 100 + 20 * lv,
+    # battle.c:2167-2168; BF_LONG from lv2 (range=[3,5,7,9,11])
+    "CR_SHIELDBOOMERANG": lambda lv, tgt: 100 + 30 * lv,
+    # battle.c:2170-2179; RENEWAL adds 2hspear bonus — not applicable in pre-re
+    "CR_HOLYCROSS":      lambda lv, tgt: 100 + 35 * lv,
+
+    # --- Merchant ---
+    # battle.c:2050-2051
+    "MC_MAMMONITE":      lambda lv, tgt: 100 + 50 * lv,
+
+    # --- Thief / Assassin / Rogue ---
+    # No case in switch → default ratio=100. Include for dps_valid. battle.c:no case
+    "TF_POISON":         lambda lv, tgt: 100,
+    # battle.c:2117-2118
+    "TF_SPRINKLESAND":   lambda lv, tgt: 130,
+    # battle.c:2114-2115; skills.json number_of_hits=-8 (cosmetic); ratio encodes full damage
+    "AS_SONICBLOW":      lambda lv, tgt: 400 + 40 * lv,
+    # battle.c:2108-2109
+    "AS_GRIMTOOTH":      lambda lv, tgt: 100 + 20 * lv,
+    # No case in switch → default ratio=100 (atk=Misc in skill_db but BF_WEAPON in castend). battle.c:no case
+    "AS_VENOMKNIFE":     lambda lv, tgt: 100,
+    # battle.c:2158-2159
+    "RG_RAID":           lambda lv, tgt: 100 + 40 * lv,
+    # battle.c:2161-2162; "copies skill" is a gameplay mechanic, ratio itself is level-linear
+    "RG_INTIMIDATE":     lambda lv, tgt: 100 + 30 * lv,
+
+    # --- Archer / Hunter ---
+    # battle.c:2056-2058; BF_LONG (range=-9 → bow weapon)
+    "AC_DOUBLE":         lambda lv, tgt: 100 + 10 * (lv - 1),
+    # battle.c:2060-2066 #else RENEWAL
+    "AC_SHOWER":         lambda lv, tgt: 75 + 5 * lv,
+    # battle.c:2068-2070; BF_LONG
+    "AC_CHARGEARROW":    lambda lv, tgt: 150,
+    # battle.c:2357-2358; BF_LONG
+    "HT_PHANTASMIC":     lambda lv, tgt: 150,
+
+    # --- Monk ---
+    # battle.c:2211-2212
+    "MO_CHAINCOMBO":     lambda lv, tgt: 150 + 50 * lv,
+    # battle.c:2214-2215
+    "MO_COMBOFINISH":    lambda lv, tgt: 240 + 60 * lv,
+    # battle.c:2360-2361
+    "MO_BALKYOUNG":      lambda lv, tgt: 300,
+
+    # --- Bard / Dancer ---
+    # battle.c:2217-2219; both share same case; BF_LONG (range=9)
+    "BA_MUSICALSTRIKE":  lambda lv, tgt: 125 + 25 * lv,
+    "DC_THROWARROW":     lambda lv, tgt: 125 + 25 * lv,
+
+    # --- Taekwon ---
+    # battle.c:2281-2282
+    "TK_STORMKICK":      lambda lv, tgt: 160 + 20 * lv,
+    # battle.c:2278-2279
+    "TK_DOWNKICK":       lambda lv, tgt: 160 + 20 * lv,
+    # battle.c:2284-2285
+    "TK_TURNKICK":       lambda lv, tgt: 190 + 30 * lv,
+    # battle.c:2287-2288
+    "TK_COUNTER":        lambda lv, tgt: 190 + 30 * lv,
+}
+
+# Hit count overrides for BF_WEAPON skills whose div_ is set to target-size+1 in battle.c.
+# Each lambda: (lv, tgt) → int hit_count. Used instead of number_of_hits from skills.json.
+# battle.c:4719-4722: wd.div_ = (wd.div_>0 ? tstatus->size+1 : -(tstatus->size+1))
+# Target size: SZ_SMALL=0 → 1 hit, SZ_MEDIUM=1 → 2 hits, SZ_LARGE=2 → 3 hits.
+# Falls back to skills.json number_of_hits (= max value) when target is None.
+_BF_WEAPON_HIT_COUNT_FN: dict = {
+    "KN_PIERCE": lambda lv, tgt: (tgt.size + 1) if tgt is not None else 3,
+}
 
 # BF_WEAPON skills with confirmed ratios implemented in this module.
 # Automatically derived from _BF_WEAPON_RATIOS keys.
@@ -102,7 +195,11 @@ class SkillRatio:
         # Positive = actual multi-hit (each hit is separate; multiply pmf × n).
         # Source: battle.c:3823 damage_div_fix macro.
         hit_count_raw = 1
-        if skill_data:
+        hit_count_fn = _BF_WEAPON_HIT_COUNT_FN.get(skill_name)
+        if hit_count_fn is not None:
+            # Override: target-size-dependent hit count (e.g. KN_PIERCE: tgt.size+1).
+            hit_count_raw = hit_count_fn(skill.level, target)
+        elif skill_data:
             noh = skill_data.get("number_of_hits")
             if noh and skill.level <= len(noh):
                 hit_count_raw = noh[skill.level - 1]

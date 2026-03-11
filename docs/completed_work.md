@@ -1515,3 +1515,37 @@ New module-level helper replaces `effective_is_ranged(build, weapon)` in `_run_b
 Logic: if skill.id != 0 and skill has explicit non-negative range in skill_db → use range[lv-1] ≥ 5 as BF_LONG threshold; else fall back to effective_is_ranged.
 Source: battle.c:3789-3792 battle_range_type: `skill_get_range2 < 5 → BF_SHORT; else BF_LONG`.
 Also: SkillRatio.calculate() call in _run_branch updated to pass `target` as 5th argument.
+
+---
+
+## Session Q1 — BF_WEAPON Standard Ratios (All Classes)
+
+**30 skill lambdas added to `_BF_WEAPON_RATIOS`** (`core/calculators/modifiers/skill_ratio.py`)
+Source: `battle.c:2039 battle_calc_skillratio, case BF_WEAPON`.
+`IMPLEMENTED_BF_WEAPON_SKILLS` auto-derives from dict keys — DPS now unlocked for all 30 skills.
+
+Skills implemented (level-linear ratios, no runtime dependencies):
+- SM_BASH (100+30×lv), SM_MAGNUM (100+20×lv, BF_LONG)
+- KN_BRANDISHSPEAR (100+20×lv, primary target only), KN_SPEARSTAB (100+20×lv), KN_SPEARBOOMERANG (100+50×lv), KN_BOWLINGBASH (100+40×lv)
+- CR_SHIELDCHARGE (100+20×lv), CR_SHIELDBOOMERANG (100+30×lv), CR_HOLYCROSS (100+35×lv, no RENEWAL 2hspear bonus)
+- MC_MAMMONITE (100+50×lv)
+- TF_POISON (100, no case), TF_SPRINKLESAND (130), AS_SONICBLOW (400+40×lv), AS_GRIMTOOTH (100+20×lv), AS_VENOMKNIFE (100, no case), RG_RAID (100+40×lv), RG_INTIMIDATE (100+30×lv)
+- AC_DOUBLE (100+10×(lv-1)), AC_SHOWER (75+5×lv, #else RENEWAL), AC_CHARGEARROW (150), HT_PHANTASMIC (150)
+- MO_CHAINCOMBO (150+50×lv), MO_COMBOFINISH (240+60×lv), MO_BALKYOUNG (300)
+- BA_MUSICALSTRIKE (125+25×lv, BF_LONG), DC_THROWARROW (125+25×lv, BF_LONG)
+- TK_STORMKICK (160+20×lv), TK_DOWNKICK (160+20×lv), TK_TURNKICK (190+30×lv), TK_COUNTER (190+30×lv)
+
+Deferred to Q3 with source notes in comments:
+- KN_PIERCE: ratio=100+10×lv (battle.c:2078-2080) but hit_count=tgt.size+1 not skills.json's fixed 3 (battle.c:4721)
+- AS_SPLASHER: ratio=500+50×lv but +20×AS_POISONREACT mastery (battle.c:2249-2252); BF_WEAPON forced #ifndef RENEWAL (skill.c:5200)
+- RG_BACKSTAP: ratio=300+40×lv (non-bow) or 200+20×lv (bow+penalty) (battle.c:2152-2156)
+- BA_DISSONANCE, TF_THROWSTONE, HT_LANDMINE, HT_BLASTMINE, HT_CLAYMORETRAP: BF_MISC not BF_WEAPON (battle.c:4215-4237, 4257-4263)
+
+Note: skills.json has no ratio data — ratios live in battle.c (not skill_db.conf scraped source). Scraper gap recorded but not blocking.
+
+**KN_PIERCE addendum** (`core/calculators/modifiers/skill_ratio.py`)
+Added to `_BF_WEAPON_RATIOS`: ratio = `100 + 10*lv` (battle.c:2078-2080).
+Added `_BF_WEAPON_HIT_COUNT_FN` dict: maps skill name → `(lv, tgt) → int` for target-size-dependent hit counts.
+`KN_PIERCE` entry: `tgt.size + 1` (Small=1, Medium=2, Large=3); falls back to 3 when target=None (battle.c:4719-4722).
+In `calculate()`: checks `_BF_WEAPON_HIT_COUNT_FN` before `number_of_hits` from JSON.
+`IMPLEMENTED_BF_WEAPON_SKILLS` = 31.
