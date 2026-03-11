@@ -165,6 +165,13 @@ class BattlePipeline:
                 if is_eligible:
                     lh_crit_raw = self._run_branch(status, lh_weapon, skill, target, build, is_crit=True)
                     lh_crit = self._apply_dualwield_rate(lh_crit_raw, lh_rate, "LH", as_left_lv)
+                # Proc branches also need ATK_RATER: damage_div_fix only scales wd.damage (RH),
+                # then ATK_RATER/ATK_RATEL are applied on top (battle.c:5567 → 5923-5932).
+                # LH is NOT doubled by the proc — it contributes its normal value to the proc swing.
+                if double_hit is not None:
+                    double_hit = self._apply_dualwield_rate(double_hit, rh_rate, "RH", as_right_lv)
+                if double_hit_crit is not None:
+                    double_hit_crit = self._apply_dualwield_rate(double_hit_crit, rh_rate, "RH", as_right_lv)
 
         # DPS calculation.
         # adelay: (2000 - aspd*10)*2 ms; floored at 200ms to guard against ASPD overflow.
@@ -181,7 +188,8 @@ class BattlePipeline:
         crit_avg   = ((float(crit.avg_damage) + (float(katar_second_crit.avg_damage) if katar_second_crit else 0.0)
                        + (float(lh_crit.avg_damage) if lh_crit else float(lh_normal.avg_damage) if lh_normal else 0.0))
                       if crit else normal_avg)
-        double_avg = float(double_hit.avg_damage) if double_hit else 0.0
+        # Proc swing: RH is doubled, LH contributes its normal value (proc does not double LH).
+        double_avg = (float(double_hit.avg_damage) + (float(lh_normal.avg_damage) if lh_normal else 0.0)) if double_hit else 0.0
 
         # Probability tree — sums to 1.0:
         #   crits auto-hit (bypass FLEE), so weight = eff_crit, NOT eff_crit * h.

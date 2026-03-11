@@ -1418,9 +1418,28 @@ After `calculate_hit_chance()`, set `perfect_dodge = 0.0` when `build.target_mob
 Monsters have no perfect dodge vs player attacks; only player characters have flee2/perfect_dodge.
 Applies to both BF_WEAPON and BF_MAGIC call sites.
 
-**REMAINING (G52 not yet done)**
-TF_DOUBLE / GS_CHAINACTION proc interaction with dual-wield is not implemented.
-Specifically: does the proc fire once (RH weapon only) or independently per hand?
-Does the existing `double_hit` branch already handle RH correctly if the RH weapon is a Knife, or does the dual-wield rate need to also be applied to the proc branch?
-This requires reading the relevant battle.c block before any code is written.
-See gaps.md G52 REMAINING note.
+---
+
+## Session G52-cont — Dual-Wield: Proc Interaction + ASPD (G52 complete)
+
+**G52-9 — Proc + dual-wield interaction** (`core/calculators/battle_pipeline.py`)
+Source read: battle.c:4866-4883 (proc check on RH weapon type only), 5567 (`damage_div_fix` doubles
+`wd.damage` = RH only), 5923-5932 (ATK_RATER/ATK_RATEL applied after div fix).
+Result: proc doubles RH only; LH contributes its normal (undoubled) value to the proc swing.
+In the dual-wield block, after computing `lh_normal`/`lh_crit`, `_apply_dualwield_rate(rh_rate,"RH")`
+now also applied to `double_hit` and `double_hit_crit` when both are present.
+DPS `double_avg` fixed to include `lh_normal.avg` — proc swing is (RH×2 + LH).
+Source ref: battle.c:5151-5153 (ATK_RATER/ATK_RATEL macros), 5567 (damage_div_fix), 5920-5940.
+
+**G52-10 — Summary proc row dual-wield display** (`gui/sections/summary_section.py`)
+"Double" row now detects `lh_normal is not None` and shows `"RH×2 + LH"` split format,
+matching the Normal row's "rh + lh" pattern. Falls back to single value when not dual-wielding.
+
+**G52-11 — ASPD dual-wield formula** (`core/calculators/status_calculator.py`)
+Pre-renewal dual-wield ASPD uses `(aspd_base[RH] + aspd_base[LH]) * 7 / 10`, not just `aspd_base[RH]`.
+Source: status.c:3699-3701 (#else, not RENEWAL_ASPD):
+  `sd->weapontype > MAX_SINGLE_WEAPON_TYPE → (aspd_base[weapontype1] + aspd_base[weapontype2]) * 7 / 10`
+The ASPD block now detects dual-wield (job_id in {12,4013} + LH item equipped + weapon_type != "Unarmed")
+and applies the two-weapon formula. Single-weapon path unchanged.
+Note: the ×7/10 factor is the intrinsic speed penalty for swinging two weapons; AS_RIGHT/AS_LEFT and
+SC_ASSNCROS reduce `amotion` on top of this base.

@@ -207,14 +207,26 @@ class StatusCalculator:
             status.flee += (_mo_dodge_lv * 3) >> 1
 
         # === ASPD ===
-        # Pre-renewal formula (status.c status_base_amotion_pc, #ifndef RENEWAL_ASPD):
-        #   amotion = aspd_base[job][weapon_type]
+        # Pre-renewal formula (status.c status_base_amotion_pc, #else = not RENEWAL_ASPD):
+        #   Single weapon: amotion = aspd_base[job][RH_type]
+        #   Dual-wield:    amotion = (aspd_base[job][RH_type] + aspd_base[job][LH_type]) * 7 / 10
+        #   Source: status.c:3699-3701 (#else, pre-renewal)
         #   amotion -= amotion * (4*agi + dex) / 1000
         #   amotion += bonus.aspd_add  (flat from bAspd)
         #   amotion += 500-100*KN_CAVALIERMASTERY if riding peco (#ifndef RENEWAL_ASPD)
         #   clamped to [pc_max_aspd, 2000] = [2000 - max_aspd*10, 2000]
         # Displayed ASPD = (2000 - amotion) / 10  (client conversion)
-        base_amotion = loader.get_aspd_base(build.job_id, weapon.weapon_type)
+        _DUAL_WIELD_JOBS = frozenset({12, 4013})  # Assassin, Assassin Cross
+        lh_item_id = build.equipped.get("left_hand") if build.job_id in _DUAL_WIELD_JOBS else None
+        lh_item = loader.get_item(lh_item_id) if lh_item_id is not None else None
+        lh_weapon_type = lh_item.get("weapon_type", "Unarmed") if lh_item else "Unarmed"
+        if lh_weapon_type != "Unarmed":
+            # Dual-wield: (RH base + LH base) * 7 / 10  (status.c:3700-3701 #else)
+            rh_base = loader.get_aspd_base(build.job_id, weapon.weapon_type)
+            lh_base = loader.get_aspd_base(build.job_id, lh_weapon_type)
+            base_amotion = (rh_base + lh_base) * 7 // 10
+        else:
+            base_amotion = loader.get_aspd_base(build.job_id, weapon.weapon_type)
         amotion = base_amotion - base_amotion * (4 * status.agi + status.dex) // 1000
         amotion += build.bonus_aspd_add  # stub: flat amotion reduction from bAspd (Session 4)
 

@@ -182,12 +182,20 @@ class SummarySection(Section):
             self._c_max.setText(_DASH)
             self._crit_pct.setText("—")
 
-        # G54: Double-hit proc row — show only when proc branch is present
+        # G54: Double-hit proc row — show only when proc branch is present.
+        # G52 + G54: When dual-wielding, proc doubles RH only; LH contributes its normal value.
+        # Show "RH×2 + LH" split to match the Normal row's "rh + lh" pattern.
         if result.double_hit is not None:
             d = result.double_hit
-            self._d_min.setText(str(d.min_damage))
-            self._d_avg.setText(str(d.avg_damage))
-            self._d_max.setText(str(d.max_damage))
+            if result.lh_normal is not None:
+                lhd = result.lh_normal
+                self._d_min.setText(f"{d.min_damage} + {lhd.min_damage}")
+                self._d_avg.setText(f"{d.avg_damage} + {lhd.avg_damage}")
+                self._d_max.setText(f"{d.max_damage} + {lhd.max_damage}")
+            else:
+                self._d_min.setText(str(d.min_damage))
+                self._d_avg.setText(str(d.avg_damage))
+                self._d_max.setText(str(d.max_damage))
             self._proc_pct.setText(f"{result.proc_chance:.1f}% proc")
             for w in self._double_row_widgets:
                 w.setVisible(True)
