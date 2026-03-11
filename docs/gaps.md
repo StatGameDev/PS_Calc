@@ -112,6 +112,10 @@ _Status: [ ] open, [x] done, [~] partial_
 | G57 | [ ] | DPS: Markov chain steady-state for turn-sequence modelling. AttackDefinition has state_requirement/next_state seam; BattleResult.attacks carries the full distribution. Replace FormulaSelectionStrategy with MarkovSelectionStrategy (eigenvector of transition matrix) when combo/status-ailment turn-sequence systems are implemented. Prerequisite: G56 + combo/status session. | future |
 | G58 | [ ] | Card GUI rework: current card slot UI (G13) is a minimal inline-button approach. Needs a proper rework — per-slot card detail, correct card browser filtering for all edge cases (LH weapon vs shield fixed in G52; other slot types may have similar issues). Low priority until core pipeline work is complete. | future |
 
+| G61 | [~] | BF_WEAPON skill ratios Q1: standard ratios (all classes, no stat/HP/SP dependency). Infrastructure done (Prep-Q1): `_BF_WEAPON_RATIOS` dict + `calculate()` dict lookup + `target` param + `number_of_hits` cosmetic/actual fix + `_resolve_is_ranged()` BF_SHORT/BF_LONG override. Ratio lambdas to be populated in Session Q1. Source: skill.c calc_skillratio BF_WEAPON switch. | Q1 |
+| G62 | [ ] | BF_WEAPON skill ratios Q2: special-mechanic skills (KN_AUTOCOUNTER, KN_CHARGEATK, MC_CARTREVOLUTION, MO_INVESTIGATE, MO_FINGEROFFENSIVE, MO_EXTREMITYFIST, TK_JUMPKICK, HT_FREEZINGTRAP, AM_DEMONSTRATION, AM_ACIDTERROR, CR_GRANDCROSS). Also: remaining BF_MAGIC ratios not in Session B (bolt multi-hits, WZ_METEOR/JUPITEL/EARTHSPIKE/HEAVENDRIVE, AL_HEAL vs Undead, PR_TURNUNDEAD, PR_MAGNUS). | Q2 |
+| G63 | [ ] | BF_WEAPON/BF_MAGIC skill ratios Q3: Ninja hybrid (NJ_* BF_WEAPON + BF_MAGIC) and Gunslinger (all GS_* BF_WEAPON + GS_MAGICALBULLET BF_MAGIC). | Q3 |
+
 ---
 
 ## Completed Gaps (reference)

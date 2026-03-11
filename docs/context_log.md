@@ -1082,3 +1082,46 @@ Files created:
 Total est_tokens: ~4,976 reads + ~2,829 edits + ~868 creates + 6,000 fixed + ~30,000 conv ≈ 45,000
 Notes: Extended due to architecture discussion (hardcoded attack list → stored on BattleResult;
 crit auto-hit bug + proc-miss omission found and fixed; katar DPS correction). No Hercules reads.
+
+---
+
+## Session Prep-Q1  2026-03-11  claude-sonnet-4-6
+ctx_used: ___%   (fill in after session)
+
+Work items completed:
+- Session plan restructure: Q1/Q2 (melee vs ranged) → Q1/Q2/Q3 (standard / special+magic / hybrid)
+- _BF_WEAPON_RATIOS dict + IMPLEMENTED_BF_WEAPON_SKILLS auto-derive
+- SkillRatio.calculate() update: dict lookup, target param, number_of_hits fix
+- _resolve_is_ranged() BF_SHORT/BF_LONG override from skill range field
+- gaps.md: G61/G62/G63 added; session_roadmap.md Q1/Q2/Q3 written
+
+Files read:
+| file | lines | est_tok |
+|---|---|---|
+| docs/session_roadmap.md | 131 | ~524 |
+| docs/skill_lists/offensive_skills.md | 111 | ~444 |
+| docs/skill_lists/skills_by_job.md | 524 | ~2,096 |
+| docs/lookup/skill_ref.tsv (partial) | ~50 | ~200 |
+| core/calculators/modifiers/skill_ratio.py | 154 | ~1,078 |
+| core/models/skill.py | 9 | ~63 |
+| core/calculators/battle_pipeline.py | 453 | ~3,171 |
+| core/calculators/modifiers/final_rate_bonus.py | 51 | ~357 |
+| core/build_manager.py (grep) | ~24 | ~168 |
+| Hercules/src/map/battle.c (grep+sed) | ~40 | ~280 |
+| docs/gaps.md (partial) | ~100 | ~400 |
+| **subtotal reads** | **~1,651** | **~8,781** |
+
+Files edited:
+| file | lines_added | est_tok |
+|---|---|---|
+| core/calculators/modifiers/skill_ratio.py | +50 net | ~350 |
+| core/calculators/battle_pipeline.py | +22 net | ~154 |
+| docs/session_roadmap.md | +130 net | ~520 |
+| docs/gaps.md | +5 | ~100 |
+| docs/completed_work.md | +40 | ~160 |
+| docs/context_log.md | +this | ~150 |
+
+Files created: none
+
+Total est_tokens: ~8,781 reads + ~1,434 edits + 6,000 fixed + ~20,000 conv ≈ 36,000
+Notes: Light session — planning-heavy. 1 Hercules read (battle.c battle_range_type BF_LONG threshold).

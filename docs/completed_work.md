@@ -1484,3 +1484,34 @@ Two new BattleResult fields: `period_ms: float = 0.0`, `dps_valid: bool = True`.
 `dps_valid=True` only for magic skills in IMPLEMENTED_BF_MAGIC_SKILLS (keys of _BF_MAGIC_RATIOS).
 Unknown magic skills (non-damaging, non-ratio skills) correctly show N/A DPS.
 Same frozenset-gated pattern as BF_WEAPON so Q2 just populates both sets.
+
+---
+
+## Session Prep-Q1 — Skill Ratio Infrastructure + Session Restructure
+
+**Session plan restructure** (`docs/session_roadmap.md`)
+Replaced Q1/Q2 (melee vs ranged/magic class split) with Q1/Q2/Q3 divided by ratio complexity and attack type:
+- Q1: All BF_WEAPON standard ratios (constant/level-linear, no stat dependency); ~35 skills across all classes.
+- Q2: BF_WEAPON special-mechanic skills (HP/SP/DEF/weight/distance-dependent) + remaining BF_MAGIC ratios (bolt multi-hits, WZ missing, AL_HEAL/PR_TURNUNDEAD/PR_MAGNUS holy/undead conditional).
+- Q3: Ninja hybrid (NJ_* BF_WEAPON + BF_MAGIC in one class) + Gunslinger complete (GS_* BF_WEAPON + GS_MAGICALBULLET BF_MAGIC).
+New gaps G61/G62/G63 added to gaps.md tracking Q1/Q2/Q3 respectively.
+
+**_BF_WEAPON_RATIOS dict** (`core/calculators/modifiers/skill_ratio.py`)
+`_BF_WEAPON_RATIOS: dict = {}` added above _BF_MAGIC_RATIOS. Lambda signature: `(lv, tgt) → int ratio %`. Populated in Q1+ sessions.
+`IMPLEMENTED_BF_WEAPON_SKILLS` now derives from `frozenset(_BF_WEAPON_RATIOS.keys())` — DPS unlocks automatically as skills are added.
+
+**SkillRatio.calculate() updates** (`core/calculators/modifiers/skill_ratio.py`)
+- Added `target=None` parameter (passed through to ratio lambdas for Q2 stat-dependent skills).
+- Lookup priority: `_BF_WEAPON_RATIOS.get(skill_name)` → `ratio_per_level` JSON → `ratio_base` JSON → default 100.
+- Fixed hit_count to read from `number_of_hits` field (was reading non-existent `hit_count` key → always 1).
+  Negative number_of_hits = cosmetic (ratio encodes full damage; do NOT multiply PMF).
+  Positive number_of_hits = actual multi-hit (multiply PMF × n).
+  Source: battle.c:3823 damage_div_fix.
+- `note=` now reads `description` field (not non-existent `note` field).
+- Formula string updated to show cosmetic vs actual hits and ratio source.
+
+**_resolve_is_ranged()** (`core/calculators/battle_pipeline.py`)
+New module-level helper replaces `effective_is_ranged(build, weapon)` in `_run_branch`.
+Logic: if skill.id != 0 and skill has explicit non-negative range in skill_db → use range[lv-1] ≥ 5 as BF_LONG threshold; else fall back to effective_is_ranged.
+Source: battle.c:3789-3792 battle_range_type: `skill_get_range2 < 5 → BF_SHORT; else BF_LONG`.
+Also: SkillRatio.calculate() call in _run_branch updated to pass `target` as 5th argument.

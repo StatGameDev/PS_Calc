@@ -34,6 +34,26 @@ from core.calculators.skill_timing import calculate_skill_timing
 from core.calculators.modifiers.skill_ratio import IMPLEMENTED_BF_WEAPON_SKILLS, IMPLEMENTED_BF_MAGIC_SKILLS
 
 
+def _resolve_is_ranged(build: PlayerBuild, weapon: Weapon, skill: SkillInstance) -> bool:
+    """Determine BF_SHORT (False) vs BF_LONG (True) for a skill attack.
+
+    Skills with an explicit non-negative range in skill_db override the weapon-derived flag.
+    Negative range values mean 'use weapon range' and fall back to effective_is_ranged.
+    Source: battle.c:3789-3792 battle_range_type:
+        skill_get_range2 < 5 → BF_SHORT; else BF_LONG
+    """
+    if skill.id != 0:
+        skill_data = loader.get_skill(skill.id)
+        if skill_data:
+            range_list = skill_data.get("range", [])
+            if range_list:
+                idx = min(skill.level - 1, len(range_list) - 1)
+                r = range_list[idx]
+                if r >= 0:
+                    return r >= 5   # BF_LONG threshold from battle_range_type
+    return effective_is_ranged(build, weapon)
+
+
 class BattlePipeline:
     """
     Orchestrator for the full pre-renewal BF_WEAPON damage calculation.
@@ -336,7 +356,7 @@ class BattlePipeline:
         result = DamageResult()
         gear_bonuses = GearBonusAggregator.compute(build.equipped, build.refine_levels)
         GearBonusAggregator.apply_passive_bonuses(gear_bonuses, build.mastery_levels)
-        is_ranged = effective_is_ranged(build, weapon)
+        is_ranged = _resolve_is_ranged(build, weapon, skill)
 
         # Informational input steps — show values entering the pipeline
         result.add_step(
@@ -382,7 +402,7 @@ class BattlePipeline:
             )
 
         # === SKILL RATIO ===
-        pmf = SkillRatio.calculate(skill, pmf, build, result)
+        pmf = SkillRatio.calculate(skill, pmf, build, result, target)
 
         # === PROC HIT COUNT — mirrors damage_div_fix at battle.c:5567 (#ifndef RENEWAL) ===
         # For TF_DOUBLE / GS_CHAINACTION proc branches: proc_hit_count=2 doubles the total.

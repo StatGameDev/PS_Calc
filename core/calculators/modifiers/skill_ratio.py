@@ -4,10 +4,17 @@ from core.models.build import PlayerBuild
 from core.data_loader import loader
 from pmf.operations import _scale_floor, pmf_stats
 
+# Pre-renewal BF_WEAPON skill ratios from battle_calc_skillratio BF_WEAPON switch.
+# Source: skill.c calc_skillratio (BF_WEAPON path). Each lambda: (lv, tgt) → int ratio %.
+# tgt is a Target instance (or None for skills that don't depend on target stats).
+# Populated in Q1/Q2 sessions. Skills not listed fall back to ratio_base / ratio_per_level
+# in skills.json, or default 100 if those fields are absent.
+_BF_WEAPON_RATIOS: dict = {}
+
 # BF_WEAPON skills with confirmed ratios implemented in this module.
-# Empty in Q0; Q1+ will add entries here as each job's skills are implemented.
+# Automatically derived from _BF_WEAPON_RATIOS keys.
 # BattlePipeline checks this set to set dps_valid=True only when ratio is known.
-IMPLEMENTED_BF_WEAPON_SKILLS: frozenset[str] = frozenset()
+IMPLEMENTED_BF_WEAPON_SKILLS: frozenset[str] = frozenset(_BF_WEAPON_RATIOS.keys())
 
 # Pre-renewal magic skill ratios from battle_calc_skillratio BF_MAGIC switch.
 # Source: battle.c:1631-1785 #else not RENEWAL.
@@ -46,20 +53,34 @@ class SkillRatio:
     battle.c: wd.damage = (int64)wd.damage * ratio / 100;"""
 
     @staticmethod
-    def calculate(skill: SkillInstance, pmf: dict, build: PlayerBuild, result: DamageResult) -> dict:
-        """Applies skill ratio and hit count to the PMF."""
-        skill_data = loader.get_skill(skill.id)
+    def calculate(skill: SkillInstance, pmf: dict, build: PlayerBuild, result: DamageResult,
+                  target=None) -> dict:
+        """Applies skill ratio and hit count to the PMF.
 
-        if skill_data and skill_data.get("ratio_per_level"):
+        target is passed through to ratio lambdas so Q2 stat-dependent skills
+        (MO_INVESTIGATE, MO_EXTREMITYFIST, etc.) can access target DEF / HP.
+        """
+        skill_data = loader.get_skill(skill.id)
+        skill_name = skill_data.get("name", "") if skill_data else ""
+
+        # Priority: _BF_WEAPON_RATIOS dict (Q1+) → ratio_per_level in JSON → ratio_base → 100.
+        ratio_fn = _BF_WEAPON_RATIOS.get(skill_name)
+        if ratio_fn is not None:
+            ratio = ratio_fn(skill.level, target)
+            ratio_src = f"_BF_WEAPON_RATIOS[{skill_name!r}]"
+        elif skill_data and skill_data.get("ratio_per_level"):
             ratio_list = skill_data["ratio_per_level"]
             ratio = ratio_list[skill.level - 1] if skill.level <= len(ratio_list) else skill_data.get("ratio_base", 100)
+            ratio_src = f"ratio_per_level[lv{skill.level}]"
         else:
             ratio = skill_data.get("ratio_base", 100) if skill_data else 100
+            ratio_src = "ratio_base (default 100)"
 
         # SC_MAXIMIZEPOWER forces ratio = 100 (exact rule from battle_calc_skillratio)
         active = getattr(build, 'active_status_levels', {})
         if "SC_MAXIMIZEPOWER" in active:
             ratio = 100
+            ratio_src = "SC_MAXIMIZEPOWER override"
 
         # SC_OVERTHRUST / SC_OVERTHRUSTMAX add to skillratio (not flat ATK).
         # status.c: SC_OVERTHRUST val3 = 5*val1 (self-cast, pre-renewal)
@@ -76,18 +97,23 @@ class SkillRatio:
         # NK flags (loaded here – ready for future NK_IGNORE_DEF etc. checks)
         nk_flags = skill_data.get("nk_flags", []) if skill_data else []  # noqa: F841
 
-        # Multi-hit support (hit_count from skills.json)
-        hit_count = skill_data.get("hit_count", 1) if skill_data else 1
+        # Multi-hit from number_of_hits field.
+        # Negative = cosmetic (ratio already encodes full damage; do NOT multiply pmf).
+        # Positive = actual multi-hit (each hit is separate; multiply pmf × n).
+        # Source: battle.c:3823 damage_div_fix macro.
+        hit_count_raw = 1
+        if skill_data:
+            noh = skill_data.get("number_of_hits")
+            if noh and skill.level <= len(noh):
+                hit_count_raw = noh[skill.level - 1]
+        hit_count = hit_count_raw if hit_count_raw > 0 else 1
+        display_hits = abs(hit_count_raw)
+        cosmetic = hit_count_raw < 0
 
-        # Two sequential scale() calls — keep separate to preserve Hercules integer rounding
-        # battle.c: wd.damage = (int64)wd.damage * ratio / 100;  (then * hit_count separately)
+        # Two sequential scale() calls — keep separate to preserve Hercules integer rounding.
+        # battle.c: wd.damage = (int64)wd.damage * ratio / 100;  (then × hit_count separately)
         pmf = _scale_floor(pmf, ratio, 100)
         pmf = _scale_floor(pmf, hit_count, 1)
-
-        if skill_data and skill_data.get("ratio_per_level"):
-            src = f"ratio_per_level[lv{skill.level}]"
-        else:
-            src = "ratio_base"
 
         mn, mx, av = pmf_stats(pmf)
         result.add_step(
@@ -96,12 +122,15 @@ class SkillRatio:
             min_value=mn,
             max_value=mx,
             multiplier=ratio / 100.0,
-            note=skill_data.get("note", "") if skill_data else "",
-            formula=f"dmg * {ratio} // 100 * {hit_count}   (from skills.json {src})",
-            hercules_ref="battle.c: battle_calc_skillratio — base ratio from skill_get_damage\n"
-                         "battle.c:2919-2922: if(sc->data[SC_OVERTHRUST]) skillratio += sc->data[SC_OVERTHRUST]->val3;\n"
-                         "battle.c:2921-2922: if(sc->data[SC_OVERTHRUSTMAX]) skillratio += sc->data[SC_OVERTHRUSTMAX]->val2;\n"
-                         "battle.c: wd.damage = (int64)wd.damage * ratio / 100;"
+            note=skill_data.get("description", "") if skill_data else "",
+            formula=(f"dmg × {ratio}% × {display_hits} cosmetic hits   ({ratio_src})"
+                     if cosmetic else
+                     f"dmg × {ratio}% × {hit_count} hits   ({ratio_src})"),
+            hercules_ref="battle.c: battle_calc_skillratio — BF_WEAPON ratio from _BF_WEAPON_RATIOS dict\n"
+                         "battle.c:2919-2922: if(sc->data[SC_OVERTHRUST]) skillratio += SC_OVERTHRUST->val3;\n"
+                         "battle.c:2921-2922: if(sc->data[SC_OVERTHRUSTMAX]) skillratio += SC_OVERTHRUSTMAX->val2;\n"
+                         "battle.c: wd.damage = (int64)wd.damage * ratio / 100;\n"
+                         "battle.c:3823: damage_div_fix: div>1 → dmg*=div; div<0 → cosmetic (unchanged)"
         )
         return pmf
 
