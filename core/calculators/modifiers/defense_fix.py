@@ -32,15 +32,34 @@ class DefenseFix:
     @staticmethod
     def calculate(target: Target, build: PlayerBuild, gear_bonuses: GearBonuses,
                   pmf: dict, config: BattleConfig, result: DamageResult,
-                  is_crit: bool = False) -> dict:
+                  is_crit: bool = False, skill_name: str = "",
+                  nk_flags: list = None) -> dict:
         """VIT penalty applied to def1/def2 before reduction (exact source position).
 
-        On crit, flag.idef = flag.idef2 = 1 (battle.c:4988-4989, #ifndef RENEWAL),
-        which makes the defense condition (!flag.idef || !flag.idef2) = false,
-        so calc_defense is entirely skipped. DEF values remain available to read
-        but neither percentage nor VIT reduction is applied.
+        flag.idef sources (both cause calc_defense to be skipped entirely):
+          - Crit (#ifndef RENEWAL): flag.idef = flag.idef2 = 1 (battle.c:4988-4989)
+          - NK_IGNORE_DEF skill flag: flag.idef = flag.idef2 = 1 (battle.c:4673)
+        Both result in (!flag.idef || !flag.idef2) = false → calc_defense not called.
+
+        pdef sources (alter the formula inside calc_defense, pre-renewal #else block):
+          - MO_INVESTIGATE: flag.pdef = flag.pdef2 = 2 (battle.c:4759)
+            → damage = damage * 2 * (def1 + vit_def) / 100  (DEF amplifies instead of reduces)
+          - def_ratio_atk_ele/race card bonuses: flag.pdef = 1 (battle.c:5686/5694)
+            → damage = damage * 1 * (def1 + vit_def) / 100  (not yet implemented — needs gear_bonuses field)
+
+        AM_ACIDTERROR: def1 forced to 0 before formula (#ifndef RENEWAL, battle.c:1474).
         """
-        if is_crit:
+        nk_ignore = bool(nk_flags and "NK_IGNORE_DEF" in nk_flags)
+        if is_crit or nk_ignore:
+            if is_crit:
+                reason = "crit sets flag.idef=flag.idef2=1 (#ifndef RENEWAL, battle.c:4988-4989)"
+                src_ref = ("battle.c:4988-4989 (#ifndef RENEWAL):\n"
+                           "flag.idef = flag.idef2 = flag.hit = 1;\n"
+                           "Then: if((!flag.idef || !flag.idef2)) → false → calc_defense not called.")
+            else:
+                reason = "NK_IGNORE_DEF flag sets flag.idef=flag.idef2=1 (battle.c:4673)"
+                src_ref = ("battle.c:4673: flag.idef = flag.idef2 = (nk&NK_IGNORE_DEF) ? 1 : 0;\n"
+                           "Then: if((!flag.idef || !flag.idef2)) → false → calc_defense not called.")
             mn, mx, av = pmf_stats(pmf)
             result.add_step(
                 name="Defense Fix",
@@ -48,11 +67,9 @@ class DefenseFix:
                 min_value=mn,
                 max_value=mx,
                 multiplier=1.0,
-                note=f"BYPASSED — crit sets flag.idef=flag.idef2=1 (DEF {target.def_}, VIT {target.vit} readable but not applied)",
-                formula="no change (defense skipped on crit)",
-                hercules_ref="battle.c:4988-4989 (#ifndef RENEWAL):\n"
-                             "flag.idef = flag.idef2 = flag.hit = 1;\n"
-                             "Then: if((!flag.idef || !flag.idef2)) → false → calc_defense not called.",
+                note=f"BYPASSED — {reason} (DEF {target.def_}, VIT {target.vit} readable but not applied)",
+                formula="no change (defense skipped)",
+                hercules_ref=src_ref,
             )
             return pmf
 
@@ -72,6 +89,12 @@ class DefenseFix:
         else:
             note_def = f"Hard DEF {def1}"
 
+        # AM_ACIDTERROR: armor DEF forced to 0 in pre-renewal — only vit_def (soft DEF) applies.
+        # battle.c:1474 (#ifndef RENEWAL): if (skill_id == AM_ACIDTERROR) def1 = 0;
+        if skill_name == "AM_ACIDTERROR":
+            def1 = 0
+            note_def = f"Hard DEF forced 0 (AM_ACIDTERROR, battle.c:1474 #ifndef RENEWAL)"
+
         def2 = max(1, target.vit)
 
         # VIT penalty (full mechanic – uses target.targeted_count, respects bitmask)
@@ -87,12 +110,10 @@ class DefenseFix:
                         def1 -= penalty
                         def2 -= penalty
 
-        # Hard DEF: deterministic percentage — applies uniformly to the PMF
-        # battle.c: damage = damage * (100-def1) / 100;
-        pmf = _scale_floor(pmf, 100 - def1, 100)
+        is_pdef2 = (skill_name == "MO_INVESTIGATE")
 
-        # Soft VIT DEF: random range — independent of weapon ATK variance
-        # _subtract_uniform convolves the PMF with the negated uniform for exact crossing
+        # Soft VIT DEF range computation (needed for both normal and pdef=2 paths).
+        # _subtract_uniform convolves the PMF with the negated uniform for exact crossing.
         if target.is_pc:
             # battle.c: vit_def = def2*(def2-15)/150;
             # battle.c: vit_def = def2/2 + (vit_def>0 ? rnd()%vit_def : 0);
@@ -121,25 +142,56 @@ class DefenseFix:
             vd_avg = def2 + (variance_max // 2 if variance_max > 0 else 0)
             note_type = "monster"
 
-        pmf = _subtract_uniform(pmf, vd_min, vd_max)
-        pmf = _floor_at(pmf, 1)
-
-        mn, mx, av = pmf_stats(pmf)
-        result.add_step(
-            name="Defense Fix",
-            value=av,
-            min_value=mn,
-            max_value=mx,
-            multiplier=1.0,
-            note=f"{note_def} → ×{(100-def1)/100:.0%} + Soft DEF [{vd_min},{vd_max}] avg {vd_avg} ({note_type})",
-            formula=f"max(1, dmg * (100 - def1) // 100 - vit_def_range [{vd_min},{vd_max}])",
-            hercules_ref="battle.c: defType def1 = status_get_def(target); short def2 = tstatus->def2, vit_def;\n"
-                         "battle.c: if (def1 > 100) def1 = 100;\n"
-                         "battle.c: damage = damage * (100-def1) / 100;\n"
-                         "battle.c: if (!(flag & 1 || flag & 2)) damage -= vit_def;\n"
-                         "battle.c: if (tsd) { vit_def = def2*(def2-15)/150; vit_def = def2/2 + (vit_def>0 ? rnd()%vit_def : 0); }\n"
-                         "battle.c: else { vit_def = (def2/20)*(def2/20); vit_def = def2 + (vit_def>0 ? rnd()%vit_def : 0); }"
-        )
+        if is_pdef2:
+            # MO_INVESTIGATE — flag.pdef = flag.pdef2 = 2 (battle.c:4759)
+            # Pre-renewal formula (battle.c:1539 #else):
+            #   damage = damage * pdef * (def1 + vit_def) / 100;  (pdef=2)
+            #   vit_def NOT subtracted separately (flag&2 blocks the subtract)
+            # DEF reversal: higher DEF → higher damage. vit_def is random; avg used for PMF.
+            factor_lo = 2 * (def1 + vd_min)
+            factor_hi = 2 * (def1 + vd_max)
+            factor_avg = 2 * (def1 + vd_avg)
+            pmf = _scale_floor(pmf, factor_avg, 100)
+            pmf = _floor_at(pmf, 1)
+            mn, mx, av = pmf_stats(pmf)
+            result.add_step(
+                name="Defense Fix",
+                value=av,
+                min_value=mn,
+                max_value=mx,
+                multiplier=factor_avg / 100.0,
+                note=(f"MO_INVESTIGATE pdef=2: {note_def} + vit_def [{vd_min},{vd_max}] avg {vd_avg} ({note_type})"
+                      f" — multiplier range [{factor_lo/100:.2f}×, {factor_hi/100:.2f}×] avg {factor_avg/100:.2f}×"
+                      f" (PMF uses avg; higher DEF = more damage)"),
+                formula=f"dmg * 2 * (def1 + vit_def) / 100  [factor {factor_lo/100:.2f}–{factor_hi/100:.2f}×]",
+                hercules_ref="battle.c:4759: flag.pdef = flag.pdef2 = 2; (MO_INVESTIGATE)\n"
+                             "battle.c:1539 (#else pre-re): if(flag&2) damage = damage * pdef * (def1+vit_def) / 100;\n"
+                             "battle.c:1542 (#else pre-re): if(!(flag&1 || flag&2)) damage -= vit_def;  ← skipped for pdef=2",
+            )
+        else:
+            # Normal pre-renewal defense reduction.
+            # Hard DEF: deterministic percentage — applies uniformly to the PMF.
+            # battle.c: damage = damage * (100-def1) / 100;
+            pmf = _scale_floor(pmf, 100 - def1, 100)
+            # Soft VIT DEF: random range — independent of weapon ATK variance.
+            pmf = _subtract_uniform(pmf, vd_min, vd_max)
+            pmf = _floor_at(pmf, 1)
+            mn, mx, av = pmf_stats(pmf)
+            result.add_step(
+                name="Defense Fix",
+                value=av,
+                min_value=mn,
+                max_value=mx,
+                multiplier=1.0,
+                note=f"{note_def} → ×{(100-def1)/100:.0%} + Soft DEF [{vd_min},{vd_max}] avg {vd_avg} ({note_type})",
+                formula=f"max(1, dmg * (100 - def1) // 100 - vit_def_range [{vd_min},{vd_max}])",
+                hercules_ref="battle.c: defType def1 = status_get_def(target); short def2 = tstatus->def2, vit_def;\n"
+                             "battle.c: if (def1 > 100) def1 = 100;\n"
+                             "battle.c: damage = damage * (100-def1) / 100;\n"
+                             "battle.c: if (!(flag & 1 || flag & 2)) damage -= vit_def;\n"
+                             "battle.c: if (tsd) { vit_def = def2*(def2-15)/150; vit_def = def2/2 + (vit_def>0 ? rnd()%vit_def : 0); }\n"
+                             "battle.c: else { vit_def = (def2/20)*(def2/20); vit_def = def2 + (vit_def>0 ? rnd()%vit_def : 0); }"
+            )
         return pmf
 
     @staticmethod

@@ -423,8 +423,12 @@ class BattlePipeline:
         if is_crit:
             pmf = CritAtkRate.calculate(build, pmf, result)
 
-        # === DEFENSE FIX — skipped entirely on crit (flag.idef=flag.idef2=1) ===
-        pmf = DefenseFix.calculate(target, build, gear_bonuses, pmf, self.config, result, is_crit=is_crit)
+        # === DEFENSE FIX — skipped entirely on crit or NK_IGNORE_DEF (flag.idef=flag.idef2=1) ===
+        _sk_data = loader.get_skill(skill.id)
+        _sk_name = _sk_data.get("name", "") if _sk_data else ""
+        _nk_flags = _sk_data.get("nk_flags", []) if _sk_data else []
+        pmf = DefenseFix.calculate(target, build, gear_bonuses, pmf, self.config, result,
+                                   is_crit=is_crit, skill_name=_sk_name, nk_flags=_nk_flags)
 
         # === ACTIVE STATUS BONUSES — POST-defense (lines 5770-5795) ===
         pmf = ActiveStatusBonus.calculate(weapon, build, skill, pmf, result)

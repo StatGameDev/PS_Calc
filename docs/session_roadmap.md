@@ -60,42 +60,38 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ## Session Q2 — BF_WEAPON Special Mechanics + Remaining BF_MAGIC
 
-**Goal**: Skills whose ratio depends on runtime state (HP, SP, DEF, distance, weight)
-or has special mechanics — plus BF_MAGIC ratios not covered in Session B.
+**Status**: Partial. Session Q2-cont picks up remaining runtime-param skills.
 
-**BF_WEAPON special cases**:
+**Completed this session**:
+- `MO_FINGEROFFENSIVE`: ratio `100+50*lv` (battle.c:2191-2192); hit_count = `MO_CALLSPIRITS` level (proxy for `sd->spiritball_old`, battle.c:4698-4704)
+- `MO_INVESTIGATE`: ratio `100+75*lv` (battle.c:2194-2195); pdef=2 DEF reversal handled in DefenseFix (`flag.pdef=flag.pdef2=2`, battle.c:4759; formula `dmg×2×(def1+vit_def)/100`, battle.c:1539)
+- `AM_ACIDTERROR`: ratio `100+40*lv` (battle.c:2187-2189 `#else` pre-re); `def1` forced to 0 in DefenseFix (battle.c:1474 `#ifndef RENEWAL`) — only vit_def applies
+- `DefenseFix` updated: NK_IGNORE_DEF bypass (separate note from crit, battle.c:4673); `skill_name` + `nk_flags` params added; all three special branches documented in docstring
+- BF_MAGIC: all roadmap entries were already in `_BF_MAGIC_RATIOS` from prior sessions; nothing to add
 
-| Constant | ID | Special mechanic |
-|---|---|---|
-| KN_AUTOCOUNTER | 61 | counter-attack; ratio may differ |
-| KN_CHARGEATK | 1001 | ratio scales with charge distance, should have a dropdown for distance |
-| MC_CARTREVOLUTION | 153 | damage scales with cart weight; needs weight input widget |
-| MO_INVESTIGATE | 266 | ratio depends on target DEF — tgt param in lambda |
-| MO_FINGEROFFENSIVE | 267 | spirit sphere count (build.mastery_levels or active count) |
-| MO_EXTREMITYFIST | 271 | ratio based on remaining HP; HP input or current HP |
-| TK_JUMPKICK | 421 | SP-dependent; needs SP input or current SP |
-| HT_FREEZINGTRAP | 121 | trap + status; check if damage portion is standard |
-| AM_DEMONSTRATION | 229 | trap/bomb explosion |
-| AM_ACIDTERROR | 230 | armor DEF damage component; separate pipeline interaction |
-| CR_GRANDCROSS | 254 | complex: undead/demon split, self-damage, multi-hit AoE; full block |
+**Key source facts confirmed this session** (do not re-read next session):
+- `AM_ACIDTERROR` pre-re: `def1=0` at battle.c:1474 inside `battle_calc_defense`; the custom ATK+MATK block at battle.c:5424 is `#ifdef RENEWAL` only
+- `MO_INVESTIGATE`: `flag.pdef=flag.pdef2=2` at battle.c:4759; pre-re formula `damage=damage*pdef*(def1+vit_def)/100` at battle.c:1539; vit_def NOT subtracted separately when `flag&2`
+- `pdef=1` from `def_ratio_atk_ele/race` card bonuses (battle.c:5686/5694): sets flag via SD bonus, NOT flag-based idef. Formula `damage*1*(def1+vit_def)/100`. **Not yet implemented** — needs new `gear_bonuses` field + parser
+- Flag interaction: card `sd->ignore_def` zeros def1 INSIDE calc_defense BEFORE formula; with pdef=2 this gives `2*(0+vit_def)/100` — damage becomes weak vs low-VIT targets (correct, matches in-game)
+- `IMPLEMENTED_BF_WEAPON_SKILLS` now 34 (was 31)
 
-**Remaining BF_MAGIC** (Session B implemented 15 core Mage/Wizard ratios):
+**Remaining for Q2-cont (runtime-param skills — need `skill_params` on PlayerBuild + UI)**:
 
-| Constant | ID | Notes |
-|---|---|---|
-| MG_COLDBOLT | 14 | hit_count = lv; ratio 100 each |
-| MG_FIREBOLT | 19 | hit_count = lv; ratio 100 each |
-| MG_LIGHTNINGBOLT | 20 | hit_count = lv; ratio 100 each |
-| WZ_METEOR | 83 | |
-| WZ_JUPITEL | 84 | hit_count by level |
-| WZ_EARTHSPIKE | 90 | |
-| WZ_HEAVENDRIVE | 91 | |
-| AL_HEAL | 28 | offensive only vs Undead (element==9); normal heal otherwise |
-| PR_TURNUNDEAD | 77 | vs Undead only; check formula |
-| PR_MAGNUS | 79 | vs Undead/Demon; check formula |
+| Constant | Source confirmed | Formula | Input needed |
+|---|---|---|---|
+| `KN_CHARGEATK` | battle.c:2350-2359 | `+100*min((dist-1)//3,2)` → 100/200/300% | Distance dropdown (1–3 / 4–6 / 7+) |
+| `MC_CARTREVOLUTION` | battle.c:2120-2127 | `+50 + 100*cart_weight/cart_weight_max` → 150–250% | Cart weight % spinbox |
+| `MO_EXTREMITYFIST` | battle.c:2197-2206 `#ifndef RENEWAL` | `min(100+100*(8+sp/10),60000)` — **pre-re only** | Current SP spinbox |
+| `TK_JUMPKICK` | battle.c:2290-2300 | `30+10*lv` base; `+10*lv/3` if SC_COMBOATTACK running; ×2 if SC_STRUP | Running toggle |
 
-**Source**: skill.c `calc_skillratio` (BF_WEAPON special path); battle.c BF_MAGIC switch.
-**Estimated tokens**: 35–45k.
+**Still deferred**:
+- `CR_GRANDCROSS` — multi-target AoE + self-damage + undead/demon split, Q3+
+- `AL_HEAL` / `PR_TURNUNDEAD` — entirely custom code paths, not ratio switch; Q3+
+- `pdef=1` card bonuses — needs gear_bonuses field (add to gaps.md)
+
+**Source for Q2-cont** (formulas already confirmed above — no re-read needed):
+- `skill_params: dict[str, Any]` on PlayerBuild; GUI context-sensitive widget below skill selector
 
 ---
 

@@ -1642,3 +1642,44 @@ boolean flags. No Hercules source reads. Pure architectural improvement.
 
 **`buffs_section.py`** (→ `header_summary`):
 - Same pattern as passive_section; three update sites (`_on_changed`, `load_build`) + initial `__init__` call
+
+---
+
+## Session Q2 — BF_WEAPON Special Mechanics + DefenseFix Flags (partial G62)  2026-03-12
+
+**Q2-1 — MO_FINGEROFFENSIVE ratio + hit count** (`core/calculators/modifiers/skill_ratio.py`)
+- Ratio: `100 + 50*lv` (battle.c:2191-2192).
+- Hit count: special-cased before `_BF_WEAPON_HIT_COUNT_FN` lookup — reads `build.mastery_levels.get("MO_CALLSPIRITS", 1)` as proxy for `sd->spiritball_old` (spheres held at cast, battle.c:4698-4704, `finger_offensive_type=0` default).
+- Avoids the JSON `number_of_hits` fallback to ensure sphere count always governs (not the fixed max from skills.json).
+
+**Q2-2 — MO_INVESTIGATE ratio** (`core/calculators/modifiers/skill_ratio.py`)
+- Ratio: `100 + 75*lv` (battle.c:2194-2195).
+- Note: `flag.pdef = flag.pdef2 = 2` set by Hercules at battle.c:4759; DEF reversal handled in DefenseFix (see Q2-4).
+
+**Q2-3 — AM_ACIDTERROR ratio** (`core/calculators/modifiers/skill_ratio.py`)
+- Ratio: `100 + 40*lv` (battle.c:2187-2189, `#else` pre-renewal block).
+- Note: custom ATK+MATK block at battle.c:5424 is `#ifdef RENEWAL` only — pre-renewal uses standard pipeline.
+- `def1=0` override handled in DefenseFix (see Q2-4).
+
+**Q2-4 — DefenseFix flag handling** (`core/calculators/modifiers/defense_fix.py`, `core/calculators/battle_pipeline.py`)
+
+Three new behaviours added to `DefenseFix.calculate()`:
+
+*NK_IGNORE_DEF* (new `nk_flags: list` param):
+- Source: battle.c:4673 — `flag.idef = flag.idef2 = (nk&NK_IGNORE_DEF) ? 1 : 0;`
+- Same skip-everything outcome as crit but distinct display note.
+- `battle_pipeline.py` now passes `skill_name` + `nk_flags` (from `loader.get_skill`) to `DefenseFix.calculate()`.
+
+*AM_ACIDTERROR* (`def1 = 0`):
+- Source: battle.c:1474 (`#ifndef RENEWAL`) — `if (skill_id == AM_ACIDTERROR) def1 = 0;`
+- Applied after ignore_def_rate / VIT penalty adjustments and before the formula branch.
+- Normal pre-renewal formula then runs; only vit_def (soft DEF) reduces damage.
+
+*MO_INVESTIGATE* (pdef=2):
+- Source: battle.c:4759 (`flag.pdef = flag.pdef2 = 2`); battle.c:1539 (`#else` pre-re): `damage = damage * pdef * (def1+vit_def) / 100` (pdef=2).
+- DEF reversal: higher DEF → higher damage. vit_def NOT subtracted separately (battle.c:1542 `flag&2` blocks it).
+- PMF uses average vit_def; step note shows multiplier range `[factor_lo/100×, factor_hi/100×]`.
+
+*New gap G68*: `pdef=1` from `def_ratio_atk_ele/race` card bonuses (battle.c:5686/5694) not yet implemented — needs `gear_bonuses` field + parser.
+
+**`IMPLEMENTED_BF_WEAPON_SKILLS`**: 31 → 34 (added MO_FINGEROFFENSIVE, MO_INVESTIGATE, AM_ACIDTERROR).

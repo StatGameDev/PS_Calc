@@ -84,6 +84,26 @@ _BF_WEAPON_RATIOS: dict = {
     "BA_MUSICALSTRIKE":  lambda lv, tgt: 125 + 25 * lv,
     "DC_THROWARROW":     lambda lv, tgt: 125 + 25 * lv,
 
+    # --- Alchemist ---
+    # battle.c:2181-2182; complex MATK+ATK formula is #ifdef RENEWAL only; pre-re: standard pipeline
+    "AM_DEMONSTRATION":  lambda lv, tgt: 100 + 20 * lv,
+    # battle.c:2184-2189 #else (pre-re): skillratio += 40*lv; def1 forced to 0 in DefenseFix (battle.c:1474 #ifndef RENEWAL)
+    "AM_ACIDTERROR":     lambda lv, tgt: 100 + 40 * lv,
+
+    # --- Hunter traps ---
+    # battle.c:2073-2077 #ifndef RENEWAL
+    "HT_FREEZINGTRAP":   lambda lv, tgt: 50 + 10 * lv,
+
+    # --- Knight ---
+    # battle.c: no case in skillratio switch → default 100; BF_NORMAL flag + halved amotion (timing only)
+    "KN_AUTOCOUNTER":    lambda lv, tgt: 100,
+
+    # --- Monk ---
+    # battle.c:2191-2192; hit_count = spirit spheres held (battle.c:4698-4704: wd.div_ = sd->spiritball_old)
+    "MO_FINGEROFFENSIVE": lambda lv, tgt: 100 + 50 * lv,
+    # battle.c:2194-2195; flag.pdef=flag.pdef2=2 (battle.c:4759) → DEF reversal handled in DefenseFix
+    "MO_INVESTIGATE":    lambda lv, tgt: 100 + 75 * lv,
+
     # --- Taekwon ---
     # battle.c:2281-2282
     "TK_STORMKICK":      lambda lv, tgt: 160 + 20 * lv,
@@ -129,6 +149,21 @@ _BF_MAGIC_RATIOS = {
     "WZ_STORMGUST":    lambda lv, tgt: 100 + 40 * lv,
     "HW_NAPALMVULCAN": lambda lv, tgt: 70 + 10 * lv,
     "WZ_VERMILION":    lambda lv, tgt: 80 + 20 * lv,   # pre-re: #else RENEWAL (20*lv-20)
+    # battle.c:1631-1785 BF_MAGIC switch — no case for these skills → default ratio 100.
+    # Multi-hit comes from number_of_hits in skills.json (lv hits each).
+    # battle.c:4005-4007 (bolt spell section, inside default: block which calls calc_skillratio)
+    "MG_COLDBOLT":     lambda lv, tgt: 100,
+    "MG_FIREBOLT":     lambda lv, tgt: 100,
+    "MG_LIGHTNINGBOLT": lambda lv, tgt: 100,
+    # WZ_JUPITEL: no case in BF_MAGIC switch; multi-hit by level from skills.json
+    "WZ_JUPITEL":      lambda lv, tgt: 100,
+    # WZ_EARTHSPIKE: no case in BF_MAGIC switch; single-hit each cast
+    "WZ_EARTHSPIKE":   lambda lv, tgt: 100,
+    # WZ_HEAVENDRIVE/WZ_METEOR: case only in #ifdef RENEWAL block; pre-re uses default 100
+    "WZ_HEAVENDRIVE":  lambda lv, tgt: 100,
+    "WZ_METEOR":       lambda lv, tgt: 100,
+    # PR_MAGNUS: no case in BF_MAGIC switch; standard MATK × 100%; targets Undead/Demon only
+    "PR_MAGNUS":       lambda lv, tgt: 100,
 }
 
 # BF_MAGIC skills with confirmed ratios implemented above.
@@ -195,14 +230,19 @@ class SkillRatio:
         # Positive = actual multi-hit (each hit is separate; multiply pmf × n).
         # Source: battle.c:3823 damage_div_fix macro.
         hit_count_raw = 1
-        hit_count_fn = _BF_WEAPON_HIT_COUNT_FN.get(skill_name)
-        if hit_count_fn is not None:
-            # Override: target-size-dependent hit count (e.g. KN_PIERCE: tgt.size+1).
-            hit_count_raw = hit_count_fn(skill.level, target)
-        elif skill_data:
-            noh = skill_data.get("number_of_hits")
-            if noh and skill.level <= len(noh):
-                hit_count_raw = noh[skill.level - 1]
+        if skill_name == "MO_FINGEROFFENSIVE":
+            # battle.c:4698-4704: wd.div_ = sd->spiritball_old (spheres held at cast, finger_offensive_type=0)
+            # Proxy: MO_CALLSPIRITS level = max spheres the player can hold.
+            hit_count_raw = max(1, build.mastery_levels.get("MO_CALLSPIRITS", 1))
+        else:
+            hit_count_fn = _BF_WEAPON_HIT_COUNT_FN.get(skill_name)
+            if hit_count_fn is not None:
+                # Override: target-size-dependent hit count (e.g. KN_PIERCE: tgt.size+1).
+                hit_count_raw = hit_count_fn(skill.level, target)
+            elif skill_data:
+                noh = skill_data.get("number_of_hits")
+                if noh and skill.level <= len(noh):
+                    hit_count_raw = noh[skill.level - 1]
         hit_count = hit_count_raw if hit_count_raw > 0 else 1
         display_hits = abs(hit_count_raw)
         cosmetic = hit_count_raw < 0
