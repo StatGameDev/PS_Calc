@@ -154,6 +154,7 @@ class BuffsSection(Section):
     """
 
     changed = Signal()
+    spirit_spheres_changed = Signal(int)
 
     def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_modes, parent)
@@ -207,23 +208,25 @@ class BuffsSection(Section):
         buffs_grid.setVerticalSpacing(3)
 
         for row_i, (sc_key, display, has_lv, min_lv, max_lv, source_skill) in enumerate(_SELF_BUFFS):
-            chk = QCheckBox(display)
-            chk.setObjectName("passive_sc_check")
-            self._sc_checks[sc_key] = chk
-            buffs_grid.addWidget(chk, row_i, 0)
-
-            row_widgets: list[QWidget] = [chk]
             if has_lv:
-                combo = LevelWidget(max_lv, include_off=False)
-                combo.setEnabled(False)
+                # Combo-only: label in col 0, level dropdown (0=off) in col 1.
+                lbl = QLabel(display)
+                buffs_grid.addWidget(lbl, row_i, 0)
+                combo = LevelWidget(max_lv, include_off=True)
+                if sc_key == "MO_SPIRITBALL":
+                    combo.setItemText(0, "0")  # "0 spheres" reads more naturally than "Off"
+                    combo.valueChanged.connect(self.spirit_spheres_changed.emit)
                 self._sc_combos[sc_key] = combo
                 buffs_grid.addWidget(combo, row_i, 1)
-                row_widgets.append(combo)
-                chk.toggled.connect(combo.setEnabled)
                 combo.valueChanged.connect(self._on_changed)
-
-            chk.toggled.connect(self._on_changed)
-            self._self_buff_widgets[sc_key] = row_widgets
+                self._self_buff_widgets[sc_key] = [lbl, combo]
+            else:
+                chk = QCheckBox(display)
+                chk.setObjectName("passive_sc_check")
+                self._sc_checks[sc_key] = chk
+                buffs_grid.addWidget(chk, row_i, 0)
+                chk.toggled.connect(self._on_changed)
+                self._self_buff_widgets[sc_key] = [chk]
 
         self._sub_self.add_content_widget(buffs_widget)
         self.add_content_widget(self._sub_self)
@@ -468,19 +471,20 @@ class BuffsSection(Section):
         self._current_job_id = job_id
         show_all = self._show_all_chk.isChecked()
         job_skills = loader.get_skills_for_job(job_id)
-        for sc_key, _disp, _has_lv, _min, _max, source_skill in _SELF_BUFFS:
+        for sc_key, _disp, has_lv, _min, _max, source_skill in _SELF_BUFFS:
             visible = show_all or (source_skill in job_skills)
             for w in self._self_buff_widgets.get(sc_key, []):
                 w.setVisible(visible)
-            if not visible and sc_key in self._sc_checks:
-                chk = self._sc_checks[sc_key]
-                chk.blockSignals(True)
-                chk.setChecked(False)
-                chk.blockSignals(False)
-                if sc_key in self._sc_combos:
+            if not visible:
+                if has_lv and sc_key in self._sc_combos:
                     self._sc_combos[sc_key].blockSignals(True)
                     self._sc_combos[sc_key].setCurrentIndex(0)
                     self._sc_combos[sc_key].blockSignals(False)
+                elif sc_key in self._sc_checks:
+                    chk = self._sc_checks[sc_key]
+                    chk.blockSignals(True)
+                    chk.setChecked(False)
+                    chk.blockSignals(False)
 
         # Show Bard Songs only for Bard/Clown; Dancer Dances only for Dancer/Gypsy.
         self._sub_bard.setVisible(job_id in _BARD_JOBS)
@@ -495,14 +499,24 @@ class BuffsSection(Section):
         self.changed.emit()
         self.set_header_summary(self._build_summary())
 
+    def set_spirit_spheres(self, n: int) -> None:
+        """Update the Spirit Spheres dropdown without re-emitting spirit_spheres_changed."""
+        combo = self._sc_combos.get("MO_SPIRITBALL")
+        if combo is not None:
+            combo.blockSignals(True)
+            combo.setValue(n)
+            combo.blockSignals(False)
+
     def _build_summary(self) -> str:
         parts: list[str] = []
         for sc_key, display, has_lv, *_ in _SELF_BUFFS:
-            chk = self._sc_checks.get(sc_key)
-            if chk and chk.isChecked():
-                if has_lv and sc_key in self._sc_combos:
-                    parts.append(f"{display} {self._sc_combos[sc_key].value()}")
-                else:
+            if has_lv:
+                val = self._sc_combos[sc_key].value() if sc_key in self._sc_combos else 0
+                if val > 0:
+                    parts.append(f"{display} {val}")
+            else:
+                chk = self._sc_checks.get(sc_key)
+                if chk and chk.isChecked():
                     parts.append(display)
         return "  ·  ".join(parts) if parts else "No active buffs"
 
@@ -544,13 +558,11 @@ class BuffsSection(Section):
         # Self buffs
         active = build.active_status_levels
         for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
-            chk = self._sc_checks[sc_key]
-            is_active = sc_key in active
-            chk.setChecked(is_active)
-            if has_lv and sc_key in self._sc_combos:
-                combo = self._sc_combos[sc_key]
-                combo.setValue(active.get(sc_key, min_lv))
-                combo.setEnabled(is_active)
+            if has_lv:
+                self._sc_combos[sc_key].setValue(active.get(sc_key, 0))
+            else:
+                chk = self._sc_checks[sc_key]
+                chk.setChecked(sc_key in active)
 
         # Party buffs
         support = build.support_buffs
@@ -627,11 +639,13 @@ class BuffsSection(Section):
         for sc_key, *_ in _SELF_BUFFS:
             active.pop(sc_key, None)
         for sc_key, _, has_lv, min_lv, *_ in _SELF_BUFFS:
-            chk = self._sc_checks[sc_key]
-            if chk.isChecked():
-                if has_lv and sc_key in self._sc_combos:
-                    active[sc_key] = self._sc_combos[sc_key].value() or min_lv
-                else:
+            if has_lv:
+                val = self._sc_combos[sc_key].value() if sc_key in self._sc_combos else 0
+                if val > 0:
+                    active[sc_key] = val
+            else:
+                chk = self._sc_checks.get(sc_key)
+                if chk and chk.isChecked():
                     active[sc_key] = min_lv
         build.active_status_levels = active
 

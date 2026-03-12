@@ -1683,3 +1683,70 @@ Three new behaviours added to `DefenseFix.calculate()`:
 *New gap G68*: `pdef=1` from `def_ratio_atk_ele/race` card bonuses (battle.c:5686/5694) not yet implemented — needs `gear_bonuses` field + parser.
 
 **`IMPLEMENTED_BF_WEAPON_SKILLS`**: 31 → 34 (added MO_FINGEROFFENSIVE, MO_INVESTIGATE, AM_ACIDTERROR).
+
+---
+
+## Session Q2-cont — Runtime-Param Skill Ratios + skill_params UI  2026-03-12
+
+**Q2-cont-1 — `skill_params` on PlayerBuild** (`core/models/build.py`)
+- New field: `skill_params: Dict[str, Any] = field(default_factory=dict)`.
+- Not saved to disk; populated from GUI at each pipeline run via `collect_into()`.
+- Keys (all combat-context values): `KN_CHARGEATK_dist`, `MC_CARTREVOLUTION_pct`, `MO_EXTREMITYFIST_sp`, `TK_JUMPKICK_combo`, `TK_JUMPKICK_running`.
+
+**Q2-cont-2 — 4 param-skill ratios** (`core/calculators/modifiers/skill_ratio.py`)
+- Added `_BF_WEAPON_PARAM_SKILLS` frozenset (4 skills); `IMPLEMENTED_BF_WEAPON_SKILLS` now includes these.
+- Special-case blocks at the top of `SkillRatio.calculate()` before the `_BF_WEAPON_RATIOS` dict lookup (param skills need `build`, can't be plain lambdas).
+
+Formulas (all confirmed in session_roadmap.md Q2 — no re-read needed):
+| Skill | Formula | Source |
+|---|---|---|
+| `KN_CHARGEATK` | `100 + 100*min((dist-1)//3, 2)` | battle.c:2350-2359 |
+| `MC_CARTREVOLUTION` | `150 + cart_pct` (+50+100*w/wmax) | battle.c:2120-2127 |
+| `MO_EXTREMITYFIST` | `min(100+100*(8+sp//10), 60000)` | battle.c:2197-2206 #ifndef RENEWAL |
+| `TK_JUMPKICK` | `(30+10*lv [+10*lv//3 combo]) * (2 if running)` | battle.c:2290-2300 |
+
+**Q2-cont-3 — Skill params UI** (`gui/sections/combat_controls.py`)
+- New grid row 1 (params row): shown/hidden contextually when a param skill is selected.
+- Sub-widgets (all hidden by default):
+  - `KN_CHARGEATK`: `NoWheelCombo` with 3 distance tiers (1-3/4-6/7+), values 1/4/7.
+  - `MC_CARTREVOLUTION`: `NoWheelSpin` 0–100 step 10 with "%" suffix.
+  - `MO_EXTREMITYFIST`: `NoWheelSpin` 0–9999 for current SP.
+  - `TK_JUMPKICK`: Two `QCheckBox`es ("Combo Attack", "Running (TK_RUN)").
+- `_update_skill_params_ui()` called on every skill change.
+- `collect_into()` writes all param values to `build.skill_params`.
+- `load_build()` resets all params to defaults (not persisted).
+- Target row shifted from grid row 1→2, Env from row 2→3.
+
+**`IMPLEMENTED_BF_WEAPON_SKILLS`**: 34 → 38 (added 4 param skills).
+
+**Q2-cont addendum — MO_FINGEROFFENSIVE sphere priority** (`core/calculators/modifiers/skill_ratio.py`)
+Hit count lookup priority updated: `skill_params["MO_FINGEROFFENSIVE_spheres"]` → `active_status_levels["MO_SPIRITBALL"]` → `mastery_levels["MO_CALLSPIRITS"]` (mastery fallback kept for saves that never set the buff).
+
+**Q2-cont addendum — MO_FINGEROFFENSIVE sphere dropdown** (`gui/sections/combat_controls.py`)
+Sphere count `NoWheelCombo` (1–5) shown in params row when MO_FINGEROFFENSIVE selected.
+`load_build`: pre-populates from `active_status_levels["MO_SPIRITBALL"]` (or mastery fallback) so it starts in sync with the buffs section.
+
+---
+
+## Session GUI-BuffLvl — Buff Level Widget Rework + Sphere Sync  2026-03-12
+
+**GUI-BuffLvl-1 — Self buff level widgets** (`gui/sections/buffs_section.py`)
+All `has_lv=True` self buffs now use combo-only layout (QLabel in col 0 + `LevelWidget(include_off=True)` in col 1), replacing the previous QCheckBox + disabled-LevelWidget pair. Value 0 = inactive; value > 0 = active at that level.
+Special case: MO_SPIRITBALL relabels the off item from "Off" to "0" (sphere count reads naturally as a number).
+Affected buffs (12):
+SC_AURABLADE, SC_OVERTHRUST, SC_OVERTHRUSTMAX, SC_SPEARQUICKEN, SC_ENDURE, SC_DEFENDER,
+MO_SPIRITBALL, SC_EXPLOSIONSPIRITS, SC_CONCENTRATION, GS_COINS, SC_GS_GATLINGFEVER, SC_NJ_NEN.
+- `collect_into`: writes `active[sc_key] = val` if `val > 0`; no checkbox needed.
+- `load_build`: `combo.setValue(active.get(sc_key, 0))`.
+- `update_job`: on hide, resets combo to index 0 (no checkbox to uncheck).
+- `_build_summary`: includes combo-only buffs when value > 0.
+
+**GUI-BuffLvl-2 — Bidirectional spirit sphere sync** (`gui/sections/buffs_section.py`, `gui/sections/combat_controls.py`, `gui/main_window.py`)
+MO_SPIRITBALL combo (buffs section) and the MO_FINGEROFFENSIVE sphere combo (combat params) are now kept in sync in both directions:
+- `BuffsSection`: `spirit_spheres_changed = Signal(int)` emitted when MO_SPIRITBALL changes; `set_spirit_spheres(n)` setter uses blockSignals (no re-emit).
+- `CombatControlsSection`: `spirit_spheres_changed = Signal(int)` emitted from new `_on_spheres_changed()`; `set_spirit_spheres(n)` setter uses blockSignals (no re-emit).
+- `MainWindow._connect_builder_signals`: `buffs_section.spirit_spheres_changed → combat_controls.set_spirit_spheres`.
+- `MainWindow._connect_combat_signals`: `combat_controls.spirit_spheres_changed → buffs_section.set_spirit_spheres`.
+Circular loop avoided by design: setter methods never re-emit the signal.
+
+**Known bug (G69) — MO_EXTREMITYFIST ratio**: Flagged for Q3 fix. Formula in `skill_ratio.py` is incorrect. Re-read battle.c:2197-2206 #ifndef RENEWAL before fixing.

@@ -203,6 +203,7 @@ class MainWindow(QMainWindow):
         self._equip_section.equipment_changed.connect(self._on_build_changed)
         self._passive_section.passives_changed.connect(self._on_build_changed)
         self._buffs_section.changed.connect(self._on_build_changed)
+        self._buffs_section.spirit_spheres_changed.connect(self._combat_controls.set_spirit_spheres)
         self._player_debuffs.changed.connect(self._on_build_changed)
         self._active_items.bonuses_changed.connect(self._on_build_changed)
         self._incoming_damage.config_changed.connect(self._run_battle_pipeline)
@@ -210,6 +211,7 @@ class MainWindow(QMainWindow):
     def _connect_combat_signals(self) -> None:
         """Wire combat section change signals to _on_build_changed."""
         self._combat_controls.combat_settings_changed.connect(self._on_build_changed)
+        self._combat_controls.spirit_spheres_changed.connect(self._buffs_section.set_spirit_spheres)
 
     # ── Build list helpers ─────────────────────────────────────────────────
 

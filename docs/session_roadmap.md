@@ -55,43 +55,8 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | Q1 | 31 BF_WEAPON ratios in `_BF_WEAPON_RATIOS` + `_BF_WEAPON_HIT_COUNT_FN`. All level-linear skills + KN_PIERCE (hit_count=tgt.size+1, battle.c:4719-4722). IMPLEMENTED_BF_WEAPON_SKILLS=31. Deferred to Q3: AS_SPLASHER (+mastery), RG_BACKSTAP (bow split), BF_MISC traps/TF_THROWSTONE/BA_DISSONANCE. | G61 |
 | GUI-Rework | `gui/widgets/` package: `NoWheelCombo`, `NoWheelSpin`, `LevelWidget`. 9 files swept. `combat_controls`: `_sync_level_widget` + `_on_skill_changed`. `passive_section`: `LevelWidget` for masteries. `buffs_section`: full overhaul — lesson combos extracted to `_bard_lesson`/`_dancer_lesson`, `isinstance` guard eliminated. | — |
 | GUI-CompactRework2 | `compact_mode: str` → `compact_modes: list[str]`; two flags: `"slim_content"` (compact widget in slim, correct toggle) + `"header_summary"` (always-visible header label, auto-collapses). Base class owns all frame/state; subclass hooks only show/hide widget. passive + buffs → header_summary. New doc: `docs/compact_modes.md`. | — |
-
----
-
-## Session Q2 — BF_WEAPON Special Mechanics + Remaining BF_MAGIC
-
-**Status**: Partial. Session Q2-cont picks up remaining runtime-param skills.
-
-**Completed this session**:
-- `MO_FINGEROFFENSIVE`: ratio `100+50*lv` (battle.c:2191-2192); hit_count = `MO_CALLSPIRITS` level (proxy for `sd->spiritball_old`, battle.c:4698-4704)
-- `MO_INVESTIGATE`: ratio `100+75*lv` (battle.c:2194-2195); pdef=2 DEF reversal handled in DefenseFix (`flag.pdef=flag.pdef2=2`, battle.c:4759; formula `dmg×2×(def1+vit_def)/100`, battle.c:1539)
-- `AM_ACIDTERROR`: ratio `100+40*lv` (battle.c:2187-2189 `#else` pre-re); `def1` forced to 0 in DefenseFix (battle.c:1474 `#ifndef RENEWAL`) — only vit_def applies
-- `DefenseFix` updated: NK_IGNORE_DEF bypass (separate note from crit, battle.c:4673); `skill_name` + `nk_flags` params added; all three special branches documented in docstring
-- BF_MAGIC: all roadmap entries were already in `_BF_MAGIC_RATIOS` from prior sessions; nothing to add
-
-**Key source facts confirmed this session** (do not re-read next session):
-- `AM_ACIDTERROR` pre-re: `def1=0` at battle.c:1474 inside `battle_calc_defense`; the custom ATK+MATK block at battle.c:5424 is `#ifdef RENEWAL` only
-- `MO_INVESTIGATE`: `flag.pdef=flag.pdef2=2` at battle.c:4759; pre-re formula `damage=damage*pdef*(def1+vit_def)/100` at battle.c:1539; vit_def NOT subtracted separately when `flag&2`
-- `pdef=1` from `def_ratio_atk_ele/race` card bonuses (battle.c:5686/5694): sets flag via SD bonus, NOT flag-based idef. Formula `damage*1*(def1+vit_def)/100`. **Not yet implemented** — needs new `gear_bonuses` field + parser
-- Flag interaction: card `sd->ignore_def` zeros def1 INSIDE calc_defense BEFORE formula; with pdef=2 this gives `2*(0+vit_def)/100` — damage becomes weak vs low-VIT targets (correct, matches in-game)
-- `IMPLEMENTED_BF_WEAPON_SKILLS` now 34 (was 31)
-
-**Remaining for Q2-cont (runtime-param skills — need `skill_params` on PlayerBuild + UI)**:
-
-| Constant | Source confirmed | Formula | Input needed |
-|---|---|---|---|
-| `KN_CHARGEATK` | battle.c:2350-2359 | `+100*min((dist-1)//3,2)` → 100/200/300% | Distance dropdown (1–3 / 4–6 / 7+) |
-| `MC_CARTREVOLUTION` | battle.c:2120-2127 | `+50 + 100*cart_weight/cart_weight_max` → 150–250% | Cart weight % spinbox |
-| `MO_EXTREMITYFIST` | battle.c:2197-2206 `#ifndef RENEWAL` | `min(100+100*(8+sp/10),60000)` — **pre-re only** | Current SP spinbox |
-| `TK_JUMPKICK` | battle.c:2290-2300 | `30+10*lv` base; `+10*lv/3` if SC_COMBOATTACK running; ×2 if SC_STRUP | Running toggle |
-
-**Still deferred**:
-- `CR_GRANDCROSS` — multi-target AoE + self-damage + undead/demon split, Q3+
-- `AL_HEAL` / `PR_TURNUNDEAD` — entirely custom code paths, not ratio switch; Q3+
-- `pdef=1` card bonuses — needs gear_bonuses field (add to gaps.md)
-
-**Source for Q2-cont** (formulas already confirmed above — no re-read needed):
-- `skill_params: dict[str, Any]` on PlayerBuild; GUI context-sensitive widget below skill selector
+| Q2 | MO_FINGEROFFENSIVE/MO_INVESTIGATE/AM_ACIDTERROR ratios; DefenseFix NK_IGNORE_DEF + pdef=2 + def1=0. KN_CHARGEATK/MC_CARTREVOLUTION/MO_EXTREMITYFIST/TK_JUMPKICK ratios via skill_params; context-sensitive params UI row. IMPLEMENTED_BF_WEAPON_SKILLS=38. | G62 |
+| GUI-BuffLvl | All has_lv=True self buffs → combo-only (label + LevelWidget, no checkbox). Bidirectional sphere sync: MO_SPIRITBALL ↔ MO_FINGEROFFENSIVE sphere dropdown via new spirit_spheres_changed signals + set_spirit_spheres() setters. Known bug G69 (MO_EXTREMITYFIST formula) flagged for Q3. | — |
 
 ---
 
@@ -138,6 +103,9 @@ both need Q1/Q2 infrastructure fully in place first.
 
 **Source**: skill.c `calc_skillratio` (NJ_* and GS_* cases).
 **Estimated tokens**: 35–45k.
+
+**Also in Q3 — G69 MO_EXTREMITYFIST formula fix**: Current formula in `skill_ratio.py` is incorrect.
+Re-read battle.c:2197-2206 #ifndef RENEWAL and fix before shipping.
 
 **Also in Q3 — BF_MISC skill filter wiring**: When implementing the deferred BF_MISC skills,
 add `_BF_MISC_RATIOS: dict = {}` + `IMPLEMENTED_BF_MISC_SKILLS =

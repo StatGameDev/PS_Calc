@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -113,3 +113,12 @@ class PlayerBuild:
     # Ensemble keys: "SC_DRUMBATTLE", "SC_NIBELUNGEN", "SC_SIEGFRIED" (level only).
     # None for override key = use shared caster stat. int = use that value.
     song_state: Dict[str, object] = field(default_factory=dict)
+
+    # Q2-cont: Skill runtime parameters — combat-context values that vary per cast.
+    # Not saved to disk; reset to UI defaults on build load.
+    # Keys: "KN_CHARGEATK_dist" (int, cell distance 1/4/7 representing tiers),
+    #       "MC_CARTREVOLUTION_pct" (int 0-100, cart weight %),
+    #       "MO_EXTREMITYFIST_sp" (int, current SP at cast time),
+    #       "TK_JUMPKICK_combo" (bool, SC_COMBOATTACK active),
+    #       "TK_JUMPKICK_running" (bool, SC_STRUP / TK_RUN active).
+    skill_params: Dict[str, Any] = field(default_factory=dict)
