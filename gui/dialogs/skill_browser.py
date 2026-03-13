@@ -16,11 +16,14 @@ from PySide6.QtWidgets import (
 
 from core.calculators.modifiers.skill_ratio import (
     IMPLEMENTED_BF_MAGIC_SKILLS,
+    IMPLEMENTED_BF_MISC_SKILLS,
     IMPLEMENTED_BF_WEAPON_SKILLS,
 )
 from core.data_loader import loader
 
-_IMPLEMENTED_SKILLS: frozenset[str] = IMPLEMENTED_BF_WEAPON_SKILLS | IMPLEMENTED_BF_MAGIC_SKILLS
+_IMPLEMENTED_SKILLS: frozenset[str] = (
+    IMPLEMENTED_BF_WEAPON_SKILLS | IMPLEMENTED_BF_MAGIC_SKILLS | IMPLEMENTED_BF_MISC_SKILLS
+)
 
 _COLUMNS = ["ID", "Name", "Type", "Description"]
 

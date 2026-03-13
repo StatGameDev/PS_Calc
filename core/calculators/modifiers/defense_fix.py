@@ -2,6 +2,7 @@ from core.models.target import Target
 from core.models.damage import DamageResult
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
+from core.models.skill import SkillInstance
 from core.config import BattleConfig
 from pmf.operations import _scale_floor, _subtract_uniform, _floor_at, pmf_stats
 
@@ -32,8 +33,7 @@ class DefenseFix:
     @staticmethod
     def calculate(target: Target, build: PlayerBuild, gear_bonuses: GearBonuses,
                   pmf: dict, config: BattleConfig, result: DamageResult,
-                  is_crit: bool = False, skill_name: str = "",
-                  nk_flags: list = None) -> dict:
+                  is_crit: bool = False, skill: SkillInstance = None) -> dict:
         """VIT penalty applied to def1/def2 before reduction (exact source position).
 
         flag.idef sources (both cause calc_defense to be skipped entirely):
@@ -49,7 +49,7 @@ class DefenseFix:
 
         AM_ACIDTERROR: def1 forced to 0 before formula (#ifndef RENEWAL, battle.c:1474).
         """
-        nk_ignore = bool(nk_flags and "NK_IGNORE_DEF" in nk_flags)
+        nk_ignore = skill.nk_ignore_def if skill is not None else False
         if is_crit or nk_ignore:
             if is_crit:
                 reason = "crit sets flag.idef=flag.idef2=1 (#ifndef RENEWAL, battle.c:4988-4989)"
@@ -91,7 +91,7 @@ class DefenseFix:
 
         # AM_ACIDTERROR: armor DEF forced to 0 in pre-renewal — only vit_def (soft DEF) applies.
         # battle.c:1474 (#ifndef RENEWAL): if (skill_id == AM_ACIDTERROR) def1 = 0;
-        if skill_name == "AM_ACIDTERROR":
+        if skill is not None and skill.name == "AM_ACIDTERROR":
             def1 = 0
             note_def = f"Hard DEF forced 0 (AM_ACIDTERROR, battle.c:1474 #ifndef RENEWAL)"
 
@@ -110,7 +110,7 @@ class DefenseFix:
                         def1 -= penalty
                         def2 -= penalty
 
-        is_pdef2 = (skill_name == "MO_INVESTIGATE")
+        is_pdef2 = (skill is not None and skill.name == "MO_INVESTIGATE")
 
         # Soft VIT DEF range computation (needed for both normal and pdef=2 paths).
         # _subtract_uniform convolves the PMF with the negated uniform for exact crossing.

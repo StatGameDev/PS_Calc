@@ -57,60 +57,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | GUI-CompactRework2 | `compact_mode: str` → `compact_modes: list[str]`; two flags: `"slim_content"` (compact widget in slim, correct toggle) + `"header_summary"` (always-visible header label, auto-collapses). Base class owns all frame/state; subclass hooks only show/hide widget. passive + buffs → header_summary. New doc: `docs/compact_modes.md`. | — |
 | Q2 | MO_FINGEROFFENSIVE/MO_INVESTIGATE/AM_ACIDTERROR ratios; DefenseFix NK_IGNORE_DEF + pdef=2 + def1=0. KN_CHARGEATK/MC_CARTREVOLUTION/MO_EXTREMITYFIST/TK_JUMPKICK ratios via skill_params; context-sensitive params UI row. IMPLEMENTED_BF_WEAPON_SKILLS=38. | G62 |
 | GUI-BuffLvl | All has_lv=True self buffs → combo-only (label + LevelWidget, no checkbox). Bidirectional sphere sync: MO_SPIRITBALL ↔ MO_FINGEROFFENSIVE sphere dropdown via new spirit_spheres_changed signals + set_spirit_spheres() setters. Known bug G69 (MO_EXTREMITYFIST formula) flagged for Q3. | — |
-
----
-
-## Session Q3 — Ninja Hybrid + Gunslinger
-
-**Goal**: Ninja (true BF_WEAPON + BF_MAGIC hybrid class) and Gunslinger (all-ranged BF_WEAPON
-plus one BF_MAGIC outlier). Natural grouping: both are non-transcendent special classes,
-both need Q1/Q2 infrastructure fully in place first.
-
-**Ninja** (NJ_*):
-
-| Constant | ID | Type | Notes |
-|---|---|---|---|
-| NJ_SYURIKEN | 523 | BF_WEAPON | thrown |
-| NJ_KUNAI | 524 | BF_WEAPON | thrown |
-| NJ_HUUMA | 525 | BF_WEAPON | thrown |
-| NJ_KASUMIKIRI | 528 | BF_WEAPON | |
-| NJ_KIRIKAGE | 530 | BF_WEAPON | |
-| NJ_ZENYNAGE | 526 | BF_WEAPON | Zeny-based damage |
-| NJ_ISSEN | 544 | BF_WEAPON | HP-based damage |
-| NJ_KOUENKA | 534 | BF_MAGIC | fire |
-| NJ_KAENSIN | 535 | BF_MAGIC | ground fire; advanced modelling |
-| NJ_BAKUENRYU | 536 | BF_MAGIC | |
-| NJ_HYOUSENSOU | 537 | BF_MAGIC | |
-| NJ_HYOUSYOURAKU | 539 | BF_MAGIC | |
-| NJ_RAIGEKISAI | 541 | BF_MAGIC | |
-| NJ_KAMAITACHI | 542 | BF_MAGIC | |
-
-**Gunslinger** (GS_*):
-
-| Constant | ID | Type | Notes |
-|---|---|---|---|
-| GS_TRIPLEACTION | 502 | BF_WEAPON | |
-| GS_BULLSEYE | 503 | BF_WEAPON | |
-| GS_TRACKING | 512 | BF_WEAPON | |
-| GS_PIERCINGSHOT | 514 | BF_WEAPON | |
-| GS_RAPIDSHOWER | 515 | BF_WEAPON | |
-| GS_DESPERADO | 516 | BF_WEAPON | |
-| GS_DUST | 518 | BF_WEAPON | |
-| GS_FULLBUSTER | 519 | BF_WEAPON | |
-| GS_SPREADATTACK | 520 | BF_WEAPON | |
-| GS_FLING | 501 | BF_WEAPON | DEF reduction + special damage |
-| GS_MAGICALBULLET | 507 | BF_MAGIC | only BF_MAGIC gunslinger skill |
-
-**Source**: skill.c `calc_skillratio` (NJ_* and GS_* cases).
-**Estimated tokens**: 35–45k.
-
-**Also in Q3 — G69 MO_EXTREMITYFIST formula fix**: Current formula in `skill_ratio.py` is incorrect.
-Re-read battle.c:2197-2206 #ifndef RENEWAL and fix before shipping.
-
-**Also in Q3 — BF_MISC skill filter wiring**: When implementing the deferred BF_MISC skills,
-add `_BF_MISC_RATIOS: dict = {}` + `IMPLEMENTED_BF_MISC_SKILLS =
-frozenset(_BF_MISC_RATIOS.keys())` to `skill_ratio.py`, then add `IMPLEMENTED_BF_MISC_SKILLS`
-to `_IMPLEMENTED_SKILLS` in both `combat_controls.py` and `skill_browser.py`.
+| Q3 | G69 arch fix (SkillInstance hydrated before _run_branch; nk_ignore_def/flee/name fields; DefenseFix/MasteryFix take skill param). G55 mastery fix (NJ_TOBIDOUGU skill-based + NJ_KUNAI +60). 9 GS BF_WEAPON + 5 NJ BF_WEAPON (incl. NJ_SYURIKEN +4×lv flat) + 7 NJ BF_MAGIC ratios + BF_MISC infra. KN_PIERCE size crash fix. NJ BF_MAGIC roadmap table was wrong — corrected from source read. Charm bonuses deferred (G71). IMPLEMENTED_BF_WEAPON_SKILLS=55, BF_MAGIC=30. | G63, G55, G69 |
 
 ---
 

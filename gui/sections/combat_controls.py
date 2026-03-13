@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from core.calculators.modifiers.skill_ratio import (
     IMPLEMENTED_BF_MAGIC_SKILLS,
+    IMPLEMENTED_BF_MISC_SKILLS,
     IMPLEMENTED_BF_WEAPON_SKILLS,
 )
 from core.data_loader import loader
@@ -27,7 +28,9 @@ from core.models.skill import SkillInstance
 from gui.section import Section
 from gui.widgets import LevelWidget, NoWheelCombo, NoWheelSpin
 
-_IMPLEMENTED_SKILLS: frozenset[str] = IMPLEMENTED_BF_WEAPON_SKILLS | IMPLEMENTED_BF_MAGIC_SKILLS
+_IMPLEMENTED_SKILLS: frozenset[str] = (
+    IMPLEMENTED_BF_WEAPON_SKILLS | IMPLEMENTED_BF_MAGIC_SKILLS | IMPLEMENTED_BF_MISC_SKILLS
+)
 
 # Jobs that can use plagiarised skills from other jobs (Rogue=17, Stalker=34)
 _PLAGIARISM_JOBS: frozenset[int] = frozenset({17, 34})

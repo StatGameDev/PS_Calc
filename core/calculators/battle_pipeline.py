@@ -90,6 +90,17 @@ class BattlePipeline:
         attack_type = skill_data.get("attack_type", "Weapon") if skill_data else "Weapon"
         skill_name: str = skill_data.get("name", "") if skill_data else ""
 
+        # Hydrate SkillInstance from skills.json before any _run_branch call.
+        # Ensures NK flags and SizeFix bypass are correctly set for all branches.
+        skill.name = skill_name
+        damage_type = skill_data.get("damage_type", []) if skill_data else []
+        skill.nk_ignore_def  = "IgnoreDefense" in damage_type
+        skill.nk_ignore_flee = "IgnoreFlee" in damage_type
+        # SizeFix bypass: hardcoded in battle.c (not in skill_db.conf).
+        # battle.c:5279 #ifndef RENEWAL: (skill_id == MO_EXTREMITYFIST ? 8 : 0) → flag&8 skips SizeFix.
+        _NO_SIZEFIX_SKILLS = frozenset({"MO_EXTREMITYFIST"})
+        skill.ignore_size_fix = skill_name in _NO_SIZEFIX_SKILLS
+
         # amotion = 2000 - aspd*10  (status.c:2112; status.c:2134: adelay = 2 × amotion)
         # Floored at 100 to match cap_value(i, pc_max_aspd(sd), 2000) in Hercules.
         amotion: int = max(100, int(2000 - status.aspd * 10))
@@ -424,11 +435,8 @@ class BattlePipeline:
             pmf = CritAtkRate.calculate(build, pmf, result)
 
         # === DEFENSE FIX — skipped entirely on crit or NK_IGNORE_DEF (flag.idef=flag.idef2=1) ===
-        _sk_data = loader.get_skill(skill.id)
-        _sk_name = _sk_data.get("name", "") if _sk_data else ""
-        _nk_flags = _sk_data.get("nk_flags", []) if _sk_data else []
         pmf = DefenseFix.calculate(target, build, gear_bonuses, pmf, self.config, result,
-                                   is_crit=is_crit, skill_name=_sk_name, nk_flags=_nk_flags)
+                                   is_crit=is_crit, skill=skill)
 
         # === ACTIVE STATUS BONUSES — POST-defense (lines 5770-5795) ===
         pmf = ActiveStatusBonus.calculate(weapon, build, skill, pmf, result)
@@ -439,7 +447,7 @@ class BattlePipeline:
         pmf = RefineFix.calculate(weapon, skill, pmf, result)
 
         # === MASTERY FIX — #ifndef RENEWAL, lines 5812-5818 ===
-        pmf = MasteryFix.calculate(weapon, build, target, pmf, result)
+        pmf = MasteryFix.calculate(weapon, build, target, pmf, result, skill)
 
         # === ATTR FIX ===
         pmf = AttrFix.calculate(weapon, target, pmf, result, build)

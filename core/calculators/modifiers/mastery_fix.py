@@ -2,9 +2,16 @@ from core.models.weapon import Weapon
 from core.models.build import PlayerBuild
 from core.models.damage import DamageResult
 from core.models.target import Target
+from core.models.skill import SkillInstance
 from core.data_loader import loader
 from pmf.operations import _add_flat, _scale_floor, pmf_stats
 
+
+# battle.c:838-842: battle_calc_masteryfix returns early (no mastery bonus) for these skills.
+_MASTERY_EXEMPT_SKILLS: frozenset = frozenset({
+    "MO_INVESTIGATE", "MO_EXTREMITYFIST", "CR_GRANDCROSS",
+    "NJ_ISSEN", "CR_ACIDDEMONSTRATION",
+})
 
 
 class MasteryFix:
@@ -13,8 +20,22 @@ class MasteryFix:
     battle.c: damage = battle->add_mastery(sd, target, damage, left_hand);"""
 
     @staticmethod
-    def calculate(weapon: Weapon, build: PlayerBuild, target: Target, pmf: dict, result: DamageResult) -> dict:
+    def calculate(weapon: Weapon, build: PlayerBuild, target: Target, pmf: dict, result: DamageResult,
+                  skill: SkillInstance = None) -> dict:
         """Adds the flat mastery bonus to the PMF."""
+        # battle.c:838-842: return early from battle_calc_masteryfix for exempt skills.
+        if skill is not None and skill.name in _MASTERY_EXEMPT_SKILLS:
+            mn, mx, av = pmf_stats(pmf)
+            result.add_step(
+                name="Mastery Fix",
+                value=av, min_value=mn, max_value=mx,
+                multiplier=1.0,
+                note=f"BYPASSED — {skill.name} is exempt (battle.c:838-842)",
+                formula="no change (mastery skipped)",
+                hercules_ref="battle.c:838-842: battle_calc_masteryfix returns early for these skills",
+            )
+            return pmf
+
         mastery_key = loader.get_mastery_weapon_map().get(weapon.weapon_type)
 
         bonus: int = 0
@@ -70,10 +91,11 @@ class MasteryFix:
                 hercules_ref="battle.c:927-929 #else: damage += damage * (10 + 2 * skill2_lv) / 100"
             )
 
-        # NJ_TOBIDOUGU: Throw Shuriken mastery — flat +3*lv damage (battle.c:844)
-        # Applies to all attacks with W_SHURIKEN (practically only NJ_SYURIKEN uses this weapon).
+        # NJ_TOBIDOUGU: skill-based mastery for NJ_SYURIKEN — flat +3*lv damage.
+        # battle.c:843-850: case NJ_SYURIKEN: if (NJ_TOBIDOUGU > 0 && weapon) damage += 3 * skill2_lv;
+        # The check is on the skill being NJ_SYURIKEN, NOT on weapon_type.
         nj_tobi_lv = build.mastery_levels.get("NJ_TOBIDOUGU", 0)
-        if weapon.weapon_type == "Shuriken" and nj_tobi_lv > 0:
+        if skill is not None and skill.name == "NJ_SYURIKEN" and nj_tobi_lv > 0:
             pmf = _add_flat(pmf, 3 * nj_tobi_lv)
             mn, mx, av = pmf_stats(pmf)
             result.add_step(
@@ -84,7 +106,23 @@ class MasteryFix:
                 multiplier=1.0,
                 note=f"NJ_TOBIDOUGU Lv {nj_tobi_lv}: +{3 * nj_tobi_lv}",
                 formula=f"dmg + 3 × {nj_tobi_lv}",
-                hercules_ref="battle.c:844 NJ_TOBIDOUGU: damage += 3 * skill_lv",
+                hercules_ref="battle.c:843-850 case NJ_SYURIKEN: if(NJ_TOBIDOUGU>0 && weapon) damage += 3 * skill2_lv",
+            )
+
+        # NJ_KUNAI: flat +60 mastery pre-renewal.
+        # battle.c:852-855 #ifndef RENEWAL: case NJ_KUNAI: if(weapon) damage += 60;
+        if skill is not None and skill.name == "NJ_KUNAI":
+            pmf = _add_flat(pmf, 60)
+            mn, mx, av = pmf_stats(pmf)
+            result.add_step(
+                name="Kunai Mastery",
+                value=av,
+                min_value=mn,
+                max_value=mx,
+                multiplier=1.0,
+                note="NJ_KUNAI: +60 flat (pre-renewal)",
+                formula="dmg + 60",
+                hercules_ref="battle.c:852-855 #ifndef RENEWAL: case NJ_KUNAI: if(weapon) damage += 60",
             )
 
         return pmf

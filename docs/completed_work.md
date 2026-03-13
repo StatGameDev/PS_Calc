@@ -1750,3 +1750,122 @@ MO_SPIRITBALL combo (buffs section) and the MO_FINGEROFFENSIVE sphere combo (com
 Circular loop avoided by design: setter methods never re-emit the signal.
 
 **Known bug (G69) — MO_EXTREMITYFIST ratio**: Flagged for Q3 fix. Formula in `skill_ratio.py` is incorrect. Re-read battle.c:2197-2206 #ifndef RENEWAL before fixing.
+
+---
+
+## Session G69-Analysis (2026-03-13) — investigation only, no implementation
+
+**G69 source investigation**: Read battle.c:2197-2206 #ifndef RENEWAL. Ratio formula
+`min(100+100*(8+sp//10), 60000)` confirmed correct — the placeholder written in Q2 was right.
+G69 description was wrong; the real bugs are architectural.
+
+Three pipeline bugs confirmed:
+1. `battle_pipeline.py:429` reads `"nk_flags"` but skills.json uses `"damage_type"` →
+   `nk_ignore_def` never triggers for any skill (MO_EXTREMITYFIST has `IgnoreDefense` in
+   `damage_type` per skill_db.conf, confirmed).
+2. `SkillInstance.ignore_size_fix` never set for MO_EXTREMITYFIST → SizeFix applied
+   incorrectly. Source: battle.c:5279 `#ifndef RENEWAL` passes `i=8` to `calc_base_damage2`,
+   which skips SizeFix when `flag&8` (calc_base_damage2:668).
+3. `mastery_fix.py` doesn't exclude MO_EXTREMITYFIST. Source: battle.c:838-842 returns
+   early from `battle_calc_masteryfix` for MO_INVESTIGATE/EXTREMITYFIST/CR_GRANDCROSS/
+   NJ_ISSEN/CR_ACIDDEMONSTRATION.
+
+Architectural fix plan approved: hydrate `SkillInstance` fully before `_run_branch`; add
+`name`/`nk_ignore_def`/`nk_ignore_flee` fields to SkillInstance; pass `skill` to
+DefenseFix + MasteryFix. Full plan in session_roadmap.md Q3 Step 0. Four files: skill.py,
+battle_pipeline.py, defense_fix.py, mastery_fix.py.
+
+---
+
+## Session Q3-partial (2026-03-13) — G69 fix + G55 fix + Q3 ratio source confirmation
+
+**G69 — Architectural pipeline fix (4 files)**
+
+`core/models/skill.py`: Added `name: str = ""`, `nk_ignore_def: bool = False`, `nk_ignore_flee: bool = False` fields to SkillInstance. (ignore_size_fix already existed.)
+
+`core/calculators/battle_pipeline.py`: After resolving `skill_name` in `calculate()`, now hydrates `skill` before any `_run_branch` call:
+- `skill.name = skill_name`
+- `damage_type = skill_data.get("damage_type", [])` — corrects the old `"nk_flags"` bug
+- `skill.nk_ignore_def = "IgnoreDefense" in damage_type`
+- `skill.nk_ignore_flee = "IgnoreFlee" in damage_type`
+- `_NO_SIZEFIX_SKILLS = frozenset({"MO_EXTREMITYFIST"})` → `skill.ignore_size_fix`
+- MasteryFix call in `_run_branch` now passes `skill`
+- DefenseFix call in `_run_branch` now passes `skill=skill` (removed `_sk_data`/`_sk_name`/`_nk_flags` re-load)
+
+`core/calculators/modifiers/defense_fix.py`: Replaced `skill_name: str, nk_flags: list` params with `skill: SkillInstance = None`. Uses `skill.nk_ignore_def` for NK bypass, `skill.name` for AM_ACIDTERROR and MO_INVESTIGATE checks.
+
+`core/calculators/modifiers/mastery_fix.py`: Added `skill: SkillInstance = None` param. Added `_MASTERY_EXEMPT_SKILLS = frozenset({"MO_INVESTIGATE", "MO_EXTREMITYFIST", "CR_GRANDCROSS", "NJ_ISSEN", "CR_ACIDDEMONSTRATION"})` (source: battle.c:838-842). Added early-return bypass step when `skill.name in _MASTERY_EXEMPT_SKILLS`.
+
+**G55 — NJ_TOBIDOUGU mastery fix**
+
+`mastery_fix.py`: The old `weapon.weapon_type == "Shuriken"` check silently never fired because "Shuriken" doesn't exist as a weapon_type in item_db. Fixed to `skill is not None and skill.name == "NJ_SYURIKEN"` (source: battle.c:843-850: `case NJ_SYURIKEN: if(NJ_TOBIDOUGU>0 && weapon) damage += 3*skill2_lv`).
+
+Also added NJ_KUNAI mastery: `if skill.name == "NJ_KUNAI": damage += 60` (battle.c:852-855 `#ifndef RENEWAL`).
+
+**Q3 ratio source confirmation (battle.c:2300-2352, 5172-5510) — NOT YET in skill_ratio.py**
+
+All 14 BF_WEAPON GS/NJ ratios confirmed. See session_roadmap.md Q3 Step 1 for exact formulas.
+NJ_SYURIKEN: ratio=100% + ATK_ADD(4*lv) flat (battle.c:5506 #ifndef RENEWAL).
+Deferred: NJ_ISSEN (HP formula), NJ_ZENYNAGE/GS_FLING (BF_MISC), GS_MAGICALBULLET (needs StatusData).
+NJ BF_MAGIC ratios: must re-read battle.c:1699-1757 at start of next session before implementing.
+
+---
+
+## Session Q3 — Ninja Hybrid + Gunslinger
+
+**Step 1 — GS + NJ BF_WEAPON ratios (`skill_ratio.py`)**
+
+9 Gunslinger skills added to `_BF_WEAPON_RATIOS`: GS_TRIPLEACTION/BULLSEYE/TRACKING/PIERCINGSHOT/RAPIDSHOWER/DESPERADO/DUST/FULLBUSTER/SPREADATTACK. Sources: battle.c:2300-2337 #ifndef RENEWAL.
+
+5 Ninja BF_WEAPON skills added: NJ_HUUMA/KASUMIKIRI/KIRIKAGE/KUNAI/SYURIKEN. Sources: battle.c:2338-2348.
+
+NJ_SYURIKEN special case: `flat_add = 4 * skill.level` applied via `_add_flat` after `_scale_floor(ratio)`, before hit multiply. Source: battle.c:5506 #ifndef RENEWAL `ATK_ADD(4*skill_lv)`. `_add_flat` import added.
+
+BF_MISC infrastructure: `_BF_MISC_RATIOS: dict = {}` + `IMPLEMENTED_BF_MISC_SKILLS` frozenset. Wired into `combat_controls.py` and `skill_browser.py` `_IMPLEMENTED_SKILLS`.
+
+KN_PIERCE crash fix: `tgt.size + 1` was broken (`size` is a string). Replaced with `_SIZE_TO_HITS = {"Small": 1, "Medium": 2, "Large": 3}` lookup.
+
+IMPLEMENTED_BF_WEAPON_SKILLS: 31 (Q1) → 38 (Q2) → 55 (Q3, includes GS+NJ).
+
+**Step 2 — NJ BF_MAGIC ratios (`skill_ratio.py`)**
+
+Read battle.c:1699-1757 this session. The roadmap table (`100+100×lv` for all) was WRONG. Actual source:
+- NJ_KOUENKA: 90 (skillratio -= 10; no lv modifier)
+- NJ_KAENSIN: 50 (skillratio -= 50)
+- NJ_BAKUENRYU: 50 + 50×lv (skillratio += 50*(lv-1))
+- NJ_HYOUSENSOU: 100 (case is #ifdef RENEWAL only → pre-re default)
+- NJ_HYOUSYOURAKU: 100 + 50×lv (skillratio += 50*lv)
+- NJ_RAIGEKISAI: 160 + 40×lv (skillratio += 60+40*lv)
+- NJ_KAMAITACHI: 100 + 100×lv (fall-through to NPC_ENERGYDRAIN: skillratio += 100*lv)
+
+Charm bonuses (+20/10/15/25/15/10 per charm_count for fire/fire/fire/water/wind/wind) deferred: requires `sd->charm_type/charm_count` — new G71 gap.
+
+IMPLEMENTED_BF_MAGIC_SKILLS: 23 (prior) → 30 (Q3, adds 7 NJ spells).
+
+---
+
+## Session Q3-fix — Hit Count Audit (2026-03-13)
+
+Full audit of `number_of_hits` from skills.json against Hercules `skill_db.conf` for all 21
+GS/NJ skills added in Q3. All values confirmed correct. No code changes required.
+
+**Confirmed actual multi-hit (positive number_of_hits — PMF multiplied):**
+- GS_TRIPLEACTION: 3 hits (skill_db.conf `NumberOfHits: 3`); ratio 150% × 3 = 450% total
+- GS_RAPIDSHOWER: 5 hits constant (skill_db.conf `NumberOfHits: 5`); ratio (100+10×lv)% × 5
+- NJ_KUNAI: 3 hits (skill_db.conf `NumberOfHits: 3`); ratio 100% × 3 + mastery +60
+- NJ_KOUENKA (BF_MAGIC): lv hits (1 at lv1, 10 at lv10); ratio 90% per hit
+- NJ_BAKUENRYU (BF_MAGIC): 3 hits (skill_db.conf `NumberOfHits: 3`); ratio (50+50×lv)% × 3
+- NJ_HYOUSENSOU (BF_MAGIC): lv+2 hits (3 at lv1, 12 at lv10); ratio 100% per hit
+
+**Confirmed cosmetic multi-hit (negative number_of_hits — PMF unchanged):**
+- NJ_HUUMA: -3/-3/-4/-4/-5 (skill_db.conf negative per level); ratio 150+150×lv encodes total
+
+**Confirmed single-hit (number_of_hits=1):**
+- GS_BULLSEYE, GS_TRACKING, GS_PIERCINGSHOT, GS_DESPERADO, GS_DUST, GS_FULLBUSTER, GS_SPREADATTACK
+- NJ_KASUMIKIRI, NJ_KIRIKAGE, NJ_SYURIKEN, NJ_KAENSIN, NJ_HYOUSYOURAKU, NJ_RAIGEKISAI, NJ_KAMAITACHI
+
+**The `flag.tdef = 1` block for NJ_KUNAI/NJ_SYURIKEN (skill.c:4791) is `#ifdef RENEWAL` only —
+no pre-renewal effect.**
+
+**NJ_BAKUENRYU, NJ_HYOUSENSOU, NJ_HYOUSYOURAKU, NJ_RAIGEKISAI, NJ_KAMAITACHI all confirmed
+`AttackType: "Magic"` in skill_db.conf → correctly in `_BF_MAGIC_RATIOS`.**

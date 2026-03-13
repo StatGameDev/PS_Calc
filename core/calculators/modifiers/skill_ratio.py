@@ -2,19 +2,22 @@ from core.models.skill import SkillInstance
 from core.models.damage import DamageResult
 from core.models.build import PlayerBuild
 from core.data_loader import loader
-from pmf.operations import _scale_floor, pmf_stats
+from pmf.operations import _scale_floor, _add_flat, pmf_stats
 
 # Pre-renewal BF_WEAPON skill ratios from battle_calc_skillratio BF_WEAPON switch.
 # Source: battle.c:2039 battle_calc_skillratio, case BF_WEAPON. Each lambda: (lv, tgt) → int ratio %.
 # tgt is a Target instance (or None for skills that don't depend on target stats).
 # Skills not listed fall back to ratio_base / ratio_per_level in skills.json, or default 100.
 #
-# Deferred to Q3 (special mechanics — not simple level-linear):
-#   KN_PIERCE     — hit_count = tgt.size+1 (1/2/3 for Small/Med/Large, battle.c:4721); ratio only is 100+10*lv
+# Deferred (special mechanics — not simple level-linear):
 #   AS_SPLASHER   — ratio 500+50*lv but adds 20*AS_POISONREACT mastery (battle.c:2249-2252); BF_WEAPON #ifndef RENEWAL (skill.c:5200)
 #   RG_BACKSTAP   — ratio 300+40*lv but bow+penalty = 200+20*lv (battle.c:2152-2156)
+#   NJ_ISSEN      — #ifndef RENEWAL: wd.damage = 40*STR + lv*(HP/10 + 35) (replaces base damage; needs skill_params: current HP input)
+#   GS_MAGICALBULLET — BF_WEAPON dispatch (skill.c:4862) with ATK_ADD(MATK) #ifndef RENEWAL (battle.c:5503-5505); needs StatusData in SkillRatio
 #   BA_DISSONANCE — BF_MISC, not BF_WEAPON; flat 30+10*lv +MUSICALLESSON (battle.c:4260-4263)
 #   TF_THROWSTONE — BF_MISC, flat 50 damage (battle.c:4257-4258)
+#   NJ_ZENYNAGE   — BF_MISC dispatch (skill.c:5550); zeny-cost random damage (battle.c:4341-4349)
+#   GS_FLING      — BF_MISC dispatch (skill.c:5548); damage = job_level (battle.c:4350)
 #   HT_LANDMINE   — BF_MISC, lv*(dex+75)*(100+int)/100 (battle.c:4228-4230)
 #   HT_BLASTMINE  — BF_MISC, lv*(dex/2+50)*(100+int)/100 (battle.c:4232-4233)
 #   HT_CLAYMORETRAP — BF_MISC, lv*(dex/2+75)*(100+int)/100 (battle.c:4235-4236)
@@ -113,6 +116,38 @@ _BF_WEAPON_RATIOS: dict = {
     "TK_TURNKICK":       lambda lv, tgt: 190 + 30 * lv,
     # battle.c:2287-2288
     "TK_COUNTER":        lambda lv, tgt: 190 + 30 * lv,
+
+    # --- Gunslinger ---
+    # battle.c:2300-2302: skillratio += 50*lv
+    "GS_TRIPLEACTION":   lambda lv, tgt: 100 + 50 * lv,
+    # battle.c:2303-2308: +400 vs Brute/Demi-Human non-boss only (#ifndef RENEWAL guard not present)
+    "GS_BULLSEYE":       lambda lv, tgt: 100 + (400 if (tgt and tgt.race in ("Brute", "Demi-Human") and not tgt.is_boss) else 0),
+    # battle.c:2309-2311: skillratio += 100*(lv+1) → 200+100*lv
+    "GS_TRACKING":       lambda lv, tgt: 200 + 100 * lv,
+    # battle.c:2313-2315 #ifndef RENEWAL: skillratio += 20*lv
+    "GS_PIERCINGSHOT":   lambda lv, tgt: 100 + 20 * lv,
+    # battle.c:2317-2318: skillratio += 10*lv
+    "GS_RAPIDSHOWER":    lambda lv, tgt: 100 + 10 * lv,
+    # battle.c:2320-2323: skillratio += 50*(lv-1); SC_FALLEN_ANGEL×2 is renewal-only → 50+50*lv
+    "GS_DESPERADO":      lambda lv, tgt: 50 + 50 * lv,
+    # battle.c:2325-2326: skillratio += 50*lv
+    "GS_DUST":           lambda lv, tgt: 100 + 50 * lv,
+    # battle.c:2328-2329: skillratio += 100*(lv+2) → 300+100*lv
+    "GS_FULLBUSTER":     lambda lv, tgt: 300 + 100 * lv,
+    # battle.c:2331-2337 #ifndef RENEWAL: skillratio += 20*(lv-1)
+    "GS_SPREADATTACK":   lambda lv, tgt: 100 + 20 * (lv - 1),
+
+    # --- Ninja BF_WEAPON ---
+    # battle.c:2338-2339: skillratio += 50 + 150*lv → 150+150*lv
+    "NJ_HUUMA":          lambda lv, tgt: 150 + 150 * lv,
+    # battle.c:2344-2345: skillratio += 10*lv
+    "NJ_KASUMIKIRI":     lambda lv, tgt: 100 + 10 * lv,
+    # battle.c:2347-2348: skillratio += 100*(lv-1) → 100*lv
+    "NJ_KIRIKAGE":       lambda lv, tgt: 100 * lv,
+    # No case in calc_skillratio → default 100%; mastery +60 in MasteryFix (battle.c:852-855 #ifndef RENEWAL)
+    "NJ_KUNAI":          lambda lv, tgt: 100,
+    # No case in calc_skillratio → default 100%; ATK_ADD(4*lv) applied as flat below (battle.c:5506 #ifndef RENEWAL)
+    "NJ_SYURIKEN":       lambda lv, tgt: 100,
 }
 
 # Hit count overrides for BF_WEAPON skills whose div_ is set to target-size+1 in battle.c.
@@ -120,8 +155,10 @@ _BF_WEAPON_RATIOS: dict = {
 # battle.c:4719-4722: wd.div_ = (wd.div_>0 ? tstatus->size+1 : -(tstatus->size+1))
 # Target size: SZ_SMALL=0 → 1 hit, SZ_MEDIUM=1 → 2 hits, SZ_LARGE=2 → 3 hits.
 # Falls back to skills.json number_of_hits (= max value) when target is None.
+_SIZE_TO_HITS = {"Small": 1, "Medium": 2, "Large": 3}
 _BF_WEAPON_HIT_COUNT_FN: dict = {
-    "KN_PIERCE": lambda lv, tgt: (tgt.size + 1) if tgt is not None else 3,
+    # battle.c:4719-4722: wd.div_ = tstatus->size+1; SZ_SMALL=0→1hit, SZ_MEDIUM=1→2, SZ_LARGE=2→3
+    "KN_PIERCE": lambda lv, tgt: _SIZE_TO_HITS.get(tgt.size, 2) if tgt is not None else 3,
 }
 
 # Q2-cont: Skills whose ratio depends on build.skill_params (runtime combat context).
@@ -145,6 +182,10 @@ _BF_WEAPON_PARAM_SKILLS: frozenset[str] = frozenset({
 IMPLEMENTED_BF_WEAPON_SKILLS: frozenset[str] = (
     frozenset(_BF_WEAPON_RATIOS.keys()) | _BF_WEAPON_PARAM_SKILLS
 )
+
+# BF_MISC skills (traps, throw, zeny attacks). Populated when BF_MISC is implemented.
+_BF_MISC_RATIOS: dict = {}
+IMPLEMENTED_BF_MISC_SKILLS: frozenset[str] = frozenset(_BF_MISC_RATIOS.keys())
 
 # Pre-renewal magic skill ratios from battle_calc_skillratio BF_MAGIC switch.
 # Source: battle.c:1631-1785 #else not RENEWAL.
@@ -181,6 +222,28 @@ _BF_MAGIC_RATIOS = {
     "WZ_METEOR":       lambda lv, tgt: 100,
     # PR_MAGNUS: no case in BF_MAGIC switch; standard MATK × 100%; targets Undead/Demon only
     "PR_MAGNUS":       lambda lv, tgt: 100,
+
+    # --- Ninja BF_MAGIC ---
+    # battle.c:1699-1702: skillratio -= 10 → base 90.
+    # NOTE: +20*charm_count if CHARM_TYPE_FIRE active (sd->charm_type/charm_count) — DEFERRED (charm not implemented).
+    "NJ_KOUENKA":      lambda lv, tgt: 90,
+    # battle.c:1704-1708: skillratio -= 50 → base 50.
+    # NOTE: +10*charm_count if CHARM_TYPE_FIRE — DEFERRED.
+    "NJ_KAENSIN":      lambda lv, tgt: 50,
+    # battle.c:1709-1713: skillratio += 50*(lv-1) → 50+50*lv.
+    # NOTE: +15*charm_count if CHARM_TYPE_FIRE — DEFERRED.
+    "NJ_BAKUENRYU":    lambda lv, tgt: 50 + 50 * lv,
+    # battle.c:1715-1720: case is #ifdef RENEWAL only → pre-re default 100.
+    "NJ_HYOUSENSOU":   lambda lv, tgt: 100,
+    # battle.c:1723-1726: skillratio += 50*lv → 100+50*lv.
+    # NOTE: +25*charm_count if CHARM_TYPE_WATER — DEFERRED.
+    "NJ_HYOUSYOURAKU": lambda lv, tgt: 100 + 50 * lv,
+    # battle.c:1728-1731: skillratio += 60+40*lv → 160+40*lv.
+    # NOTE: +15*charm_count if CHARM_TYPE_WIND — DEFERRED.
+    "NJ_RAIGEKISAI":   lambda lv, tgt: 160 + 40 * lv,
+    # battle.c:1733-1755: falls through to NPC_ENERGYDRAIN: skillratio += 100*lv → 100+100*lv.
+    # NOTE: +10*charm_count if CHARM_TYPE_WIND applied before fall-through — DEFERRED.
+    "NJ_KAMAITACHI":   lambda lv, tgt: 100 + 100 * lv,
 }
 
 # BF_MAGIC skills with confirmed ratios implemented above.
@@ -210,6 +273,7 @@ class SkillRatio:
 
         # Priority: param skills (read build.skill_params) → _BF_WEAPON_RATIOS dict → JSON → default 100.
         params = getattr(build, 'skill_params', {})
+        flat_add = 0  # ATK_ADD flat bonus applied after ratio scaling (NJ_SYURIKEN)
         if skill_name == "KN_CHARGEATK":
             # battle.c:2350-2359: skillratio += 100*(k ? (k-1)/3 : 0); capped at 300.
             # dist = cell distance (1–3→100%, 4–6→200%, 7+→300%).
@@ -236,6 +300,12 @@ class SkillRatio:
                 ratio *= 2
             ratio_src = (f"TK_JUMPKICK lv={skill.level} combo={combo} running={running}"
                          " (battle.c:2290-2300)")
+        elif skill_name == "NJ_SYURIKEN":
+            # battle.c:5506 #ifndef RENEWAL: ATK_ADD(4*skill_lv) in constant-additions block
+            # after calc_skillratio returns; ratio itself has no case → default 100.
+            ratio = 100
+            flat_add = 4 * skill.level
+            ratio_src = f"NJ_SYURIKEN ratio=100 +{flat_add} flat ATK (battle.c:5506 #ifndef RENEWAL)"
         elif (ratio_fn := _BF_WEAPON_RATIOS.get(skill_name)) is not None:
             ratio = ratio_fn(skill.level, target)
             ratio_src = f"_BF_WEAPON_RATIOS[{skill_name!r}]"
@@ -298,6 +368,9 @@ class SkillRatio:
         # Two sequential scale() calls — keep separate to preserve Hercules integer rounding.
         # battle.c: wd.damage = (int64)wd.damage * ratio / 100;  (then × hit_count separately)
         pmf = _scale_floor(pmf, ratio, 100)
+        if flat_add > 0:
+            # ATK_ADD: applied after skillratio scale, before damage_div_fix (battle.c:5506 #ifndef RENEWAL)
+            pmf = _add_flat(pmf, flat_add)
         pmf = _scale_floor(pmf, hit_count, 1)
 
         mn, mx, av = pmf_stats(pmf)
@@ -308,8 +381,12 @@ class SkillRatio:
             max_value=mx,
             multiplier=ratio / 100.0,
             note=skill_data.get("description", "") if skill_data else "",
-            formula=(f"dmg × {ratio}% × {display_hits} cosmetic hits   ({ratio_src})"
+            formula=(f"dmg × {ratio}% + {flat_add} × {display_hits} cosmetic hits   ({ratio_src})"
+                     if (cosmetic and flat_add) else
+                     f"dmg × {ratio}% × {display_hits} cosmetic hits   ({ratio_src})"
                      if cosmetic else
+                     f"dmg × {ratio}% + {flat_add} × {hit_count} hits   ({ratio_src})"
+                     if flat_add else
                      f"dmg × {ratio}% × {hit_count} hits   ({ratio_src})"),
             hercules_ref="battle.c: battle_calc_skillratio — BF_WEAPON ratio from _BF_WEAPON_RATIOS dict\n"
                          "battle.c:2919-2922: if(sc->data[SC_OVERTHRUST]) skillratio += SC_OVERTHRUST->val3;\n"
