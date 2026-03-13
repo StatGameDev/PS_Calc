@@ -24,6 +24,7 @@ from core.calculators.battle_pipeline import BattlePipeline
 from core.calculators.incoming_magic_pipeline import IncomingMagicPipeline
 from core.calculators.incoming_physical_pipeline import IncomingPhysicalPipeline
 from core.calculators.status_calculator import StatusCalculator
+from core.calculators import target_utils
 from core.config import BattleConfig
 from core.data_loader import loader
 from core.gear_bonus_aggregator import GearBonusAggregator
@@ -495,6 +496,14 @@ class MainWindow(QMainWindow):
                     forge_ranked=pvp_eff.forge_ranked,
                     forge_element=pvp_eff.forge_element,
                 )
+                # Merge stat-cascade debuffs into pvp_eff before StatusCalculator runs,
+                # so effects like DECREASEAGI → AGI → FLEE/ASPD cascade correctly.
+                target_scs = self._target_state.collect_target_player_scs()
+                if target_scs:
+                    pvp_eff = dataclasses.replace(
+                        pvp_eff,
+                        player_active_scs={**pvp_eff.player_active_scs, **target_scs},
+                    )
                 pvp_status = StatusCalculator(self._config).calculate(pvp_eff, pvp_weapon)
                 pvp_gear_bonuses = GearBonusAggregator.compute(pvp_eff.equipped, pvp_eff.refine_levels)
                 GearBonusAggregator.apply_passive_bonuses(pvp_gear_bonuses, pvp_eff.mastery_levels)
@@ -505,9 +514,14 @@ class MainWindow(QMainWindow):
         else:
             target = loader.get_monster(mob_id) if mob_id is not None else Target()
 
-        # Apply target state debuffs (SC_STONE/FREEZE/STUN/etc.) after target resolved.
+        # Apply target state debuffs after target is resolved.
+        # apply_to_target() sets target_active_scs flags and element/strip overrides.
+        # apply_mob_scs() applies stat mutations for mob targets (player targets get
+        # these via StatusCalculator, fed from collect_target_player_scs() above).
         self._target_state.set_target_type(target.is_pc)
         self._target_state.apply_to_target(target)
+        if not target.is_pc:
+            target_utils.apply_mob_scs(target)
 
         # Always refresh target section — independent of pipeline success (B5).
         self._target_section.refresh_mob(mob_id)

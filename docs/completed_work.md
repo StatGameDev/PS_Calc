@@ -392,3 +392,63 @@ Sessions Arch, SC1, and SC2.
 
 **New gaps**: G78 (Arch routing fix), G79 (target debuffs SC1), G80 (player debuffs SC2).
 **Session SC stub replaced** with finalised SC1 + SC2 entries in session_roadmap.md.
+
+---
+
+## Session Arch — 2026-03-13 — Debuff Routing Fix (G78)
+
+**Problem**: `pvp_status = StatusCalculator(pvp_eff)` was computed before
+`apply_to_target(target)` ran, so stat-cascade debuffs (DECREASEAGI → AGI →
+FLEE/ASPD) were not reflected in `pvp_status`. Incoming pipeline used unbuffed
+pvp stats.
+
+**`core/calculators/target_utils.py`** (new file):
+- `apply_mob_scs(target)`: reads `target.target_active_scs` and applies stat
+  mutations for mob targets. Currently: SC_DECREASEAGI → `agi -= 2+lv`
+  (status.c:7633, 4025-4026). Mob targets are not run through StatusCalculator
+  so mutations are applied here directly. Session SC1 extends this.
+
+**`gui/sections/target_state_section.py`**:
+- Updated class docstring to describe the now-three-method API.
+- Added `collect_target_player_scs() → dict[str, int]`: returns stat-cascade SCs
+  for player targets (currently SC_DECREASEAGI). These must be merged into
+  `pvp_eff.player_active_scs` before StatusCalculator runs.
+- `apply_to_target()`: removed the `target.agi -= (2+lv)` direct mutation.
+  Stat mutations now belong in `apply_mob_scs()` (mob path) or StatusCalculator
+  (player path). `apply_to_target()` is now purely for pipeline-level flags
+  (target_active_scs, element override, DEF strip).
+
+**`gui/main_window.py`**:
+- Import `target_utils` from `core.calculators`.
+- Mob path: after `apply_to_target(target)`, call `target_utils.apply_mob_scs(target)`.
+- PvP path: before `StatusCalculator.calculate(pvp_eff, pvp_weapon)`, call
+  `collect_target_player_scs()` and merge into `pvp_eff.player_active_scs` via
+  `dataclasses.replace()` (immutable — does not mutate the loaded build object).
+
+**Gaps closed**: G78.
+
+---
+
+## Session SC1-research — 2026-03-13 — Source Read Pass for SC1
+
+**No code changes.** Source verification session for Session SC1 target debuffs.
+
+**Confirmed formulas** (all status.c unless noted):
+- SC_BLIND: `hit -= hit*25/100` (4817-4818), `flee -= flee*25/100` (4902-4903)
+- SC_CURSE: `luk = 0` via hard `return 0` (4261-4262)
+- SC_POISON: `def_percent -= 25` no guard (4431-4432)
+- SC_MINDBREAKER: `val2=20*lv` (`matk_percent += val2`, 4376-4377); `val3=12*lv` (`mdef_percent -= val3`, 4453-4454); val assignments at 8379-8382
+- SC_CRUCIS (correct name — not SC_SIGNUCRUCIS): `def -= def*val2/100` (5022-5023); mob-only — BL_PC hard-blocked at 7205-7207
+- SC_BLESSING debuff: `str >>= 1`, `dex >>= 1` when val2=0 (3964-3968, 4213-4218); mob-only — BL_PC always gets buff path (8271-8275)
+- SC_QUAGMIRE: `agi -= val2`, `dex -= val2` (4027-4028, 4211-4212); `val2=10*lv` for mobs (8343-8344)
+- SC_DONTFORGETME: `aspd_rate += 10*val2` (5666-5667); no FLEE effect found in flee function; val2 assignment not yet found
+- SC_SLEEP: `cri <<= 1` (battle.c:4959); force-hit via opt1 not yet confirmed
+
+**Scope corrections discovered**:
+- SC_CRUCIS (not SC_SIGNUCRUCIS) is mob-only — remove from SC2 player debuff list
+- SC_BLESSING debuff is mob-only — remove from SC2 player debuff list
+- SC_DONTFORGETME has no FLEE effect — ASPD + movement speed only
+
+**Remaining for SC1 session start** (2 greps only):
+1. SC_SLEEP force-hit: check opt1 path in battle.c hit calculation
+2. SC_DONTFORGETME val2: find `case DC_DONTFORGETME:` in skill.c ~line 13270

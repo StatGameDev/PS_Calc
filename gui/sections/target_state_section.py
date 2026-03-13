@@ -33,16 +33,27 @@ _ELEMENTS = [
 
 class TargetStateSection(Section):
     """
-    Session R — debuffs/ailments applied by the player to the target.
+    Debuffs/ailments applied by the player to the target.
 
-    Two-method API (see docs/session_roadmap.md Session R):
-      collect_into(build)     — writes SC_ETERNALCHAOS / SC_PROVOKE / SC_DECREASEAGI /
-                                PR_LEXAETERNA to build.support_buffs. Called from
-                                _collect_build() uniformly with all other sections.
-      apply_to_target(target) — writes ailment/element effects directly to the resolved
-                                Target (target_active_scs, element, DEF strip). Called
-                                explicitly in _run_battle_pipeline() after target resolution.
-                                No element restore needed — target is re-resolved each run.
+    Three-method API:
+      collect_into(build)            — writes SC_ETERNALCHAOS / SC_PROVOKE /
+                                       SC_DECREASEAGI / PR_LEXAETERNA to
+                                       build.support_buffs. Called from
+                                       _collect_build() uniformly with all other sections.
+      collect_target_player_scs()    — returns stat-cascade SCs (e.g. SC_DECREASEAGI)
+                                       as a dict for player targets. These must flow
+                                       through StatusCalculator before target resolution.
+                                       Called in _run_battle_pipeline() before
+                                       StatusCalculator runs on the pvp build.
+      apply_to_target(target)        — writes pipeline-level effects directly to the
+                                       resolved Target: target_active_scs flags,
+                                       element overrides, DEF strip. Called after
+                                       target resolution. No element restore needed —
+                                       target is re-resolved each pipeline run.
+
+    Mob path:  apply_to_target() → target_utils.apply_mob_scs()
+    PvP path:  collect_target_player_scs() → pvp_eff.player_active_scs
+               → StatusCalculator → player_build_to_target() → apply_to_target()
     """
 
     state_changed = Signal()
@@ -243,10 +254,33 @@ class TargetStateSection(Section):
             support["PR_LEXAETERNA"] = 1
         build.support_buffs = support
 
+    def collect_target_player_scs(self) -> dict[str, int]:
+        """Return stat-cascade SCs as a dict for player targets.
+
+        These SCs have effects that flow through StatusCalculator (e.g. AGI → FLEE,
+        LUK → BATK) and must be merged into pvp_eff.player_active_scs *before*
+        StatusCalculator runs on the pvp build.  Mob targets receive the same
+        effects via target_utils.apply_mob_scs() instead.
+
+        Session SC1 will extend this with BLIND, CURSE, QUAGMIRE, MINDBREAKER, etc.
+        """
+        scs: dict[str, int] = {}
+        decagi_lv = self._lw_decagi.value()
+        if decagi_lv:
+            scs["SC_DECREASEAGI"] = decagi_lv
+        return scs
+
     def apply_to_target(self, target: Target) -> None:
-        """Write ailment/element effects directly to resolved Target.
-        Called explicitly in _run_battle_pipeline() after target resolution.
-        No element restore needed — target is re-resolved each pipeline run."""
+        """Write pipeline-level effects directly to the resolved Target.
+
+        Sets target_active_scs flags (force-hit, DEF-halving), element overrides,
+        and DEF strip.  Stat-cascade effects (agi, luk, mdef_ mutations) are NOT
+        done here — they are handled by target_utils.apply_mob_scs() for mob targets
+        or StatusCalculator for player targets.
+
+        Called in _run_battle_pipeline() after target resolution.
+        No element restore needed — target is re-resolved each pipeline run.
+        """
         scs: dict[str, int] = {}
 
         # Monster State — element override (applied first; ailments below may overwrite)
@@ -256,7 +290,8 @@ class TargetStateSection(Section):
                 target.element = ele
                 target.element_level = self._ele_lv.value()
 
-        # Status ailments → target_active_scs + element override for Freeze/Stone
+        # Status ailments → target_active_scs flags + element override for Freeze/Stone.
+        # Stat mutations (agi, luk, etc.) are intentionally absent here — see docstring.
         if self._chk_stun.isChecked():
             scs["SC_STUN"] = 1
 
@@ -273,11 +308,9 @@ class TargetStateSection(Section):
         if self._chk_poison.isChecked():
             scs["SC_POISON"] = 1
 
-        # SC_DECREASEAGI: agi -= 2+lv (status.c:7633, 4025-4026)
         decagi_lv = self._lw_decagi.value()
         if decagi_lv:
             scs["SC_DECREASEAGI"] = decagi_lv
-            target.agi = max(0, target.agi - (2 + decagi_lv))
 
         target.target_active_scs = scs
 

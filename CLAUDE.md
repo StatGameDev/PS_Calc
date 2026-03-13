@@ -176,6 +176,7 @@ Always grep first. Never load entire files.
         hit_chance.py        — calculate_hit_chance (E1, Session 2/3)
         dps_calculator.py    — SelectionStrategy ABC, FormulaSelectionStrategy, calculate_dps()
     core/calculators/skill_timing.py           — calculate_skill_timing(): cast+ACD per skill_castfix/skill_delay_fix (Q0)
+    core/calculators/target_utils.py           — apply_mob_scs(target): mob-path stat SC mutations after apply_to_target() (Arch)
 
 ### Core models (`core/models/`)
 
