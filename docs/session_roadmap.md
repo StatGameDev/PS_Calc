@@ -65,14 +65,71 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ## Session S — Item Scripts Pass
 
-**STUB**: This Session still needs to be planned out
-Ensure all scripts work properly and begin implementing consumables.
-The Hercules file detailing item scripts is "C:\Projects\PS_Calc\Hercules\doc\item_bonus.md"
-That directory has a lot of useful documents in general
+**STUB**: Needs planning sub-session (read `Hercules/doc/item_bonus.md` first).
+Ensure all scripts work correctly and begin implementing consumable effects.
+The `Hercules/doc/` directory has many useful reference documents.
+Scope to be finalised in a dedicated planning step before implementation begins.
 
 ---
 
-## Session TW — Job Stat Bonuses + Stat Planner
+## Session SC — Debuff Audit + Fix
+
+**Goal**: Audit all SC_ status conditions affecting the damage pipeline; implement every
+effect that was silently dropped during Session R planning. No pre-filtering by
+"relevance" — every SC on the target and player side is listed, user decides disposition.
+
+**Why this session exists**: Session R implemented a subset of debuffs. Others were dropped
+during planning without user consultation, violating the "Never pre-filter scope" rule.
+This session finds and fixes the gaps.
+
+**Investigation phase (audit first — do not implement until audit is complete):**
+
+1. Read `core/calculators/modifiers/defense_fix.py` and `core/calculators/status_calculator.py`
+   — extract every SC_ currently handled for both target and player side.
+2. Grep `status.c` for `SC_BLIND`, `SC_CURSE`, `SC_DECREASEAGI`, `SC_SLEEP`, `SC_POISON`,
+   `SC_CONFUSION`, `SC_SILENCE`, `SC_JOINTBEAT`, `SC_STRIPWEAPON`, `SC_STRIPARMOR`,
+   `SC_STRIPSHIELD`, `SC_STRIPHELM` — record what stat each modifies and the formula.
+3. Grep `battle.c` for the same SCs — record any direct pipeline effects (force-hit,
+   DEF bypass, element override, ATK modification).
+4. Cross-reference against `gui/sections/player_debuffs_section.py` and
+   `gui/sections/target_state_section.py` — record which SCs have UI toggles.
+5. Present a complete table to the user: SC | effect | implemented? | UI? | verdict.
+   **Do not implement until user approves the table.**
+
+**Likely scope (to be confirmed by audit):**
+
+*Target-side gaps (TargetStateSection + defense_fix / status_calculator):*
+- **SC_BLIND on target** — FLEE penalty (affects player hit chance vs target). status.c.
+- **SC_CURSE on target** — LUK penalty. Matters for target flee/flee2 in incoming calc.
+- **SC_DECREASEAGI on target** — AGI/FLEE penalty.
+- **SC_SLEEP on target** — force-hit (same as STUN?). Confirm in battle.c.
+- **SC_JOINTBEAT** — DEF reduction + possibly ATK/ASPD/FLEE debuffs depending on joint hit.
+  Likely meaningful for DEF bypass. Confirm sub-effects from status.c.
+- **SC_STRIPWEAPON / SC_STRIPARMOR / SC_STRIPSHIELD / SC_STRIPHELM** — remove ATK/DEF
+  contributions of the relevant gear slot. Architecture question: does the calc need a
+  "stripped" flag per slot, or is the effect too complex for current pipeline? Defer if
+  architectural; note in gaps.md.
+
+*Player-side gaps (player_debuffs_section + status_calculator):*
+- **SC_POISON on player** — MaxHP halved? Confirm exact status.c effect. No outgoing
+  damage effect, but MaxHP matters for NJ_ISSEN (G74). Note for that gap.
+- **SC_SILENCE on player** — blocks magic. UI state flag needed; magic_pipeline returns 0.
+- **SC_SLEEP on player** — blocks all attacks. UI state flag only (calc returns 0 dmg).
+- **SC_CONFUSION/CHAOS on player** — blocks directional attacks. UI state / note only.
+
+*Open gap that fits here:*
+- **G77** — PR_LEXAETERNA ×2 not applied to BF_WEAPON. Currently only in magic_pipeline.
+  Hercules: SC_LEXAETERNA doubles next hit regardless of type (battle.c). Fix in
+  `BattlePipeline._run_branch()` after FinalRateBonus when target has SC_LEXAETERNA.
+
+**Estimated tokens**: 30–45k (audit grep-heavy; implementation scope depends on audit result).
+
+**Output**: Updated TargetStateSection, player_debuffs_section, defense_fix, status_calculator,
+magic_pipeline/battle_pipeline. Gaps: G77 closed; new gap IDs as needed for deferred items.
+
+---
+
+## Session T — Job Stat Bonuses + Stat Planner
 
 **Goal**: Two foundational features that share a stat data focus and fit one context window.
 
@@ -89,14 +146,6 @@ That directory has a lot of useful documents in general
 - No "what-if" mode. No comparison. Budget display only.
 
 **Estimated tokens**: 30–40k (2 Hercules reads + implementation + UI).
-
----
-
-## Session S — Item Scripts Pass
-
-**STUB**: Needs planning sub-session (read `Hercules/doc/item_bonus.md` first).
-Ensure all scripts work correctly and begin implementing consumable effects.
-Scope to be finalised in a dedicated planning step before implementation begins.
 
 ---
 
