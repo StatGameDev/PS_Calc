@@ -190,10 +190,9 @@ Always grep first. Never load entire files.
     pipeline_specs.md     — full pipeline step specs for BF_WEAPON, BF_MAGIC, incoming
     core_architecture.md  — module map, data flow, buff integration design (open questions)
     data_models.md        — Target/StatusData/GearBonuses/PlayerBuild field specs (current vs needed)
-    context_log.md        — historical context % used per session; used to calibrate future scope
-    completed_work.md     — full history of completed work (Sessions 1–A); append each session
+    completed_work.md     — session detail log (GUI-Rework onwards); append each session
     gui_plan.md           — GUI section layout (current + planned), widget specs, Phases 5–8, Buffs UI design
-    phases_done.md        — GUI phase specs archive (Phases 0–4)
+    archive/              — context_log.md, outdated_phases_done.md, completed_work_pre_gui_rework.md — user-maintained, do not modify
     buffs/               — Party buff reference docs (one file per category; see buffs/README.md)
         songs_dances.md  — All BA_*/DC_*/BD_* SCs: confirmed formulas, val mapping, status
         support_buffs.md — Priest/Knight/etc party-cast buffs (SC_BLESSING, SC_GLORIA, etc.)
@@ -203,7 +202,7 @@ Always grep first. Never load entire files.
 
     Load these on demand — do NOT load all at session start.
     Always load gaps.md + session_roadmap.md when planning or scoping a session.
-    Load context_log.md when estimating whether a planned session fits in one context window.
+    Load docs/archive/context_log.md when estimating whether a planned session fits in one context window.
 
 ### Lookup tables (`docs/lookup/`)
 
@@ -285,7 +284,7 @@ static-analysis explanation. Ask the user for runtime cooperation.
 
 - Open gaps by ID: `docs/gaps.md`
 - Session scope and work items in order: `docs/session_roadmap.md`
-- Context budget history for scope calibration: `docs/context_log.md`
+- Context budget history for scope calibration: `docs/archive/context_log.md`
 
 ---
 
@@ -317,4 +316,4 @@ sections of this file (rules, file structure, pipeline order).
 - `docs/gui_plan.md` — update if GUI design changes were decided upon
 - `CLAUDE.md` — update Pipeline Step Order and modifiers list if steps added/reordered, update project structure if files added/deleted/moved
 - **DO NOT touch `docs/current_state.md`** — only written on explicit user command `handoff`. Do not read or write it as part of routine session start or end.
-- **DO NOT touch `docs/context_log.md`** — user-maintained only. Never write to it during EOS maintenance or at any other time unless explicitly asked.
+- **DO NOT touch `docs/archive/context_log.md`** — user-maintained only. Never write to it during EOS maintenance or at any other time unless explicitly asked.
