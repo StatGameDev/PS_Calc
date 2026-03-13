@@ -363,3 +363,32 @@ ensemble buff with an incoming pipeline effect; same home as SC_BLESSING/SC_ADRE
 - layout_config.json: `target_state_section` entry added before `step_breakdown` (combat panel, collapsed, slim_content)
 - panel_container.py: import + factory entry
 - main_window.py: import, typed ref `_target_state`, signal wiring, collect_into, load_build, set_target_type + apply_to_target after target resolved, SC_SIEGFRIED incoming resist (55+5×lv added to all non-Neutral sub_ele on player_target)
+
+---
+
+## Session Plan-SC — 2026-03-13 — Debuff Audit + Architecture Planning
+
+**No code changes.** Planning and architecture session establishing the work queue for
+Sessions Arch, SC1, and SC2.
+
+**Debuff audit completed** (replaces investigation phase that was in Session SC stub):
+- Full table of target-side and player-side SC status for all debuffs in scope.
+- Confirmed implemented: target SC_STONE/FREEZE/STUN/EC/PROVOKE/DECREASEAGI; player SC_BLIND/CURSE/DECREASEAGI.
+- Missing target-side (9 SCs): SC_BLIND, SC_CURSE, SC_SLEEP, SC_POISON, SC_DONTFORGETME, SC_MINDBREAKER, SC_SIGNUCRUCIS, SC_BLESSING-debuff, SC_QUAGMIRE.
+- Missing player-side (12 SCs): SC_STUN/FREEZE/STONE/SLEEP/POISON/DONTFORGETME/EC/MINDBREAKER/PROVOKE/SIGNUCRUCIS/BLESSING-debuff/QUAGMIRE.
+
+**Scope decisions made**:
+- All debuffs that affect players apply to both build panel (player) and combat panel (target), except strip skills and elemental change.
+- Players can have Undead attribute → SIGNUCRUCIS + BLESSING-debuff apply to player.
+- SC_PROVOKE: debuff section on both panels; ATK buff deferred to self-buffs if other cast methods found.
+- No short-circuit for immobilising SCs (Stun/Freeze/Stone/Sleep) on player — UX decision.
+- Spider Web / Flying: out of scope for current calculator.
+
+**Architecture decision**:
+- Player target pipeline (pvp_build → StatusCalculator → player_build_to_target) was already correctly implemented (Session F/R).
+- Gap found: debuffs from TargetStateSection run *after* pvp_status is computed; cascading stat effects not reflected in incoming pipeline.
+- Fix: `collect_target_player_scs()` on TargetStateSection; route to `pvp_eff.player_active_scs` before StatusCalculator call.
+- New `core/calculators/target_utils.py` with `apply_mob_scs()` centralises mob-target stat SC application.
+
+**New gaps**: G78 (Arch routing fix), G79 (target debuffs SC1), G80 (player debuffs SC2).
+**Session SC stub replaced** with finalised SC1 + SC2 entries in session_roadmap.md.

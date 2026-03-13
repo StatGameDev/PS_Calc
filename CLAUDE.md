@@ -16,6 +16,15 @@ If a task requires locating files, external data, or unfamiliar formats — ask 
 user first. One targeted grep or read is fine. Exploratory multi-file searches are
 not. Stop and ask after one failed attempt.
 
+**Corollary — user questions cost zero context:**
+If a question can be answered by asking the user (terminology, intent, scope, an
+unknown name), ask the user instead of searching. Searching to avoid asking wastes
+context and produces worse answers. Examples of when to ask instead of search:
+- An unknown skill/SC name (just ask "what SC does X apply?")
+- Ambiguous scope ("should X apply to player targets too?")
+- Architecture intent ("did you want A or B?")
+Never run more than one search attempt on an unknown before asking.
+
 ## Source Verification — Hard Rule
 
 **No implementation without reading the exact source line in the current session.**
@@ -59,6 +68,12 @@ every entry on that list must appear in the planning output with its confirmed
 Hercules effect. Do not exclude entries because you judged them "not relevant to the
 damage pipeline", "only a regen effect", "only affects SP", etc. That judgment belongs
 to the user, not to you. List every entry; let the user decide the disposition.
+
+**Scope is not limited to outgoing damage.**
+The calculator models player stats, target stats, outgoing damage, incoming damage,
+DPS, and survivability. Do not use "does this affect outgoing damage?" as a scope
+filter — it is too narrow. Any effect on any stat or pipeline value on either side
+is in scope by default. Ask the user to decide disposition; never unilaterally defer.
 
 ---
 

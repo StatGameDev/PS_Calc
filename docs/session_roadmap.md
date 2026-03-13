@@ -72,60 +72,134 @@ Scope to be finalised in a dedicated planning step before implementation begins.
 
 ---
 
-## Session SC — Debuff Audit + Fix
+## Session Arch — Debuff Routing Fix
 
-**Goal**: Audit all SC_ status conditions affecting the damage pipeline; implement every
-effect that was silently dropped during Session R planning. No pre-filtering by
-"relevance" — every SC on the target and player side is listed, user decides disposition.
+**Goal**: Fix the one remaining architectural gap before SC: debuffs applied to a
+player target must be routed through StatusCalculator so cascading effects (e.g.
+SC_BLESSING → STR reduction → BATK reduction in the incoming pipeline) are correct.
+The player-target resolution pipeline and UI are already implemented correctly.
 
-**Why this session exists**: Session R implemented a subset of debuffs. Others were dropped
-during planning without user consultation, violating the "Never pre-filter scope" rule.
-This session finds and fixes the gaps.
+**What already exists** (no changes needed):
+- `PlayerTargetBrowserDialog` + combat panel toggle: ✅
+- `pvp_build → _apply_gear_bonuses → StatusCalculator → player_build_to_target() → Target`: ✅
+- `hit_chance.py` reads `target.level + target.agi` (not pre-stored flee): ✅ so
+  direct agi modification in `apply_to_target()` is correct for the outgoing pipeline.
+- `apply_to_target()` for pipeline-level effects (element override, force-hit flags): ✅
 
-**Investigation phase (audit first — do not implement until audit is complete):**
+**The gap**: `pvp_status` (and `pvp_build.player_active_scs`) is computed before
+`apply_to_target()` runs. Debuffs with stat-cascade effects (BLESSING → STR → BATK,
+CURSE → LUK → BATK, QUAGMIRE → DEX → soft MDEF) are not reflected in `pvp_status`.
+This means the incoming pipeline (pvp attacker hitting the player) uses the unbuffed
+pvp ATK when debuffs should have reduced it.
 
-1. Read `core/calculators/modifiers/defense_fix.py` and `core/calculators/status_calculator.py`
-   — extract every SC_ currently handled for both target and player side.
-2. Grep `status.c` for `SC_BLIND`, `SC_CURSE`, `SC_DECREASEAGI`, `SC_SLEEP`, `SC_POISON`,
-   `SC_CONFUSION`, `SC_SILENCE`, `SC_JOINTBEAT`, `SC_STRIPWEAPON`, `SC_STRIPARMOR`,
-   `SC_STRIPSHIELD`, `SC_STRIPHELM` — record what stat each modifies and the formula.
-3. Grep `battle.c` for the same SCs — record any direct pipeline effects (force-hit,
-   DEF bypass, element override, ATK modification).
-4. Cross-reference against `gui/sections/player_debuffs_section.py` and
-   `gui/sections/target_state_section.py` — record which SCs have UI toggles.
-5. Present a complete table to the user: SC | effect | implemented? | UI? | verdict.
-   **Do not implement until user approves the table.**
+---
 
-**Likely scope (to be confirmed by audit):**
+### Changes
 
-*Target-side gaps (TargetStateSection + defense_fix / status_calculator):*
-- **SC_BLIND on target** — FLEE penalty (affects player hit chance vs target). status.c.
-- **SC_CURSE on target** — LUK penalty. Matters for target flee/flee2 in incoming calc.
-- **SC_DECREASEAGI on target** — AGI/FLEE penalty.
-- **SC_SLEEP on target** — force-hit (same as STUN?). Confirm in battle.c.
-- **SC_JOINTBEAT** — DEF reduction + possibly ATK/ASPD/FLEE debuffs depending on joint hit.
-  Likely meaningful for DEF bypass. Confirm sub-effects from status.c.
-- **SC_STRIPWEAPON / SC_STRIPARMOR / SC_STRIPSHIELD / SC_STRIPHELM** — remove ATK/DEF
-  contributions of the relevant gear slot. Architecture question: does the calc need a
-  "stripped" flag per slot, or is the effect too complex for current pipeline? Defer if
-  architectural; note in gaps.md.
+**`gui/sections/target_state_section.py`**
+- Add `collect_target_player_scs() → dict[str, int]`: returns all stat-based debuff
+  SCs that need to flow through StatusCalculator (BLIND, CURSE, BLESSING, QUAGMIRE,
+  MINDBREAKER, SIGNUCRUCIS, DONTFORGETME, PROVOKE, etc.).
+- `apply_to_target(target)` stays for pipeline-level effects (element overrides,
+  `target_active_scs` flags for force-hit and DEF halving).
 
-*Player-side gaps (player_debuffs_section + status_calculator):*
-- **SC_POISON on player** — MaxHP halved? Confirm exact status.c effect. No outgoing
-  damage effect, but MaxHP matters for NJ_ISSEN (G74). Note for that gap.
-- **SC_SILENCE on player** — blocks magic. UI state flag needed; magic_pipeline returns 0.
-- **SC_SLEEP on player** — blocks all attacks. UI state flag only (calc returns 0 dmg).
-- **SC_CONFUSION/CHAOS on player** — blocks directional attacks. UI state / note only.
+**`main_window.py`** — pvp path in `_run_battle_pipeline()`:
+- Before calling StatusCalculator on pvp_build: write
+  `collect_target_player_scs()` output into `pvp_eff.player_active_scs`.
+- StatusCalculator then processes debuffs the same way as the build panel.
+- `apply_to_target()` called after for pipeline-level flags (unchanged).
 
-*Open gap that fits here:*
-- **G77** — PR_LEXAETERNA ×2 not applied to BF_WEAPON. Currently only in magic_pipeline.
-  Hercules: SC_LEXAETERNA doubles next hit regardless of type (battle.c). Fix in
-  `BattlePipeline._run_branch()` after FinalRateBonus when target has SC_LEXAETERNA.
+**`core/calculators/target_utils.py`** (new file, ~30 lines)
+- `apply_mob_scs(target: Target) -> None`: centralises all mob-target stat
+  modifications currently scattered in `apply_to_target()`. Called once after
+  mob Target resolution. SC stat effects that already work via direct field
+  modification (agi, luk, mdef_, def_) live here for mob targets. Player targets
+  get these effects through StatusCalculator instead.
 
-**Estimated tokens**: 30–45k (audit grep-heavy; implementation scope depends on audit result).
+**No changes**: `Target`, `PlayerBuild`, `StatusCalculator`, `DefenseFix`,
+`hit_chance`, `player_build_to_target()`, `PlayerTargetBrowserDialog`.
 
-**Output**: Updated TargetStateSection, player_debuffs_section, defense_fix, status_calculator,
-magic_pipeline/battle_pipeline. Gaps: G77 closed; new gap IDs as needed for deferred items.
+---
+
+**Estimated tokens**: 15–20k (3 files, no Hercules reads).
+
+**Output**: Debuff routing is correct for both mob and player targets. SC sessions
+slot new SCs into `apply_mob_scs()` (mob path) or `StatusCalculator`
+`player_active_scs` block (player path) with no further architecture work needed.
+
+---
+
+## Session SC1 — Target Debuffs
+
+**Audit complete** (planning session 2026-03-13). Source reads required before implementation.
+
+**Scope decisions** (from planning):
+- All debuffs that can affect players apply to both panels (build + combat) except strip skills and elemental change.
+- Players can have Undead attribute → Undead/Demon-only debuffs (SIGNUCRUCIS, BLESSING debuff) apply to player.
+- SC_PROVOKE: in debuff sections of both panels; ATK buff aspect deferred to self-buffs if other cast methods are found.
+- No pipeline short-circuit for Stun/Freeze/Stone/Sleep on player (UX decision).
+- Spider Web / Flying: out of scope for current calculator.
+
+**Target-side gaps** (TargetStateSection + target pipeline):
+
+| SC | Effect | Source |
+|---|---|---|
+| SC_BLIND | mob_flee ×75% — affects player hit chance | status.c |
+| SC_CURSE | target LUK → 0 — affects perfect dodge | status.c |
+| SC_SLEEP | force-hit (same channel as STUN) | battle.c |
+| SC_POISON | stat effect (confirm exact formula) | status.c |
+| SC_DONTFORGETME | FLEE + ASPD reduction | status.c |
+| SC_MINDBREAKER | MDEF reduction | status.c |
+| SC_SIGNUCRUCIS | DEF% reduction (Undead/Demon target only) | status.c |
+| SC_BLESSING debuff | STR/DEX penalty (Undead/Demon target only) | status.c |
+| SC_QUAGMIRE | AGI + DEX reduction | status.c |
+
+**Already implemented on target**: SC_STONE/FREEZE/STUN (force-hit), SC_ETERNALCHAOS (def2=0),
+SC_PROVOKE (def_percent), SC_DECREASEAGI (agi direct), SC_FREEZE/STONE (DEF halved),
+SC_FREEZE/STONE (MDEF+25%), PR_LEXAETERNA (magic only — G77 BF_WEAPON deferred to SC2).
+
+**Architecture** (established in Session Arch):
+- Mob path: stat effects go into `apply_mob_scs(target)` in `core/calculators/target_utils.py`.
+- Player path: stat-based SCs go into `pvp_eff.player_active_scs` → StatusCalculator.
+- Pipeline-level effects (force-hit flags, element override) stay in `apply_to_target()`.
+
+**Files touched**: `target_utils.py`, `hit_chance.py`, `target_state_section.py`. Closes G79.
+
+**Estimated tokens**: 30–40k (8–9 status.c/battle.c greps + implementation + UI).
+
+---
+
+## Session SC2 — Player Debuffs + G77
+
+**Source reads**: minimal — formulas confirmed in SC1; same SCs applied to player side.
+
+**Player-side gaps** (PlayerDebuffsSection + StatusCalculator):
+
+| SC | Effect | Already? |
+|---|---|---|
+| SC_BLIND | HIT/FLEE ×75% | ✅ done |
+| SC_CURSE | LUK → 0, BATK ×75% | ✅ done |
+| SC_DECREASEAGI | AGI −(2+lv) | ✅ done |
+| SC_STUN | incoming: enemy force-hits player | ❌ |
+| SC_FREEZE | incoming: force-hit + player element → Water | ❌ |
+| SC_STONE | incoming: force-hit + player element → Earth | ❌ |
+| SC_SLEEP | incoming: force-hit | ❌ |
+| SC_POISON | stat effect (confirm in SC1) | ❌ |
+| SC_DONTFORGETME | FLEE + ASPD reduction | ❌ |
+| SC_ETERNALCHAOS | VIT DEF → 0 (incoming calc) | ❌ |
+| SC_MINDBREAKER | MDEF reduction (incoming magic) | ❌ |
+| SC_PROVOKE | DEF% penalty | ❌ |
+| SC_SIGNUCRUCIS | DEF% reduction (Undead/Demon player only) | ❌ |
+| SC_BLESSING debuff | STR/DEX penalty (Undead/Demon player only) | ❌ |
+| SC_QUAGMIRE | AGI + DEX reduction | ❌ |
+
+**G77**: PR_LEXAETERNA ×2 for BF_WEAPON. After FinalRateBonus in `BattlePipeline._run_branch()`,
+check `target.target_active_scs` for SC_LEXAETERNA and apply ×2. Source: battle.c.
+
+**Files touched**: `status_calculator.py`, `battle_pipeline.py`, `player_debuffs_section.py`.
+Closes G80, G77.
+
+**Estimated tokens**: 25–35k (minimal source reads, implementation + UI).
 
 ---
 
