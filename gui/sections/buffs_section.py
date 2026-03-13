@@ -592,7 +592,10 @@ class BuffsSection(Section):
                               self._dance_level_combos, self._dance_ov_checks, self._dance_ov_spins,
                               _DANCER_DANCES)
         for sc_key, _, _ in _ENSEMBLES:
-            self._ensemble_combos[sc_key].setValue(int(ss.get(sc_key, 0)))
+            if sc_key == "SC_SIEGFRIED":
+                self._ensemble_combos[sc_key].setValue(int(build.support_buffs.get(sc_key, 0)))
+            else:
+                self._ensemble_combos[sc_key].setValue(int(ss.get(sc_key, 0)))
 
         # Ground effects
         if self._ground_combo is not None and self._ground_lv_combo is not None:
@@ -687,7 +690,10 @@ class BuffsSection(Section):
                                  self._dance_level_combos, self._dance_ov_checks, self._dance_ov_spins,
                                  _DANCER_DANCES)
         for sc_key, _, _ in _ENSEMBLES:
-            ss[sc_key] = self._ensemble_combos[sc_key].value()
+            if sc_key == "SC_SIEGFRIED":
+                build.support_buffs["SC_SIEGFRIED"] = self._ensemble_combos[sc_key].value()
+            else:
+                ss[sc_key] = self._ensemble_combos[sc_key].value()
         build.song_state = ss
 
     def _collect_song_group(self, ss: dict,

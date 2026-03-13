@@ -495,11 +495,11 @@ on the enemy, owned by `support_buffs`) — two separate fields, two separate ef
 
 ---
 
-### target_state_section
+### target_state_section — IMPLEMENTED (Session R)
 
 File: `gui/sections/target_state_section.py`
 Panel: combat (below summary_section, above step_breakdown)
-compact_mode: `[]` (ignores panel focus; stays in last user state)
+compact_mode: `["slim_content"]`
 default_collapsed: true
 
 **Scope**: Debuffs and state overrides that affect the target. Primary location for all

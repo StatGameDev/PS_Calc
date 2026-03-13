@@ -47,6 +47,7 @@ from gui.sections.incoming_damage import IncomingDamageSection
 from gui.sections.step_breakdown import StepBreakdownSection
 from gui.sections.summary_section import SummarySection
 from gui.sections.target_section import TargetSection
+from gui.sections.target_state_section import TargetStateSection
 from gui.widgets import NoWheelCombo
 
 
@@ -105,6 +106,7 @@ class MainWindow(QMainWindow):
         self._step_breakdown:   StepBreakdownSection   = self._panel_container.get_section("step_breakdown")    # type: ignore[assignment]
         self._target_section:   TargetSection          = self._panel_container.get_section("target_section")    # type: ignore[assignment]
         self._incoming_damage:  IncomingDamageSection  = self._panel_container.get_section("incoming_damage")   # type: ignore[assignment]
+        self._target_state:     TargetStateSection     = self._panel_container.get_section("target_state_section") # type: ignore[assignment]
 
         self._connect_builder_signals()
         self._connect_combat_signals()
@@ -206,6 +208,7 @@ class MainWindow(QMainWindow):
         self._buffs_section.spirit_spheres_changed.connect(self._combat_controls.set_spirit_spheres)
         self._player_debuffs.changed.connect(self._on_build_changed)
         self._active_items.bonuses_changed.connect(self._on_build_changed)
+        self._target_state.state_changed.connect(self._on_build_changed)
         self._incoming_damage.config_changed.connect(self._run_battle_pipeline)
 
     def _connect_combat_signals(self) -> None:
@@ -332,6 +335,7 @@ class MainWindow(QMainWindow):
         self._player_debuffs.load_build(build)
         self._active_items.load_build(build)
         self._combat_controls.load_build(build)
+        self._target_state.load_build(build)
 
     # ── Build-change pipeline ─────────────────────────────────────────────
 
@@ -356,6 +360,7 @@ class MainWindow(QMainWindow):
         self._player_debuffs.collect_into(build)
         self._active_items.collect_into(build)
         self._combat_controls.collect_into(build)
+        self._target_state.collect_into(build)
         # G15: bonus_str–luk and flat bonus fields are now auto-computed from gear/AI/MA;
         # zero them so old loaded values don't double-stack on top of gear bonuses.
         build.bonus_str = 0
@@ -500,6 +505,10 @@ class MainWindow(QMainWindow):
         else:
             target = loader.get_monster(mob_id) if mob_id is not None else Target()
 
+        # Apply target state debuffs (SC_STONE/FREEZE/STUN/etc.) after target resolved.
+        self._target_state.set_target_type(target.is_pc)
+        self._target_state.apply_to_target(target)
+
         # Always refresh target section — independent of pipeline success (B5).
         self._target_section.refresh_mob(mob_id)
 
@@ -507,6 +516,12 @@ class MainWindow(QMainWindow):
         gear_bonuses = GearBonusAggregator.compute(eff_build.equipped, eff_build.refine_levels)
         GearBonusAggregator.apply_passive_bonuses(gear_bonuses, eff_build.mastery_levels)
         player_target = BuildManager.player_build_to_target(eff_build, status, gear_bonuses)
+        siegfried_lv = int(eff_build.support_buffs.get("SC_SIEGFRIED", 0))
+        if siegfried_lv:
+            resist = 55 + 5 * siegfried_lv
+            for ele_key in ("Ele_Water", "Ele_Earth", "Ele_Fire", "Ele_Wind",
+                            "Ele_Poison", "Ele_Holy", "Ele_Dark", "Ele_Ghost"):
+                player_target.sub_ele[ele_key] = player_target.sub_ele.get(ele_key, 0) + resist
         phys_result = None
         magic_result = None
         is_ranged, ele_override, ratio_override = (

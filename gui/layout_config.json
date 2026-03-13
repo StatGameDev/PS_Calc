@@ -84,6 +84,13 @@
       "compact_modes": []
     },
     {
+      "key": "target_state_section",
+      "panel": "combat",
+      "display_name": "Target State",
+      "default_collapsed": true,
+      "compact_modes": ["slim_content"]
+    },
+    {
       "key": "step_breakdown",
       "panel": "combat",
       "display_name": "Step Breakdown",

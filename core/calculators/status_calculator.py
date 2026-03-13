@@ -73,6 +73,18 @@ class StatusCalculator:
         if _ac_owl_lv:
             status.dex += _ac_owl_lv
 
+        # === PLAYER DEBUFFS (player_active_scs) ===
+        # Applied before derived stats so BATK, HIT, FLEE, CRI pick up the penalties.
+        player_scs = build.player_active_scs
+
+        # SC_DECREASEAGI: agi -= 2+lv (status.c:7633, 4025-4026)
+        if "SC_DECREASEAGI" in player_scs:
+            status.agi -= 2 + player_scs["SC_DECREASEAGI"]
+
+        # SC_CURSE: luk = 0 (status.c:4261)
+        if "SC_CURSE" in player_scs:
+            status.luk = 0
+
         # === BASE ATK ===
         # Ranged weapons (W_BOW etc.) swap STR/DEX roles in BATK.
         # is_ranged_override overrides; otherwise derived from weapon_type.
@@ -101,6 +113,10 @@ class StatusCalculator:
         if "SC_GS_GATLINGFEVER" in active_sc:
             _lv = active_sc["SC_GS_GATLINGFEVER"]
             status.batk += 20 + 10 * _lv
+
+        # SC_CURSE: atk% -= 25 (status.c:4345-4346)
+        if "SC_CURSE" in player_scs:
+            status.batk = status.batk * 75 // 100
 
         # === DEFENSE ===
         status.def_ = build.equip_def                    # Hard DEF (def1) = equipment only
@@ -205,6 +221,12 @@ class StatusCalculator:
         _mo_dodge_lv = build.mastery_levels.get("MO_DODGE", 0)
         if _mo_dodge_lv:
             status.flee += (_mo_dodge_lv * 3) >> 1
+
+        # SC_BLIND: hit *= 0.75, flee *= 0.75 — applied last, after all additive bonuses
+        # status.c:4817-4818 (hit), status.c:4902-4903 (flee)
+        if "SC_BLIND" in player_scs:
+            status.hit  = status.hit  * 75 // 100
+            status.flee = status.flee * 75 // 100
 
         # === ASPD ===
         # Pre-renewal formula (status.c status_base_amotion_pc, #else = not RENEWAL_ASPD):

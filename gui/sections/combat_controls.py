@@ -516,6 +516,7 @@ class CombatControlsSection(Section):
         self._param_ef_spin.setValue(0)
         self._param_jk_combo.setChecked(False)
         self._param_jk_running.setChecked(False)
+        self._repopulate_skill_combo(build.job_id, preserve_selection=False)
 
     def set_spirit_spheres(self, n: int) -> None:
         """Update the sphere count combo without re-emitting spirit_spheres_changed."""

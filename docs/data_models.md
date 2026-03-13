@@ -34,10 +34,12 @@ mdef_: int = 0          # hard MDEF — from mob_db "mdef" or player equip
 int_: int = 0           # used to derive mdef2 (soft MDEF) from mob or player INT
 armor_element: int = 0  # element the target defends as (from armor card/endow)
 flee: int = 0           # full FLEE — used when is_pc=True
+# Added Session R (G48):
+target_active_scs: Dict[str, int] = field(default_factory=dict)  # SC_STONE/FREEZE/STUN/POISON etc.
 ```
 
 ### Fields to add [NEW]:
-_All previously listed [NEW] fields were added in Session A. No remaining Target fields to add._
+_All previously listed [NEW] fields were added. No remaining Target fields to add._
 
 ### How mob_db populates Target (loader.get_monster):
 **Currently populated**: def_, vit, luk, agi, size, race, element, element_level, is_boss, level, mdef_, int_

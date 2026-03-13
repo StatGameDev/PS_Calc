@@ -2,21 +2,22 @@ from __future__ import annotations
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout,
+    QCheckBox,
+    QGridLayout,
     QLabel,
     QWidget,
 )
 
 from core.models.build import PlayerBuild
 from gui.section import Section
-from gui.widgets.collapsible_sub_group import CollapsibleSubGroup
+from gui.widgets import LevelWidget
 
 
 class PlayerDebuffsSection(Section):
     """
-    Session M0 skeleton — debuffs applied to the player by enemies.
-    Used for incoming damage calculations.
-    Content is stubbed; actual debuff rows added in Session R.
+    Session R — debuffs the enemy has applied to the player.
+    Affects StatusCalculator outputs (AGI/LUK/BATK/HIT/FLEE).
+    All widgets write to build.player_active_scs.
     """
 
     changed = Signal()
@@ -24,52 +25,62 @@ class PlayerDebuffsSection(Section):
     def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_modes, parent)
 
-        self._compact_widget: QWidget | None = None
-        self._compact_summary_lbl: QLabel | None = None
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(4)
+        grid.setColumnStretch(1, 1)
 
-        # ── Player Debuffs sub-group ──────────────────────────────────────
-        self._sub_debuffs = CollapsibleSubGroup("Player Debuffs", default_collapsed=False)
-        self._sub_debuffs.add_content_widget(
-            _note("Debuffs the enemy has applied to you.\n(SC toggles added in Session R)")
-        )
-        self.add_content_widget(self._sub_debuffs)
+        row = 0
+        grid.addWidget(_lbl("Curse"), row, 0)
+        self._chk_curse = QCheckBox()
+        grid.addWidget(self._chk_curse, row, 1)
+        row += 1
 
-    # ── Compact API ────────────────────────────────────────────────────────
+        grid.addWidget(_lbl("Blind"), row, 0)
+        self._chk_blind = QCheckBox()
+        grid.addWidget(self._chk_blind, row, 1)
+        row += 1
 
-    def _build_compact_widget(self) -> None:
-        w = QWidget()
-        layout = QHBoxLayout(w)
-        layout.setContentsMargins(4, 4, 4, 4)
-        self._compact_summary_lbl = QLabel("No active debuffs")
-        self._compact_summary_lbl.setObjectName("passive_compact_summary")
-        self._compact_summary_lbl.setWordWrap(True)
-        layout.addWidget(self._compact_summary_lbl)
-        w.setVisible(False)
-        self._compact_widget = w
-        self.layout().addWidget(w)
+        grid.addWidget(_lbl("Decrease AGI"), row, 0)
+        self._lw_decagi = LevelWidget(10, include_off=True, item_prefix="Lv ")
+        grid.addWidget(self._lw_decagi, row, 1)
 
-    def _enter_slim(self) -> None:
-        if self._compact_widget is None:
-            self._build_compact_widget()
-        self._compact_widget.setVisible(True)
+        container = QWidget()
+        container.setLayout(grid)
+        self.add_content_widget(container)
 
-    def _exit_slim(self) -> None:
-        if self._compact_widget is not None:
-            self._compact_widget.setVisible(False)
+        self._chk_curse.stateChanged.connect(self._emit)
+        self._chk_blind.stateChanged.connect(self._emit)
+        self._lw_decagi.valueChanged.connect(self._emit)
+
+    def _emit(self, *_) -> None:
+        self.changed.emit()
 
     # ── Public API ─────────────────────────────────────────────────────────
 
     def load_build(self, build: PlayerBuild) -> None:
-        # No widgets yet — nothing to restore
-        pass
+        scs = build.player_active_scs
+        for w in (self._chk_curse, self._chk_blind, self._lw_decagi):
+            w.blockSignals(True)
+        self._chk_curse.setChecked(bool(scs.get("SC_CURSE", False)))
+        self._chk_blind.setChecked(bool(scs.get("SC_BLIND", False)))
+        self._lw_decagi.setValue(int(scs.get("SC_DECREASEAGI", 0)))
+        for w in (self._chk_curse, self._chk_blind, self._lw_decagi):
+            w.blockSignals(False)
 
     def collect_into(self, build: PlayerBuild) -> None:
-        # No widgets yet — nothing to collect
-        build.player_active_scs = dict(getattr(build, "player_active_scs", {}))
+        scs: dict[str, int] = {}
+        if self._chk_curse.isChecked():
+            scs["SC_CURSE"] = 1
+        if self._chk_blind.isChecked():
+            scs["SC_BLIND"] = 1
+        decagi_lv = self._lw_decagi.value()
+        if decagi_lv:
+            scs["SC_DECREASEAGI"] = decagi_lv
+        build.player_active_scs = scs
 
 
-def _note(text: str) -> QLabel:
+def _lbl(text: str) -> QLabel:
     lbl = QLabel(text)
-    lbl.setObjectName("active_items_note")
-    lbl.setWordWrap(True)
+    lbl.setObjectName("combat_field_label")
     return lbl

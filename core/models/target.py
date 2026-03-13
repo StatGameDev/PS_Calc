@@ -27,3 +27,6 @@ class Target:
     armor_element: int = 0          # 0 = Neutral
     flee:  int = 0                  # tstatus->flee
     def_percent: int = 100          # st->def_percent: multiplier on vit_def for PC targets (battle.c:1492)
+    target_active_scs: Dict[str, int] = field(default_factory=dict)
+    # SC_STONE/SC_FREEZE/SC_STUN/SC_POISON applied to this target by the player.
+    # Written by TargetStateSection.apply_to_target(); read by DefenseFix, hit_chance.

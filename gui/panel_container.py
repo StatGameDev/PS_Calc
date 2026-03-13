@@ -25,6 +25,7 @@ from gui.sections.summary_section import SummarySection
 from gui.sections.step_breakdown import StepBreakdownSection
 from gui.sections.target_section import TargetSection
 from gui.sections.incoming_damage import IncomingDamageSection
+from gui.sections.target_state_section import TargetStateSection
 
 _SECTION_FACTORY: dict[str, type[Section]] = {
     "build_header":     BuildHeaderSection,
@@ -39,6 +40,7 @@ _SECTION_FACTORY: dict[str, type[Section]] = {
     "summary_section":  SummarySection,
     "step_breakdown":   StepBreakdownSection,
     "target_section":   TargetSection,
+    "target_state_section": TargetStateSection,
     "incoming_damage":  IncomingDamageSection,
 }
 

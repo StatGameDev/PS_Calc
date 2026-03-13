@@ -30,6 +30,10 @@ def calculate_hit_chance(
         - arrow_hit: ammo HIT bonus added to player HIT
         - agi_penalty_type: AoE hit penalty for hitting multiple targets
     """
+    target_scs = target.target_active_scs
+    if "SC_STONE" in target_scs or "SC_FREEZE" in target_scs or "SC_STUN" in target_scs:
+        return 100.0, 0.0  # force-hit, no perfect dodge (battle.c:5014-5015)
+
     mob_flee = target.level + target.agi
     hitrate = 80 + status.hit - mob_flee
     hitrate = max(config.min_hitrate, min(config.max_hitrate, hitrate))

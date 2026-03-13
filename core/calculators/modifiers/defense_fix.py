@@ -75,6 +75,10 @@ class DefenseFix:
 
         def1 = max(0, min(100, target.def_))
 
+        target_scs = target.target_active_scs
+        if "SC_STONE" in target_scs or "SC_FREEZE" in target_scs:
+            def1 = def1 >> 1  # status.c:5013-5016 #ifndef RENEWAL
+
         # G5 ignore_def: cards like Thanatos bypass a % of hard DEF
         race_rc = _RACE_TO_RC.get(target.race, "")
         boss_rc = "RC_Boss" if target.is_boss else "RC_NonBoss"
@@ -97,6 +101,9 @@ class DefenseFix:
 
         def2 = max(1, target.vit)
 
+        if build is not None and build.support_buffs.get("SC_ETERNALCHAOS"):
+            def2 = 0  # status.c:5090: returns 0 from status_calc_def2
+
         # VIT penalty (full mechanic – uses target.targeted_count, respects bitmask)
         if config.vit_penalty_type != 0 and (config.vit_penalty_target & (1 if target.is_pc else 2)) != 0:
             target_count = target.targeted_count
@@ -111,6 +118,7 @@ class DefenseFix:
                         def2 -= penalty
 
         is_pdef2 = (skill is not None and skill.name == "MO_INVESTIGATE")
+        prov_lv = int(build.support_buffs.get("SC_PROVOKE", 0)) if build is not None else 0
 
         # Soft VIT DEF range computation (needed for both normal and pdef=2 paths).
         # _subtract_uniform convolves the PMF with the negated uniform for exact crossing.
@@ -126,6 +134,8 @@ class DefenseFix:
             # SC_ANGELUS: vit_def *= def_percent/100 (battle.c:1492, pre-renewal PC path only)
             # Hard DEF (def1) is NOT scaled for PCs in pre-renewal (only mob/pet targets).
             dp = getattr(target, "def_percent", 100)
+            if prov_lv:
+                dp = max(0, dp - (5 + 5 * prov_lv))  # status.c:4401-4402
             if dp != 100:
                 vd_min = vd_min * dp // 100
                 vd_max = vd_max * dp // 100
@@ -140,6 +150,11 @@ class DefenseFix:
             vd_max = def2 + (variance_max - 1 if variance_max > 0 else 0)
             # avg of rnd()%n is (n-1)/2; n//2 rounds half-up (C1a fix)
             vd_avg = def2 + (variance_max // 2 if variance_max > 0 else 0)
+            if prov_lv:
+                prov_pct = 5 + 5 * prov_lv
+                vd_min = vd_min * (100 - prov_pct) // 100
+                vd_max = vd_max * (100 - prov_pct) // 100
+                vd_avg = vd_avg * (100 - prov_pct) // 100
             note_type = "monster"
 
         if is_pdef2:
@@ -204,6 +219,8 @@ class DefenseFix:
         Source: battle.c:1549-1592 BF_MAGIC case (#else not RENEWAL, magic_defense_type=0).
         """
         mdef = max(0, min(100, target.mdef_))
+        if "SC_STONE" in target.target_active_scs or "SC_FREEZE" in target.target_active_scs:
+            mdef = min(100, mdef + 25 * mdef // 100)  # status.c:5153-5156
         # Soft MDEF: int_ + vit//2 (status.c:3867 #else not RENEWAL)
         mdef2 = target.int_ + (target.vit >> 1)
 

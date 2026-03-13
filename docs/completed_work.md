@@ -1869,3 +1869,46 @@ no pre-renewal effect.**
 
 **NJ_BAKUENRYU, NJ_HYOUSENSOU, NJ_HYOUSYOURAKU, NJ_RAIGEKISAI, NJ_KAMAITACHI all confirmed
 `AttackType: "Magic"` in skill_db.conf → correctly in `_BF_MAGIC_RATIOS`.**
+
+---
+
+## Session R — Target Debuff System (2026-03-13)
+
+**G48 — Target debuff system (full)**
+
+New field `target_active_scs: Dict[str, int]` on `Target` (core/models/target.py).
+New section `gui/sections/target_state_section.py`: SC_STONE/FREEZE/STUN toggles (mob-only);
+SC_PROVOKE level 1–10 (mob-only); SC_ETERNALCHAOS toggle (both). Two-method API:
+`collect_into(build)` → support_buffs; `apply_to_target(target)` → mutates Target fields directly.
+
+**G70 — Skill combo empty on first load**
+
+`combat_controls.py` load_build() now calls `_repopulate_skill_combo(build.job_id, preserve_selection=False)` at end, so skill list is populated with the correct job on build load, not just on job-change.
+
+**defense_fix.py — SC_STONE/FREEZE/STUN/PROVOKE/EC**
+
+- SC_STONE or SC_FREEZE active on target: `def1 >>= 1` (status.c:5013-5016 #ifndef RENEWAL)
+- SC_ETERNALCHAOS active (build.support_buffs): `def2 = 0` (status.c:5090)
+- SC_PROVOKE level: PC path reduces `dp` by `5+5×lv`; mob path scales vd_min/max/avg by `(100 - 5+5×lv) / 100` (status.c:4401-4402)
+- calculate_magic(): SC_STONE or SC_FREEZE → `mdef = min(100, mdef + 25*mdef//100)` (status.c:5153-5156)
+
+**hit_chance.py — Force-hit**
+
+SC_STONE, SC_FREEZE, or SC_STUN on target → return (100.0, 0.0) immediately (battle.c:5014-5015).
+
+**magic_pipeline.py — PR_LEXAETERNA**
+
+After FinalRateBonus, if `build.support_buffs.get("PR_LEXAETERNA")`: `pmf × 2` with its own
+pipeline step "Lex Aeterna". Source: status.c:8490.
+
+**buffs_section.py — SC_SIEGFRIED storage moved**
+
+SC_SIEGFRIED in ensemble loop now writes to `build.support_buffs` (not song_state) in both
+`collect_into` and `load_build`. Architectural correction: SC_SIEGFRIED is a received party
+ensemble buff with an incoming pipeline effect; same home as SC_BLESSING/SC_ADRENALINE.
+
+**layout_config.json / panel_container.py / main_window.py — target_state_section wired**
+
+- layout_config.json: `target_state_section` entry added before `step_breakdown` (combat panel, collapsed, slim_content)
+- panel_container.py: import + factory entry
+- main_window.py: import, typed ref `_target_state`, signal wiring, collect_into, load_build, set_target_type + apply_to_target after target resolved, SC_SIEGFRIED incoming resist (55+5×lv added to all non-Neutral sub_ele on player_target)
