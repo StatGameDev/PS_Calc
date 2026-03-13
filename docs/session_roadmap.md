@@ -63,19 +63,29 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ## Session R — Target Debuff System
 
-**Goal**: Allow debuffs from debuff_skills.md to be applied to the target before the
-damage pipeline runs, so they modify the target's effective stats.
-**Gap ID**: G48.
+**Goal**: Full target/player debuff system plus all deferred gui_plan.md Session R items.
+**Gap IDs**: G48, G70, G72, G73.
 **Architecture**: New `target_active_scs: dict[str, int]` on Target dataclass.
 `player_active_scs` already stubbed on PlayerBuild (Session M0 prereq). DefenseFix /
 a new `target_status_calculator.py` reads these SCs and adjusts target DEF, FLEE, element.
 **GUI**: Wire `target_state_section` Applied Debuffs + Monster State sub-groups with actual
 debuff toggles (SC_PROVOKE, SC_DECREASEAGI, PR_LEXAETERNA, etc.).
 Wire `player_debuffs_section` (already scaffolded in M0) with actual debuff toggles
-(SC_ETERNALCHAOS, SC_CURSE, SC_BLIND, SC_DECREASEAGI).
-Toggles per debuff (PROVOKE, AGIDISCOUNT, etc.) + level spinbox.
-Readback regarding player/target differences in implementation (ideally re-use system for both)
-**Estimated tokens**: 30–40k (new architecture + UI).
+(SC_ETERNALCHAOS, SC_CURSE, SC_BLIND, SC_DECREASEAGI). Toggles per debuff + level spinbox.
+
+**Additional scope**:
+- **G70** — Fix Skill List filter bug (filters everything until Job is changed once).
+- **Status Ailments (simple toggles)** — Target State sub-group: Freeze (FLEE=0, Water
+  element), Stone (FLEE=0, Earth element, DEF increase), Stun (FLEE=0), Poison (UI
+  toggle only — DoT not modelled), Curse (stat penalties). No turn-sequence logic.
+- **SC_SIEGFRIED** — player-side elemental resist; wire into incoming pipeline.
+- **Target Strip/Divest** — promote from placeholder stub to functional: zero the
+  relevant defense component when checked.
+- **Target Stone Skin / Anti-Magic** — implement stat effects.
+- **G72 / G73** — Verify SC_WHISTLE/SC_HUMMING formulas and SC_DRUMBATTLE/
+  SC_NIBELUNGEN pipeline timing against Hercules source before closing session.
+
+**Estimated tokens**: 40–50k (architecture + UI + multiple Hercules reads).
 
 ---
 
@@ -88,13 +98,148 @@ That directory has a lot of useful documents in general
 
 ---
 
-## Deferred (Phase 5+ / Advanced Combat Modelling)
+## Session TW — Job Stat Bonuses + Stat Planner
 
-| Item | Reason deferred |
+**Goal**: Two foundational features that share a stat data focus and fit one context window.
+
+**Job Stat Bonuses (G64 + G65)**:
+- Job bonus table from Hercules `pc.c` — stat gain per job level per job.
+- Apply in StatusCalculator per `job_id` / `job_level`.
+- Bonus stat display column updated to show job bonus as a named source.
+
+**Stat Planner (Phase 5 partial)**:
+- Stat point cost curve: each successive point in a stat costs more points
+  (Hercules `pc.c` `pc_gets_status_point` or equivalent).
+- New UI widget in StatsSection (or dedicated sub-section): shows remaining
+  stat points, cost of next point per stat, and current total spent.
+- No "what-if" mode. No comparison. Budget display only.
+
+**Estimated tokens**: 30–40k (2 Hercules reads + implementation + UI).
+
+---
+
+## Session S — Item Scripts Pass
+
+**STUB**: Needs planning sub-session (read `Hercules/doc/item_bonus.md` first).
+Ensure all scripts work correctly and begin implementing consumable effects.
+Scope to be finalised in a dedicated planning step before implementation begins.
+
+---
+
+## Session Scale — UI Scaling
+
+**Goal**: App scales correctly across common resolutions and provides a manual override.
+
+- Auto-detect active monitor DPI / resolution; derive a base scale factor.
+- Apply scale factor to fonts, widget sizes, and layout spacing via QSS variables
+  or programmatic scaling at startup.
+- Manual adjustment slider in a settings area: further multiplies the auto-derived scale.
+- Verify layout at 1280×720, 1920×1080, and at least one HiDPI config.
+- `ui_scale_override: float` persisted in settings JSON.
+
+**Estimated tokens**: 20–35k depending on how many layout fixes are needed.
+
+---
+
+## Alpha Test
+
+---
+
+## Post-Alpha: UX Pass *(parallel with Payon Stories Config work)*
+
+### Session U (and U2, U3 … as needed) — Blacksmith + Guild Buffs + Alpha Bug Fixes
+
+**Goal**: Fix all bugs surfaced during alpha; implement remaining known mechanics gaps.
+Scope is intentionally open-ended — one session per logical cluster of bugs/fixes.
+
+Confirmed pre-load items:
+- **G66** — Blacksmith: Weaponry Mastery ATK bonus, Overthrust cap→5,
+  Adrenaline Rush self/party split, Skin Tempering DEF+resistance,
+  Cart Revolution in skill list, Mammonite ratio.
+- **G49 remainder** — Guild Buffs sub-group (`GD_BATTLEORDER`).
+- Alpha bug fixes as discovered during testing.
+
+Each U-session is scoped at session start once bugs are known.
+
+---
+
+### Session UX-1 — GUI/UX Polish
+
+Visual consistency, tooltip completeness, section ordering review, accessibility basics.
+Scope defined after alpha feedback is collected.
+
+---
+
+### Session UX-2 — Easy Gimme Features
+
+Low-hanging advanced features that don't require new architecture:
+- **G67** — Equipment section card field rework.
+- **G58** — Card browser edge cases.
+- **G14** — bWeaponAtk (weapon-type ATK%).
+- **G68** — pdef=1 card bonuses (def_ratio_atk_ele/race).
+- **G50 remainder** — HT_STEELCROW, AC_VULTURE/GS_SNAKEEYE range tracking.
+- **G53** — Falcon/Blitz Beat proc system (if in scope by then).
+- **G44** — Forge toggle restriction (if DB consolidation resolved).
+- **G51** — SC_NIBELUNGEN DEF bypass (if Hercules devs have responded).
+- **G74** — NJ_ISSEN HP-based damage formula.
+- **G75** — NJ_ZENYNAGE / GS_FLING BF_MISC wiring.
+- **G76** — GS_MAGICALBULLET: pass StatusData into SkillRatio (architectural) + implementation.
+
+---
+
+## Payon Stories Config
+
+**Scale**: Comparable in total effort to all pre-alpha work combined.
+Toggleable deviations from stock Hercules pre-renewal — custom skill behaviour,
+stat changes, mob modifications, and server-rate overrides specific to the
+Payon Stories private server. Individual sessions to be planned as work begins.
+
+Sessions to be defined here as scope is understood. Each session will follow the
+standard Source Verification rule: every custom value must be traced to the
+Payon Stories config files or patch notes, not inferred.
+
+---
+
+## Post-Config
+
+### Session Comparison — Multi-Variant Builds (Phase 6)
+
+Multiple build variants stored within a single save file, toggled via buttons.
+Side-by-side diff view showing delta between active variant and a reference variant.
+Exact UI placement TBD (likely a toolbar row above the builder panel).
+
+### Session Histogram — Distribution Graph (Phase 7)
+
+pyqtgraph TTK distribution histogram: median, 10th/90th percentile,
+normal vs crit overlay. Requires PMF variance tuple structure to be correct first.
+
+---
+
+## Advanced Combat Modelling *(last)*
+
+### Session Adv-1 — Turn-Sequence + Combo System
+
+Turn-sequence infrastructure. Stance-state modelling. Combo skill chains.
+AttackDefinition `state_requirement` / `next_state` seam becomes live.
+Also includes: **GD_BLOODLUST** (HP drain on hit) and **SC_DEVOTION** (Crusader damage
+redirect) — both require post-hit event modelling that this session's infrastructure enables.
+
+### Session Adv-2 — Status Ailments (Advanced)
+
+Proc chance, turn interaction, debuff-on-hit mechanics.
+Upgrades the simple-toggle ailment toggles from Session R to full modelling.
+
+### Session Adv-3 — Markov DPS Steady-State (G57)
+
+Replace `FormulaSelectionStrategy` with `MarkovSelectionStrategy`
+(eigenvector of transition matrix). Requires Adv-1 combo system as prerequisite.
+
+---
+
+## Deferred Indefinitely
+
+| Item | Reason |
 |---|---|
-| **G41 — PC VIT DEF discrepancy** | LOW PRIORITY. Hercules comment vs C code disagree. Investigate vs official server data before any fix. Currently following C implementation. |
-| **Status ailments** (status_skills.md) | Need turn-sequence / hit-count modelling. Phase 5+. |
-| **Combo system** (combo_skills.md) | Requires turn-sequence and stance-state modelling. |
-| **Healing calculator** (healing_skill.md) | Separate feature mode; 4 skills. |
-| **Rebirth / Star Gladiator / Soul Linker** | Not yet in skill_lists; to be added in a future extension session. |
-| **Phases 5–8** | Stat Planner, Comparison, Histogram, Config/Scale tabs. |
+| **G41 — PC VIT DEF discrepancy** | Hercules comment vs C code disagree. Investigate vs official server data before any fix. Currently following C implementation. |
+| **Rebirth / Star Gladiator / Soul Linker** | Out of scope until content expansion. |
+| **Healing calculator** | Separate feature mode; deferred until core is stable. |

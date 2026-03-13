@@ -152,10 +152,12 @@ type changes require editing only this class.
 ## Phases 5–8
 
 **Phase 5 — Stat Planner Tab**
-Tab infrastructure on combat panel. Stat budget, projections, what-if mode.
+Tab infrastructure on combat panel. Stat budget and per-stat point cost display.
 
 **Phase 6 — Comparison Tab**
-Side-by-side build comparison. Diff highlighting and delta column.
+Side-by-side build comparison using multiple variants stored within a single save file.
+Toggle between saved variants via buttons; diff highlighting and delta column show
+differences between the active variant and a selected reference variant.
 
 **Phase 7 — Advanced Tab & Graphs**
 Full step breakdown always-visible. pyqtgraph TTK distribution histogram
@@ -608,4 +610,4 @@ element_override: Optional[int]     # None = natural element; int = override (Se
 | SC_DEVOTION (Crusader) | Damage redirect; requires attacker/defender pairing. |
 | Target Strip/Divest | Deferred to Session R. |
 | Target Stone Skin / Anti-Magic | Deferred to Session R. |
-| Status ailments | Phase 5+ (requires turn-sequence model). |
+| Status ailments (advanced) | Simple stat-effect toggles implemented in Session R. Turn-sequence / proc mechanics deferred to Session Adv-2. |
