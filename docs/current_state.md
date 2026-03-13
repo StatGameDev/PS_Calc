@@ -1,129 +1,159 @@
 # PS_Calc — Current State (Handoff)
 
-_Updated: Session J-plan, 2026-03-08. For use when switching Claude instances._
+_Updated: Post-GUI-BuffLvl, 2026-03-12. For use when switching Claude instances._
 
 ---
 
-## What was completed this session
+## What was completed in recent sessions
 
-**Session J-plan — taxonomy research and doc structure only. No code was written.**
+**Q2 (skill ratios + DefenseFix specials)**
+- `MO_FINGEROFFENSIVE`, `MO_INVESTIGATE`, `AM_ACIDTERROR` added to `_BF_WEAPON_RATIOS`
+- `KN_CHARGEATK`, `MC_CARTREVOLUTION`, `MO_EXTREMITYFIST`, `TK_JUMPKICK` implemented as
+  special-case blocks in `SkillRatio.calculate()` (require `build.skill_params` at runtime)
+- `_BF_WEAPON_PARAM_SKILLS` frozenset tracks these 4 skills
+- `DefenseFix`: NK_IGNORE_DEF flag read from `build.skill_params`; `pdef=2` (damage×1×def/100)
+  and `def1=0` paths confirmed and implemented
+- `IMPLEMENTED_BF_WEAPON_SKILLS` = 38 (all non-deferred Q1+Q2 skills)
+- Context-sensitive `skill_params` UI row in `CombatControlsSection`
 
-1. Full Bard/Dancer buff taxonomy confirmed from Hercules source (skill.c + status.c).
-2. Key architectural finding: **val position mapping** — songs are applied via `sc_start4`
-   so `sg->val1` (set in `skill_unitsetting`) becomes `SC->val2`; `sg->val2` becomes `SC->val3`.
-   Confirmed from `skill_unit_onplace_timer` (skill.c:~14278). All songs follow this rule.
-3. `docs/BARD_DANCER_SONGS.md` deleted and replaced by `docs/buffs/` (6 separate files).
-4. Data model drafted (not implemented): `song_state` dict + `support_buffs` dict on `PlayerBuild`.
+**GUI-BuffLvl**
+- All `has_lv=True` self buffs converted from checkbox+spinbox → label+`LevelWidget` combo
+- Bidirectional spirit sphere sync: `MO_SPIRITBALL` spinbox ↔ `MO_FINGEROFFENSIVE` sphere
+  dropdown, via `spirit_spheres_changed` signals and `set_spirit_spheres()` setters
 
-All confirmed formulas are in `docs/buffs/songs_dances.md` — do not re-research them.
-
----
-
-## Entry point for next session
-
-**The user will provide a list of all skills with buff/debuff effects.**
-
-Use that list to fill in stubs in:
-- `docs/buffs/support_buffs.md` — Priest/Knight/etc party-cast buffs
-- `docs/buffs/weapon_endow.md` — TK_SEVENWIND level→element table + any missed endow
-- `docs/buffs/stat_foods.md` — specific consumable SC keys + stacking rules
-- `docs/buffs/ground_effects.md` — Volcano/Deluge/ViolentGale formulas + any missed
-
-For each stub entry: one targeted grep in Hercules status.c or skill.c to confirm.
-Update confidence level from [stub] to [confirmed] or [explore] as appropriate.
-
-Once the full list is processed, proceed to implementation (see Implementation Order below).
+**Active known bug**
+- **G69**: `MO_EXTREMITYFIST` ratio formula in `skill_ratio.py:228` is **WRONG**.
+  Current (placeholder): `min(100 + 100*(8 + sp//10), 60000)`
+  Must re-read `battle.c:2197-2206` `#ifndef RENEWAL` before fixing.
+  The correct formula is NOT a simple `8 + sp//10` progression — see Hercules source.
+  Also: per roadmap note, this skill should **ignore DEF** (NK_IGNORE_DEF or similar);
+  confirm from the same source block.
 
 ---
 
-## Implementation order for Party Buffs (Session J proper)
+## Entry point for Q3
 
-**Step 1 — Data model** (`core/models/build.py`):
-Add `song_state: dict = field(default_factory=dict)` and
-`support_buffs: dict = field(default_factory=dict)`.
-Add save/load round-trip in `core/build_manager.py`.
+**Q3 = Ninja hybrid + Gunslinger + G69 fix. All in one session.**
 
-**Step 2 — New StatusData fields** (`core/models/status.py`):
-- `cast_time_reduction_pct: int = 0`
-- `after_cast_delay_reduction_pct: int = 0`
-- `sp_cost_reduction_pct: int = 0`
+### Step 0 — Fix G69 first (before adding new skills)
 
-**Step 3 — StatusCalculator** (`core/calculators/status_calculator.py`):
-Apply all song/support effects in the correct stat blocks:
-- ASPD block: SC_ASSNCROS (scaffolded — wire `song_state`)
-- HIT block: SC_HUMMING, support HIT buffs
-- FLEE block: SC_WHISTLE val2 (FLEE) + val3×10 (FLEE2 / perfect dodge)
-- CRI block: SC_FORTUNE
-- MaxHP block: SC_APPLEIDUN
-- MaxSP block: SC_SERVICEFORYU val2
-- New fields: SC_POEMBRAGI → cast/ACD; SC_SERVICEFORYU val3 → sp_cost
-- Base stat blocks: SC_BLESSING (STR/INT/DEX), SC_INCREASEAGI (AGI), SC_GLORIA (+30 LUK), etc.
+Re-read `battle.c:2197-2206` `#ifndef RENEWAL`. The formula block is short.
+Fix `skill_ratio.py:225-229`. If the block also sets `NK_IGNORE_DEF` or similar flag,
+add that to `_BF_WEAPON_PARAM_SKILLS` or handle inline as needed.
 
-**Step 4 — Pipeline step for WATK bonuses**:
-SC_DRUMBATTLE and SC_NIBELUNGEN add flat WATK. Confirm pipeline position before implementing.
-(Open design question #2 in `docs/buffs/README.md`.)
+### Step 1 — Verify G55 (Shuriken type string)
 
-**Step 5 — GUI** (`gui/sections/passive_section.py` or new section):
-Party Buffs sub-group in PassiveSection:
-- Song caster panel: AGI, LUK, VIT, DEX, INT spinboxes (1–99) + MusLesson + DanceLesson (0–10)
-- Per-song rows: checkbox + level spinbox (1–10) for each confirmed song/dance/ensemble
-- Support buff rows: checkbox or level spinbox per confirmed buff
+`mastery_fix.py:76` checks `weapon.weapon_type == "Shuriken"`.
+Grep `item_db.json` for `"Shuriken"` weapon_type entries to confirm the string matches.
+If it doesn't match, fix mastery_fix.py before implementing NJ skill ratios.
 
-**Step 6 — derived_section** (`gui/sections/derived_section.py`):
-New display rows for cast_time_reduction_pct, after_cast_delay_reduction_pct, sp_cost_reduction_pct.
+### Step 2 — NJ_* BF_WEAPON ratios (battle.c `calc_skillratio` NJ_* cases)
+
+Source to grep: `skill.c` `calc_skillratio`, then NJ_* cases.
+Skills and what to expect:
+
+| Constant | ID | Notes |
+|---|---|---|
+| NJ_SYURIKEN | 523 | thrown; likely level-linear |
+| NJ_KUNAI | 524 | thrown |
+| NJ_HUUMA | 525 | thrown |
+| NJ_KASUMIKIRI | 528 | |
+| NJ_KIRIKAGE | 530 | |
+| NJ_ZENYNAGE | 526 | Zeny-based damage — special formula |
+| NJ_ISSEN | 544 | HP-based damage — special formula, may need build.skill_params |
+
+**NJ_ZENYNAGE and NJ_ISSEN**: both require runtime values (current zeny / current HP).
+If they need `build.skill_params`, add them to `_BF_WEAPON_PARAM_SKILLS` and the
+special-case block in `SkillRatio.calculate()`, similar to KN_CHARGEATK/MO_EXTREMITYFIST.
+Add corresponding `skill_params` UI rows in `CombatControlsSection` if needed.
+
+### Step 3 — NJ_* BF_MAGIC ratios (skill.c `calc_skillratio` NJ_* cases)
+
+| Constant | ID | Notes |
+|---|---|---|
+| NJ_KOUENKA | 534 | fire |
+| NJ_KAENSIN | 535 | ground fire; may be complex |
+| NJ_BAKUENRYU | 536 | |
+| NJ_HYOUSENSOU | 537 | |
+| NJ_HYOUSYOURAKU | 539 | |
+| NJ_RAIGEKISAI | 541 | |
+| NJ_KAMAITACHI | 542 | |
+
+Add to `_BF_MAGIC_RATIOS` in `skill_ratio.py`. Use the same pattern as existing magic
+ratios — lambda `(lv, tgt)` or special-case block.
+
+### Step 4 — GS_* BF_WEAPON ratios (skill.c `calc_skillratio` GS_* cases)
+
+| Constant | ID | Notes |
+|---|---|---|
+| GS_TRIPLEACTION | 502 | |
+| GS_BULLSEYE | 503 | |
+| GS_TRACKING | 512 | |
+| GS_PIERCINGSHOT | 514 | |
+| GS_RAPIDSHOWER | 515 | |
+| GS_DESPERADO | 516 | |
+| GS_DUST | 518 | |
+| GS_FULLBUSTER | 519 | |
+| GS_SPREADATTACK | 520 | |
+| GS_FLING | 501 | DEF reduction + special damage — may need special casing |
+
+**GS_FLING**: check if it reduces target DEF (similar to MO_INVESTIGATE pdef=2 path).
+May need `build.skill_params` if it requires runtime context.
+
+### Step 5 — GS_MAGICALBULLET (BF_MAGIC)
+
+Add to `_BF_MAGIC_RATIOS`. Only gunslinger magic skill.
+
+### Step 6 — BF_MISC scaffold (per roadmap)
+
+After NJ/GS ratios are done, add to `skill_ratio.py`:
+```python
+_BF_MISC_RATIOS: dict = {}  # deferred — see session_roadmap.md Q3 notes
+IMPLEMENTED_BF_MISC_SKILLS: frozenset = frozenset(_BF_MISC_RATIOS.keys())
+```
+Then add `IMPLEMENTED_BF_MISC_SKILLS` to `_IMPLEMENTED_SKILLS` in both:
+- `gui/sections/combat_controls.py`
+- `gui/dialogs/skill_browser.py`
+
+### Step 7 — EOS docs maintenance
+
+- `docs/gaps.md`: mark G63 [x], G69 [x], G55 [x]
+- `docs/completed_work.md`: append Q3 section
+- `docs/session_roadmap.md`: move Q3 to Completed, review Q4 scope
 
 ---
 
-## Confirmed song formulas (do not re-research)
-
-Full detail in `docs/buffs/songs_dances.md`. Quick reference:
-
-| SC | stat | SC val | formula (from skill_unitsetting, pre-RE) |
-|----|------|--------|------------------------------------------|
-| SC_ASSNCROS | ASPD | val2 | `(MusLesson/2 + 10 + lv + agi/10) * 10` |
-| SC_WHISTLE | FLEE | val2 | `lv + agi/10 + MusLesson` |
-| SC_WHISTLE | FLEE2 | val3×10 | `(lv+1)/2 + luk/10 + MusLesson` |
-| SC_POEMBRAGI | cast% | val2 | `3*lv + dex/10 + 2*MusLesson` |
-| SC_POEMBRAGI | ACD% | val3 | `(lv<10?3*lv:50) + int/5 + 2*MusLesson` |
-| SC_APPLEIDUN | MaxHP% | val2 | `5 + 2*lv + vit/10 + MusLesson` |
-| SC_HUMMING | HIT | val2 | `2*lv + dex/10 + DanceLesson` (no x2 in pre-RE) |
-| SC_FORTUNE | CRI | val2 | `(10 + lv + luk/10 + DanceLesson) * 10` |
-| SC_SERVICEFORYU | MaxSP% | val2 | `15 + lv + int/10 + DanceLesson/2` |
-| SC_SERVICEFORYU | SP cost% | val3 | `20 + 3*lv + int/10 + DanceLesson/2` |
-| SC_DRUMBATTLE | WATK | val2 | `(lv+1)*25` (ensemble, level only) |
-| SC_DRUMBATTLE | DEF | val3 | `(lv+1)*2` (ensemble, level only) |
-| SC_NIBELUNGEN | WATK | val2 | `(lv+2)*25` (ensemble, level only) |
-| SC_SIEGFRIED | subele% | val2 | `55 + lv*5` all elements (ensemble) |
-
----
-
-## Open design questions (answer before implementing)
-
-1. **SC_SIEGFRIED** — elemental resistance on buffed player, feeds into `target.sub_ele` for incoming. Scope now or defer?
-2. **SC_DRUMBATTLE / SC_NIBELUNGEN WATK** — where in BF_WEAPON pipeline? Before or after SkillRatio? Needs one pipeline grep.
-3. **SC_ETERNALCHAOS** — zeroes enemy def2. Hostile debuff on target. Scope or defer?
-4. **Stat foods** — stay in G46 Active Items spinboxes, or separate Foods sub-section once list confirmed?
-
----
-
-## Active known bugs
-
-None.
-
----
-
-## Key files for next session
+## Key files for Q3
 
 | File | Purpose |
-|------|---------|
-| `docs/buffs/README.md` | Data model design, interface points, open questions |
-| `docs/buffs/songs_dances.md` | All confirmed song/dance/ensemble formulas |
-| `docs/buffs/support_buffs.md` | Stubs to fill from user's skill list |
-| `docs/buffs/weapon_endow.md` | Stubs to fill |
-| `docs/buffs/stat_foods.md` | Stubs to fill |
-| `docs/buffs/ground_effects.md` | Stubs to fill |
-| `docs/aspd.md` | ASPD system reference (1000-scale, SC_ASSNCROS wiring) |
-| `core/calculators/status_calculator.py` | Where song effects wire in |
-| `gui/sections/passive_section.py` | Where song GUI goes |
-| `core/models/build.py` | Where `song_state` / `support_buffs` dicts go |
-| `core/models/status.py` | Where new StatusData fields go |
+|---|---|
+| `core/calculators/modifiers/skill_ratio.py` | All ratio changes go here |
+| `Hercules/src/map/skill.c` | Primary source for NJ_*/GS_* ratio cases (`calc_skillratio`) |
+| `Hercules/src/map/battle.c` | G69 fix source (line 2197-2206); also GS_FLING if special |
+| `core/calculators/modifiers/mastery_fix.py` | G55 Shuriken type string check |
+| `core/data/pre-re/db/item_db.json` | G55 verification grep target |
+| `gui/sections/combat_controls.py` | skill_params UI rows (if NJ_ISSEN/NJ_ZENYNAGE need them) |
+| `docs/session_roadmap.md` | Q3 full skill table + BF_MISC scaffold note |
+
+---
+
+## Architecture reminders
+
+- NJ_* in `_BF_WEAPON_RATIOS` uses `lambda lv, tgt: ...` (same as all other weapon ratios)
+- NJ_* in `_BF_MAGIC_RATIOS` uses `lambda lv, tgt: ...` (same as HW_*/WZ_* magic ratios)
+- Runtime-context skills (zeny/HP/dist) go in `_BF_WEAPON_PARAM_SKILLS` and the
+  special-case block above `_BF_WEAPON_RATIOS` dict lookup in `SkillRatio.calculate()`
+- `IMPLEMENTED_BF_WEAPON_SKILLS = frozenset(_BF_WEAPON_RATIOS.keys()) | _BF_WEAPON_PARAM_SKILLS`
+  is auto-derived — no manual update needed when adding to the dict or frozenset
+- `IMPLEMENTED_BF_MAGIC_SKILLS` similarly auto-derived from `_BF_MAGIC_RATIOS`
+- Hercules guard: NJ/GS skills are `#ifndef RENEWAL` (pre-re only) or no guard — always check
+
+---
+
+## Open gaps relevant to Q3
+
+| Gap | Status | Description |
+|---|---|---|
+| G63 | [ ] | NJ_* + GS_* skill ratios (main Q3 work) |
+| G69 | [ ] | MO_EXTREMITYFIST formula wrong in skill_ratio.py:228 — fix first |
+| G55 | [ ] | NJ_TOBIDOUGU "Shuriken" weapon_type string unverified |
