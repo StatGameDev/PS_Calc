@@ -225,24 +225,25 @@ _BF_MAGIC_RATIOS = {
 
     # --- Ninja BF_MAGIC ---
     # battle.c:1699-1702: skillratio -= 10 → base 90.
-    # NOTE: +20*charm_count if CHARM_TYPE_FIRE active (sd->charm_type/charm_count) — DEFERRED (charm not implemented).
+    # Charm bonus (+20*charm_count if CHARM_TYPE_FIRE) is dead code in pre-re: charms are set
+    # by KO_* (Kagerou/Oboro) skills only; Ninja (job 25) always has charm_type=CHARM_TYPE_NONE.
     "NJ_KOUENKA":      lambda lv, tgt: 90,
     # battle.c:1704-1708: skillratio -= 50 → base 50.
-    # NOTE: +10*charm_count if CHARM_TYPE_FIRE — DEFERRED.
+    # Charm bonus (+10*charm_count) dead in pre-re (see NJ_KOUENKA note above).
     "NJ_KAENSIN":      lambda lv, tgt: 50,
     # battle.c:1709-1713: skillratio += 50*(lv-1) → 50+50*lv.
-    # NOTE: +15*charm_count if CHARM_TYPE_FIRE — DEFERRED.
+    # Charm bonus (+15*charm_count) dead in pre-re.
     "NJ_BAKUENRYU":    lambda lv, tgt: 50 + 50 * lv,
     # battle.c:1715-1720: case is #ifdef RENEWAL only → pre-re default 100.
     "NJ_HYOUSENSOU":   lambda lv, tgt: 100,
     # battle.c:1723-1726: skillratio += 50*lv → 100+50*lv.
-    # NOTE: +25*charm_count if CHARM_TYPE_WATER — DEFERRED.
+    # Charm bonus (+25*charm_count CHARM_TYPE_WATER) dead in pre-re.
     "NJ_HYOUSYOURAKU": lambda lv, tgt: 100 + 50 * lv,
     # battle.c:1728-1731: skillratio += 60+40*lv → 160+40*lv.
-    # NOTE: +15*charm_count if CHARM_TYPE_WIND — DEFERRED.
+    # Charm bonus (+15*charm_count CHARM_TYPE_WIND) dead in pre-re.
     "NJ_RAIGEKISAI":   lambda lv, tgt: 160 + 40 * lv,
     # battle.c:1733-1755: falls through to NPC_ENERGYDRAIN: skillratio += 100*lv → 100+100*lv.
-    # NOTE: +10*charm_count if CHARM_TYPE_WIND applied before fall-through — DEFERRED.
+    # Charm bonus (+10*charm_count CHARM_TYPE_WIND) dead in pre-re.
     "NJ_KAMAITACHI":   lambda lv, tgt: 100 + 100 * lv,
 }
 
