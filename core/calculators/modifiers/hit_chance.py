@@ -31,10 +31,15 @@ def calculate_hit_chance(
         - agi_penalty_type: AoE hit penalty for hitting multiple targets
     """
     target_scs = target.target_active_scs
-    if "SC_STONE" in target_scs or "SC_FREEZE" in target_scs or "SC_STUN" in target_scs:
+    # Force-hit: opt1 SCs → flag.hit = 1  (battle.c:5014)
+    # SC_SLEEP is OPT1_SLEEP — neither OPT1_STONEWAIT nor OPT1_BURNING → triggers force-hit.
+    if "SC_STONE" in target_scs or "SC_FREEZE" in target_scs or "SC_STUN" in target_scs or "SC_SLEEP" in target_scs:
         return 100.0, 0.0  # force-hit, no perfect dodge (battle.c:5014-5015)
 
-    mob_flee = target.level + target.agi
+    # target.flee pre-populated as level+agi by DataLoader (status.c:3865 #else).
+    # apply_mob_scs() mutates it for SC_BLIND, SC_QUAGMIRE, SC_DECREASEAGI.
+    # Fall back to inline derivation only for default (non-mob) Target() instances.
+    mob_flee = target.flee if target.flee > 0 else target.level + target.agi
     hitrate = 80 + status.hit - mob_flee
     hitrate = max(config.min_hitrate, min(config.max_hitrate, hitrate))
 

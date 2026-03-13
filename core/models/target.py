@@ -25,8 +25,13 @@ class Target:
     mdef_: int = 0                  # tstatus->mdef (hard MDEF)
     int_:  int = 0                  # tstatus->int (soft MDEF)
     armor_element: int = 0          # 0 = Neutral
-    flee:  int = 0                  # tstatus->flee
-    def_percent: int = 100          # st->def_percent: multiplier on vit_def for PC targets (battle.c:1492)
+    flee:  int = 0                  # tstatus->flee — pre-populated: level+agi (status.c:3865 #else)
+    str:   int = 0                  # tstatus->str  — SC_BLESSING debuff: str >>= 1
+    dex:   int = 0                  # tstatus->dex  — mob hit = level+dex (status.c:3864 #else); SC_QUAGMIRE/BLESSING
+    hit:   int = 0                  # tstatus->hit  — pre-populated: level+dex; SC_BLIND: hit -= hit*25/100
+    def_percent: int = 100          # st->def_percent — SC_POISON: -= 25 (status.c:4431); SC_PROVOKE mob path
+    mdef_percent: int = 100         # SC_MINDBREAKER: mdef_percent -= 12*lv (status.c:4453-4454)
+    matk_percent: int = 100         # SC_MINDBREAKER: matk_percent += 20*lv (status.c:4376-4377) — incoming magic
+    aspd_rate: int = 1000           # SC_DONTFORGETME: aspd_rate += 10*val2 (status.c:5667); 1000=100%, >1000=slower
     target_active_scs: Dict[str, int] = field(default_factory=dict)
-    # SC_STONE/SC_FREEZE/SC_STUN/SC_POISON applied to this target by the player.
-    # Written by TargetStateSection.apply_to_target(); read by DefenseFix, hit_chance.
+    # SC flags written by TargetStateSection.apply_to_target(); read by DefenseFix, hit_chance, apply_mob_scs.

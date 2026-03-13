@@ -228,6 +228,12 @@ class StatusCalculator:
             status.hit  = status.hit  * 75 // 100
             status.flee = status.flee * 75 // 100
 
+        # SC_QUAGMIRE: agi -= val2, dex -= val2; val2=10*lv (status.c:4027-4028, 4211-4212)
+        if "SC_QUAGMIRE" in player_scs:
+            val2 = 10 * int(player_scs["SC_QUAGMIRE"])
+            status.agi = max(0, status.agi - val2)
+            status.dex = max(0, status.dex - val2)
+
         # === ASPD ===
         # Pre-renewal formula (status.c status_base_amotion_pc, #else = not RENEWAL_ASPD):
         #   Single weapon: amotion = aspd_base[job][RH_type]
@@ -374,6 +380,11 @@ class StatusCalculator:
         # val1=skill_lv via sc_start; we always treat as skill cast (val4=0 path)
         if "SC_ENDURE" in active_sc:
             status.mdef += active_sc["SC_ENDURE"]
+
+        # SC_MINDBREAKER: mdef_percent -= 12*lv (status.c:4453-4454)
+        if "SC_MINDBREAKER" in player_scs:
+            lv = int(player_scs["SC_MINDBREAKER"])
+            status.mdef = max(0, status.mdef * (100 - 12 * lv) // 100)
 
         # === BARD SONGS (song_state) ===
         # All formulas from skill.c skill_unitsetting (#else pre-renewal blocks).

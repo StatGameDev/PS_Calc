@@ -519,6 +519,7 @@ class MainWindow(QMainWindow):
         # apply_mob_scs() applies stat mutations for mob targets (player targets get
         # these via StatusCalculator, fed from collect_target_player_scs() above).
         self._target_state.set_target_type(target.is_pc)
+        self._target_state.set_is_boss(target.is_boss)
         self._target_state.apply_to_target(target)
         if not target.is_pc:
             target_utils.apply_mob_scs(target)
@@ -567,6 +568,7 @@ class MainWindow(QMainWindow):
                     build=eff_build,
                     ele_override=ele_override,
                     ratio_override=ratio_override,
+                    mob_matk_bonus_rate=target.matk_percent - 100,
                 )
             except Exception as exc:
                 print(f"WARNING: IncomingMagicPipeline error: {exc}")

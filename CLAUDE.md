@@ -10,6 +10,18 @@ Always use integer IDs instead of name strings for internal data:
 
 ---
 
+## Stop and Ask — Hard Rule
+
+**When you hit a genuine decision point, stop immediately and ask. Do not reason through options internally.**
+
+A genuine decision point is one where two approaches exist and neither source accuracy nor software architecture best practices resolves it.
+
+For everything else: decide autonomously. Source accuracy determines what to implement. Software architecture best practices determine how. If both of those answer the question, implement — do not ask.
+
+The specific failure to avoid: internal reasoning loops over questions that have a clear answer from source or architecture. If you are weighing options for more than a moment, check: does the source resolve it? Does best practice resolve it? If yes to either — implement. If no to both — ask the user in one sentence, immediately.
+
+---
+
 ## Ask First, Search Later
 
 If a task requires locating files, external data, or unfamiliar formats — ask the

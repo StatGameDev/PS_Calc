@@ -36,10 +36,18 @@ armor_element: int = 0  # element the target defends as (from armor card/endow)
 flee: int = 0           # full FLEE — used when is_pc=True
 # Added Session R (G48):
 target_active_scs: Dict[str, int] = field(default_factory=dict)  # SC_STONE/FREEZE/STUN/POISON etc.
+# Added Session SC1 (G79):
+str:  int = 0           # tstatus->str — SC_BLESSING debuff: str >>= 1; SC_QUAGMIRE indirect
+dex:  int = 0           # tstatus->dex — mob hit = level+dex; SC_QUAGMIRE/BLESSING
+hit:  int = 0           # tstatus->hit — pre-populated: level+dex; SC_BLIND: hit -= hit*25/100
+def_percent:  int = 100 # st->def_percent — SC_POISON: −25 (status.c:4431); SC_PROVOKE mob path
+mdef_percent: int = 100 # SC_MINDBREAKER: mdef_percent −= 12×lv (status.c:4453-4454)
+matk_percent: int = 100 # SC_MINDBREAKER: matk_percent += 20×lv (status.c:4376-4377)
+aspd_rate:    int = 1000 # SC_DONTFORGETME: aspd_rate += 10×val2 (status.c:5667); 1000=100%
 ```
 
 ### Fields to add [NEW]:
-_All previously listed [NEW] fields were added. No remaining Target fields to add._
+_All fields through SC1 have been added. No remaining Target fields to add._
 
 ### How mob_db populates Target (loader.get_monster):
 **Currently populated**: def_, vit, luk, agi, size, race, element, element_level, is_boss, level, mdef_, int_

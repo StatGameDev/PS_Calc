@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from core.models.build import PlayerBuild
 from core.models.target import Target
 from gui.section import Section
-from gui.widgets import LevelWidget, NoWheelCombo
+from gui.widgets import LevelWidget, NoWheelCombo, NoWheelSpin
 
 # Hercules element indices (ele_name order in db/const.hpp)
 _ELEMENTS = [
@@ -54,6 +54,10 @@ class TargetStateSection(Section):
     Mob path:  apply_to_target() → target_utils.apply_mob_scs()
     PvP path:  collect_target_player_scs() → pvp_eff.player_active_scs
                → StatusCalculator → player_build_to_target() → apply_to_target()
+
+    Widget sizing note: NoWheelSpin instances in this section require setFixedWidth()
+    set ~8px wider than the Qt default or they truncate in the dark theme.  Apply to
+    every new NoWheelSpin added here regardless of whether it has a prefix.
     """
 
     state_changed = Signal()
@@ -94,6 +98,32 @@ class TargetStateSection(Section):
         debuff_grid.addWidget(_lbl("Lex Aeterna"), row, 0)
         self._chk_lex = QCheckBox()
         debuff_grid.addWidget(self._chk_lex, row, 1)
+        row += 1
+
+        debuff_grid.addWidget(_lbl("Quagmire"), row, 0)
+        self._lw_quagmire = LevelWidget(5, include_off=True, item_prefix="Lv ")
+        debuff_grid.addWidget(self._lw_quagmire, row, 1)
+        row += 1
+
+        debuff_grid.addWidget(_lbl("Don't Forget Me"), row, 0)
+        self._lw_dontforgetme = LevelWidget(10, include_off=True, item_prefix="Lv ")
+        self._sb_dfm_agi = NoWheelSpin()
+        self._sb_dfm_agi.setRange(0, 999)
+        self._sb_dfm_agi.setPrefix("AGI ")
+        self._sb_dfm_agi.setFixedWidth(80)  # +8px vs default — see class docstring
+        _dfm_row = QHBoxLayout()
+        _dfm_row.setSpacing(4)
+        _dfm_row.setContentsMargins(0, 0, 0, 0)
+        _dfm_row.addWidget(self._lw_dontforgetme)
+        _dfm_row.addWidget(self._sb_dfm_agi)
+        _dfm_container = QWidget()
+        _dfm_container.setLayout(_dfm_row)
+        debuff_grid.addWidget(_dfm_container, row, 1)
+        row += 1
+
+        debuff_grid.addWidget(_lbl("Mind Breaker"), row, 0)
+        self._lw_mindbreaker = LevelWidget(5, include_off=True, item_prefix="Lv ")
+        debuff_grid.addWidget(self._lw_mindbreaker, row, 1)
 
         outer.addLayout(debuff_grid)
 
@@ -129,6 +159,21 @@ class TargetStateSection(Section):
         ailment_grid.addWidget(_lbl("Poisoned"), row, 0)
         self._chk_poison = QCheckBox()
         ailment_grid.addWidget(self._chk_poison, row, 1)
+        row += 1
+
+        ailment_grid.addWidget(_lbl("Blind"), row, 0)
+        self._chk_blind = QCheckBox()
+        ailment_grid.addWidget(self._chk_blind, row, 1)
+        row += 1
+
+        ailment_grid.addWidget(_lbl("Cursed"), row, 0)
+        self._chk_curse = QCheckBox()
+        ailment_grid.addWidget(self._chk_curse, row, 1)
+        row += 1
+
+        ailment_grid.addWidget(_lbl("Asleep"), row, 0)
+        self._chk_sleep = QCheckBox()
+        ailment_grid.addWidget(self._chk_sleep, row, 1)
 
         outer.addLayout(ailment_grid)
 
@@ -183,6 +228,17 @@ class TargetStateSection(Section):
             strip_row.addWidget(chk)
         strip_row.addStretch()
         ms_grid.addWidget(strip_w, ms_row, 1)
+        ms_row += 1
+
+        ms_grid.addWidget(_lbl("Signum Crucis"), ms_row, 0)
+        self._lw_crucis = LevelWidget(10, include_off=True, item_prefix="Lv ")
+        ms_grid.addWidget(self._lw_crucis, ms_row, 1)
+        ms_row += 1
+
+        ms_grid.addWidget(_lbl("Blessing Debuff"), ms_row, 0)
+        self._chk_blessing = QCheckBox()
+        ms_grid.addWidget(self._chk_blessing, ms_row, 1)
+
         ms_layout.addLayout(ms_grid)
 
         outer.addWidget(self._monster_state_widget)
@@ -196,16 +252,25 @@ class TargetStateSection(Section):
         self._lw_provoke.valueChanged.connect(self._emit)
         self._lw_decagi.valueChanged.connect(self._emit)
         self._chk_lex.stateChanged.connect(self._emit)
+        self._lw_quagmire.valueChanged.connect(self._emit)
+        self._lw_dontforgetme.valueChanged.connect(self._emit)
+        self._sb_dfm_agi.valueChanged.connect(self._emit)
+        self._lw_mindbreaker.valueChanged.connect(self._emit)
         self._chk_stun.stateChanged.connect(self._emit)
         self._chk_freeze.stateChanged.connect(self._on_freeze_changed)
         self._chk_stone.stateChanged.connect(self._on_stone_changed)
         self._chk_poison.stateChanged.connect(self._emit)
+        self._chk_blind.stateChanged.connect(self._emit)
+        self._chk_curse.stateChanged.connect(self._emit)
+        self._chk_sleep.stateChanged.connect(self._emit)
         self._ele_combo.currentIndexChanged.connect(self._on_ele_changed)
         self._ele_lv.valueChanged.connect(self._emit)
         self._chk_strip_weapon.stateChanged.connect(self._emit)
         self._chk_strip_armor.stateChanged.connect(self._emit)
         self._chk_strip_shield.stateChanged.connect(self._emit)
         self._chk_strip_helm.stateChanged.connect(self._emit)
+        self._lw_crucis.valueChanged.connect(self._emit)
+        self._chk_blessing.stateChanged.connect(self._emit)
 
     # ── Signal helpers ────────────────────────────────────────────────────
 
@@ -236,11 +301,27 @@ class TargetStateSection(Section):
         """Show/hide monster-specific controls when target type changes."""
         self._monster_state_widget.setVisible(not is_player)
 
+    def set_is_boss(self, is_boss: bool) -> None:
+        """Disable boss-immune SCs when target is a boss (G81)."""
+        boss_blocked = [
+            self._chk_stun, self._chk_freeze, self._chk_stone,
+            self._chk_sleep, self._chk_poison, self._chk_blind, self._chk_curse,
+            self._lw_provoke, self._lw_decagi,
+        ]
+        for w in boss_blocked:
+            w.setEnabled(not is_boss)
+            if is_boss:
+                if hasattr(w, 'setChecked'):
+                    w.setChecked(False)
+                else:
+                    w.setValue(0)
+
     def collect_into(self, build: PlayerBuild) -> None:
         """Write debuffs that feed the pipeline via build.support_buffs.
         Called from _collect_build() uniformly with all other sections."""
         support = build.support_buffs
-        for key in ("SC_ETERNALCHAOS", "SC_PROVOKE", "SC_DECREASEAGI", "PR_LEXAETERNA"):
+        for key in ("SC_ETERNALCHAOS", "SC_PROVOKE", "SC_DECREASEAGI", "PR_LEXAETERNA",
+                    "SC_QUAGMIRE", "SC_MINDBREAKER"):
             support.pop(key, None)
         if self._chk_chaos.isChecked():
             support["SC_ETERNALCHAOS"] = 1
@@ -252,6 +333,12 @@ class TargetStateSection(Section):
             support["SC_DECREASEAGI"] = decagi_lv
         if self._chk_lex.isChecked():
             support["PR_LEXAETERNA"] = 1
+        qua_lv = self._lw_quagmire.value()
+        if qua_lv:
+            support["SC_QUAGMIRE"] = qua_lv
+        mb_lv = self._lw_mindbreaker.value()
+        if mb_lv:
+            support["SC_MINDBREAKER"] = mb_lv
         build.support_buffs = support
 
     def collect_target_player_scs(self) -> dict[str, int]:
@@ -262,12 +349,23 @@ class TargetStateSection(Section):
         StatusCalculator runs on the pvp build.  Mob targets receive the same
         effects via target_utils.apply_mob_scs() instead.
 
-        Session SC1 will extend this with BLIND, CURSE, QUAGMIRE, MINDBREAKER, etc.
         """
         scs: dict[str, int] = {}
         decagi_lv = self._lw_decagi.value()
         if decagi_lv:
             scs["SC_DECREASEAGI"] = decagi_lv
+        if self._chk_blind.isChecked():
+            scs["SC_BLIND"] = 1
+        if self._chk_curse.isChecked():
+            scs["SC_CURSE"] = 1
+        if self._chk_sleep.isChecked():
+            scs["SC_SLEEP"] = 1
+        qua_lv = self._lw_quagmire.value()
+        if qua_lv:
+            scs["SC_QUAGMIRE"] = qua_lv
+        mb_lv = self._lw_mindbreaker.value()
+        if mb_lv:
+            scs["SC_MINDBREAKER"] = mb_lv
         return scs
 
     def apply_to_target(self, target: Target) -> None:
@@ -307,10 +405,34 @@ class TargetStateSection(Section):
 
         if self._chk_poison.isChecked():
             scs["SC_POISON"] = 1
+        if self._chk_blind.isChecked():
+            scs["SC_BLIND"] = 1
+        if self._chk_curse.isChecked():
+            scs["SC_CURSE"] = 1
+        if self._chk_sleep.isChecked():
+            scs["SC_SLEEP"] = 1
 
         decagi_lv = self._lw_decagi.value()
         if decagi_lv:
             scs["SC_DECREASEAGI"] = decagi_lv
+        qua_lv = self._lw_quagmire.value()
+        if qua_lv:
+            scs["SC_QUAGMIRE"] = qua_lv
+        dfm_lv = self._lw_dontforgetme.value()
+        if dfm_lv:
+            scs["SC_DONTFORGETME"] = dfm_lv
+            scs["SC_DONTFORGETME_agi"] = self._sb_dfm_agi.value()
+        mb_lv = self._lw_mindbreaker.value()
+        if mb_lv:
+            scs["SC_MINDBREAKER"] = mb_lv
+
+        # Monster-only SCs
+        if not target.is_pc:
+            crucis_lv = self._lw_crucis.value()
+            if crucis_lv:
+                scs["SC_CRUCIS"] = crucis_lv
+            if self._chk_blessing.isChecked():
+                scs["SC_BLESSING"] = 1
 
         target.target_active_scs = scs
 
@@ -330,10 +452,13 @@ class TargetStateSection(Section):
         support = build.support_buffs
         all_widgets = [
             self._chk_chaos, self._lw_provoke, self._lw_decagi, self._chk_lex,
+            self._lw_quagmire, self._lw_dontforgetme, self._sb_dfm_agi, self._lw_mindbreaker,
             self._chk_stun, self._chk_freeze, self._chk_stone, self._chk_poison,
+            self._chk_blind, self._chk_curse, self._chk_sleep,
             self._ele_combo, self._ele_lv,
             self._chk_strip_weapon, self._chk_strip_armor,
             self._chk_strip_shield, self._chk_strip_helm,
+            self._lw_crucis, self._chk_blessing,
         ]
         for w in all_widgets:
             w.blockSignals(True)
@@ -343,12 +468,19 @@ class TargetStateSection(Section):
         self._lw_provoke.setValue(int(support.get("SC_PROVOKE", 0)))
         self._lw_decagi.setValue(int(support.get("SC_DECREASEAGI", 0)))
         self._chk_lex.setChecked(bool(support.get("PR_LEXAETERNA", False)))
+        self._lw_quagmire.setValue(int(support.get("SC_QUAGMIRE", 0)))
+        self._lw_mindbreaker.setValue(int(support.get("SC_MINDBREAKER", 0)))
 
         # Session-only — always reset on build load
+        self._lw_dontforgetme.setValue(0)
+        self._sb_dfm_agi.setValue(0)
         self._chk_stun.setChecked(False)
         self._chk_freeze.setChecked(False)
         self._chk_stone.setChecked(False)
         self._chk_poison.setChecked(False)
+        self._chk_blind.setChecked(False)
+        self._chk_curse.setChecked(False)
+        self._chk_sleep.setChecked(False)
         self._ele_combo.setCurrentIndex(0)   # (default)
         self._ele_lv.setValue(1)
         self._ele_lv.setEnabled(False)
@@ -356,6 +488,8 @@ class TargetStateSection(Section):
         self._chk_strip_armor.setChecked(False)
         self._chk_strip_shield.setChecked(False)
         self._chk_strip_helm.setChecked(False)
+        self._lw_crucis.setValue(0)
+        self._chk_blessing.setChecked(False)
 
         for w in all_widgets:
             w.blockSignals(False)

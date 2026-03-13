@@ -155,6 +155,11 @@ class DefenseFix:
                 vd_min = vd_min * (100 - prov_pct) // 100
                 vd_max = vd_max * (100 - prov_pct) // 100
                 vd_avg = vd_avg * (100 - prov_pct) // 100
+            mob_dp = target.def_percent
+            if mob_dp != 100:
+                vd_min = vd_min * mob_dp // 100
+                vd_max = vd_max * mob_dp // 100
+                vd_avg = vd_avg * mob_dp // 100
             note_type = "monster"
 
         if is_pdef2:
@@ -219,6 +224,8 @@ class DefenseFix:
         Source: battle.c:1549-1592 BF_MAGIC case (#else not RENEWAL, magic_defense_type=0).
         """
         mdef = max(0, min(100, target.mdef_))
+        if target.mdef_percent != 100:
+            mdef = max(0, min(100, mdef * target.mdef_percent // 100))
         if "SC_STONE" in target.target_active_scs or "SC_FREEZE" in target.target_active_scs:
             mdef = min(100, mdef + 25 * mdef // 100)  # status.c:5153-5156
         # Soft MDEF: int_ + vit//2 (status.c:3867 #else not RENEWAL)

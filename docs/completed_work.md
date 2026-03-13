@@ -452,3 +452,57 @@ pvp stats.
 **Remaining for SC1 session start** (2 greps only):
 1. SC_SLEEP force-hit: check opt1 path in battle.c hit calculation
 2. SC_DONTFORGETME val2: find `case DC_DONTFORGETME:` in skill.c ~line 13270
+
+---
+
+## Session SC1 — 2026-03-14 — Target Debuffs (G79, G81)
+
+**`core/calculators/target_utils.py`**:
+- Extended `apply_mob_scs(target)` with all remaining mob-path debuffs:
+  SC_BLIND (`hit/flee ×75%`, status.c:4817/4902), SC_CURSE (`luk=0`, status.c:4261),
+  SC_POISON (`def_percent−=25`, status.c:4431), SC_QUAGMIRE (`agi−=val2, dex−=val2`,
+  status.c:4027/4211), SC_BLESSING debuff (`str>>=1, dex>>=1`, Undead/Demon only,
+  status.c:3964/4213), SC_CRUCIS (`def−=def×val2/100`, Undead/Demon only, status.c:5022),
+  SC_MINDBREAKER (`matk_percent+=20×lv`, `mdef_percent−=12×lv`, status.c:4376/4453),
+  SC_DONTFORGETME (`aspd_rate+=10×val2`; val2=dancer_agi/10+3×lv+5, skill.c:13270,
+  status.c:5667; dancer AGI stored as `SC_DONTFORGETME_agi` in target_active_scs).
+- Boss immunities: each SC guarded by `_blocked()` against `_BOSS_IMMUNE_SCS` +
+  `_BOSS_IMMUNE_NOBOSS` frozensets.
+- Removed `status: StatusData` parameter — dancer AGI now passed via scs dict.
+
+**`core/calculators/status_calculator.py`** (player attacker path):
+- Added SC_BLIND (`hit×75%, flee×75%`) and SC_CURSE (`luk=0`) handling in player_scs block.
+- Added SC_QUAGMIRE (`agi−=10×lv`, `dex−=10×lv`) in player_scs block.
+- Added SC_MINDBREAKER (`mdef×(100−12×lv)//100`) in player_scs block.
+- Removed wrong SC_DONTFORGETME block (was approximating dancer AGI from player ASPD path).
+
+**`core/calculators/modifiers/defense_fix.py`**:
+- Mob path: `target.def_percent` applied to vit_def min/max/avg after Provoke block.
+- Magic path: `target.mdef_percent` applied before SC_STONE/FREEZE MDEF boost.
+
+**`core/calculators/modifiers/crit_chance.py`**:
+- SC_SLEEP: `cri <<= 1` when target has SC_SLEEP (battle.c:4959).
+
+**`core/calculators/modifiers/hit_chance.py`**:
+- SC_SLEEP added to force-hit set (opt1 OPT1_SLEEP path, battle.c:5014-5015).
+
+**`gui/sections/target_state_section.py`**:
+- Applied Debuffs: Quagmire LevelWidget(5), Don't Forget Me LevelWidget(10) + dancer AGI
+  QSpinBox (`_sb_dfm_agi`, range 0–999), Mind Breaker LevelWidget(5).
+- Status Ailments: Blind, Cursed, Asleep checkboxes (session-only).
+- Monster State: Signum Crucis LevelWidget(10), Blessing Debuff checkbox.
+- `set_is_boss(is_boss)`: disables/clears boss-immune SC widgets when target.is_boss=True.
+- `apply_to_target()`: SC_DONTFORGETME stores both `lv` and `SC_DONTFORGETME_agi` in scs dict.
+- `collect_into()`: SC_DONTFORGETME removed (session-only target debuff, not a player buff).
+- `collect_target_player_scs()`: SC_DONTFORGETME removed (mob-path only).
+- `load_build()`: DFM level + AGI spinbox reset on load (session-only).
+
+**`gui/main_window.py`**:
+- `apply_mob_scs(target)` call drops `status` arg (no longer needed).
+- `set_is_boss(target.is_boss)` called in pipeline run.
+
+**New Target fields** (`core/models/target.py`):
+  `str`, `dex`, `hit` (SC_BLESSING/QUAGMIRE/BLIND propagation);
+  `def_percent`, `mdef_percent`, `matk_percent`, `aspd_rate` (SC_POISON/MINDBREAKER/DONTFORGETME).
+
+**Gaps closed**: G79 (target debuffs), G81 (boss protocol).

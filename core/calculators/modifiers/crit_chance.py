@@ -77,7 +77,9 @@ def calculate_crit_chance(
     # We are always a PC attacker (sd != NULL), so coefficient = 2.
     cri -= target.luk * 2
 
-    # 5. SC_SLEEP: skipped — no SC system yet
+    # 5. SC_SLEEP: cri <<= 1 when target has SC_SLEEP (battle.c:4959)
+    if "SC_SLEEP" in target.target_active_scs:
+        cri <<= 1
 
     # 6–8. Skill-specific cri adjustments (battle.c:4968-4981)
     if skill.id == _KN_AUTOCOUNTER:
