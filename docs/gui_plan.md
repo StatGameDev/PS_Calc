@@ -467,26 +467,26 @@ Public API:
 
 Data model: `PlayerBuild.player_active_scs: dict[str, int]` (new field, Session R prereq).
 
-#### Sub-group: Player Debuffs
-`default_collapsed: true`
+#### Player Debuffs rows (flat, no sub-group header)
 
 Framing: "debuffs the enemy has applied to you."
-Widget pattern: QCheckBox + optional QSpinBox, 2-column grid.
-Tooltip per row: stat modified + how.
+Widget pattern: one widget per row — `QCheckBox` for boolean, `LevelWidget` for leveled. No both.
+2-column QGridLayout. Tooltip per row: stat modified + Hercules ref.
 
-Initial debuffs (Session R):
 ```
-SC_ETERNALCHAOS  "Eternal Chaos"   no lv    → zeroes player's soft DEF (def2=0) in incoming calc
-SC_CURSE         "Curse"           no lv    → Various effects
-SC_BLIND         "Blind"           no lv    → DEX/HIT reduced
-SC_DECREASEAGI   "Decrease AGI"    lv 1–10  → AGI reduced → FLEE reduced
+SC_ETERNALCHAOS  "Eternal Chaos"   QCheckBox        → player def2=0 in incoming (status.c:5090)
+SC_CURSE         "Curse"           QCheckBox        → player LUK=0, ATK%−25 (status.c:4261, 4345)
+SC_BLIND         "Blind"           QCheckBox        → player HIT×0.75, FLEE×0.75 (status.c:4817, 4902)
+SC_DECREASEAGI   "Decrease AGI"    LevelWidget 1–10 → player AGI−(2+lv) → lower FLEE (status.c:7633)
 ```
 
 Data model:
 ```python
 PlayerBuild.player_active_scs = {
-    "SC_ETERNALCHAOS": False,    # → player.def2 = 0 in incoming pipeline when True
-    # Session R additions
+    "SC_ETERNALCHAOS": False,   # bool
+    "SC_CURSE":        False,   # bool
+    "SC_BLIND":        False,   # bool
+    "SC_DECREASEAGI":  0,       # int 0=off, 1-10=level
 }
 ```
 
@@ -499,75 +499,112 @@ on the enemy, owned by `support_buffs`) — two separate fields, two separate ef
 
 File: `gui/sections/target_state_section.py`
 Panel: combat (below summary_section, above step_breakdown)
-compact_mode: `none` (ignores panel focus; stays in last user state)
+compact_mode: `[]` (ignores panel focus; stays in last user state)
 default_collapsed: true
 
 **Scope**: Debuffs and state overrides that affect the target. Primary location for all
 outgoing debuffs (what the player's team has applied to the enemy).
 
 Public API:
-- `update_target_type(is_monster: bool)` — show/hide monster-only content
-- `collect_into(target: Target)` — write active SCs + overrides to target
-- `load_state(target: Target)` — restore from target
+- `update_target_type(is_monster: bool)` — show/hide monster-only rows
+- `collect_into(build: PlayerBuild, target: Target)` — write debuffs to support_buffs, ailments to target
+- `load_state(build: PlayerBuild, target: Target)` — restore from both
 - Signal: `state_changed = Signal()` → triggers pipeline re-run
 
-Data model: `Target.target_active_scs: dict[str, int]` + `Target.element_override: Optional[int]`
-(both new fields, Session R prereq).
+Data model:
+- Applied Debuffs → `PlayerBuild.support_buffs` (build round-trip)
+- Status Ailments → `Target.target_active_scs: dict[str, bool]` (new field)
+- Element override → `Target.element_override: Optional[int]` (new field)
 
 ---
 
-#### Sub-group: Applied Debuffs
-`default_collapsed: false` — all target types
+#### Widget pattern — one widget per row, no exceptions
 
-Debuffs applied by the player's party to the enemy target before the pipeline runs.
-Framing: "what your team has set up on this target."
-Widget pattern: QCheckBox + optional QSpinBox, 2-column grid.
-Tooltip per row: stat modified + how.
+**Boolean effect** → `QCheckBox("Name")` only. No spinbox alongside it.
 
-Data flows via `support_buffs` on `PlayerBuild`, collected/loaded through the normal
-build round-trip (not via `Target` — the pipeline reads `support_buffs` to modify the
-target's effective stats).
+**Leveled effect** → `LevelWidget(max_lv, include_off=True)` only. No separate checkbox.
+Off = inactive; selecting a level activates it. Same pattern as has_lv=True self buffs.
 
-Initial debuffs (Session R):
+---
+
+#### Layout: flat rows with a horizontal line separator
+
+No CollapsibleSubGroups inside this section. Content is a single QVBoxLayout with:
+1. Applied Debuffs rows (flat)
+2. `QFrame(shape=HLine)` — visual separator, no label
+3. Status Ailments rows (flat)
+4. Monster State rows (flat, shown/hidden via `update_target_type`)
+
+2-column QGridLayout for rows above and below the separator separately.
+Tooltip per row: effect summary + Hercules ref.
+
+---
+
+#### Applied Debuffs (rows above separator)
+
+Data via `PlayerBuild.support_buffs`. All target types.
+
 ```
-SC_ETERNALCHAOS  "Eternal Chaos"   no lv    Sage → zeroes target soft DEF (def2=0)
-SC_PROVOKE       "Provoke"         lv 1–10  → raises target ATK but lowers DEF
-SC_DECREASEAGI   "Decrease AGI"    lv 1–10  → lowers target AGI → lower FLEE
-PR_LEXAETERNA    "Lex Aeterna"     no lv    → doubles next magic hit on target
+SC_ETERNALCHAOS  "Eternal Chaos"   QCheckBox        → target def2 = 0 (status.c:5090)
+SC_PROVOKE       "Provoke"         LevelWidget 1–10 → target DEF%−(5+5×lv), ATK%+(2+3×lv) (status.c:8361-8362)
+SC_DECREASEAGI   "Decrease AGI"    LevelWidget 1–10 → target AGI−(2+lv) → lower FLEE (status.c:7633)
+PR_LEXAETERNA    "Lex Aeterna"     QCheckBox        → next magic hit ×2
 ```
-"Blessing vs Undead/Demon": Blessing on undead target → reduces INT/DEX/LUK.
 
-Data model (in `PlayerBuild.support_buffs`):
+Data model keys in `support_buffs`:
 ```python
-"SC_ETERNALCHAOS": False,    # → target.def2 = 0 in pipeline when True
-# Session R additions
+"SC_ETERNALCHAOS": False       # bool
+"SC_PROVOKE":      0           # int 0=off, 1-10=level
+"SC_DECREASEAGI":  0           # int 0=off, 1-10=level
+"PR_LEXAETERNA":   False       # bool
 ```
 
 ---
 
-#### Sub-group: Monster State
-`default_collapsed: false` — hidden entirely when `update_target_type(is_monster=False)`
+#### Status Ailments (rows below separator)
 
-**Elemental Override** (Sage elemental change):
-```
-Element:  [QComboBox: — (natural) | Fire | Water | Wind | Earth | Ghost | Dark | Holy | Undead | Poison | Neutral]
-```
-Overrides `target.element` for this pipeline run. Does not change `element_level`.
-Maps to `Target.element_override: Optional[int]`.
+Data via `Target.target_active_scs`. All target types (though ailments are more common on monsters).
+All boolean — `QCheckBox` only.
 
-**Strip / Divest** (placeholder — deferred to Session R):
 ```
-Stripped:  □ Weapon   □ Armor   □ Shield   □ Helm
+SC_STUN    "Stun"    QCheckBox  → hit_chance = 100% (battle.c:5014; OPT1_STUN)
+SC_FREEZE  "Freeze"  QCheckBox  → hit_chance = 100%, element→Water Lv1, hard DEF÷2, MDEF+25% (status.c:5015,5155,5880)
+SC_STONE   "Stone"   QCheckBox  → hit_chance = 100%, element→Earth Lv1, hard DEF÷2, MDEF+25% (status.c:5013,5153,5882)
+SC_POISON  "Poison"  QCheckBox  → UI display only; no pipeline effect in pre-renewal damage
 ```
-Sets corresponding target defense component to 0 in pipeline.
+
+Data model keys in `target_active_scs`:
+```python
+"SC_STUN":   False
+"SC_FREEZE": False
+"SC_STONE":  False
+"SC_POISON": False   # stored but has no pipeline effect
+```
+
+Note: Freeze and Stone are mutually exclusive (applying one should clear the other in the UI).
 
 ---
 
-#### Sub-group: Status Ailments (deferred stub)
-`default_collapsed: true`
+#### Monster State (rows shown only when is_monster=True)
 
-Single QLabel content: "(Status ailments — Phase 5+)". Placeholder for Freeze, Stone,
-Stun, Poison interactions with damage formulae.
+Displayed below the Status Ailments rows. Hidden (not disabled) when target is a player.
+
+**Element override** — one QComboBox, no other widget:
+```
+Element: [— natural | Neutral | Fire | Water | Wind | Earth | Poison | Holy | Dark | Ghost | Undead]
+```
+Overrides `target.element` for the pipeline run. Does not change `element_level` (stays at mob's natural level).
+Maps to `Target.element_override: Optional[int]`. `—` = None = use natural element.
+
+**Strip / Divest** — four QCheckBoxes on one row:
+```
+Stripped: □ Weapon  □ Armor  □ Shield  □ Helm
+```
+Each sets the corresponding defense component to 0 in the pipeline.
+Stored as `Target.stripped: set[str]` (or four bool fields). DEF zeroing:
+- Armor stripped → `target.equip_def = 0` in DefenseFix
+- Shield/Helm: approximation — each reduces hard DEF by 25% of the equip_def value
+- Weapon stripped → `target.atk_min = target.atk_max = 0` (affects incoming physical only)
 
 ---
 
@@ -602,12 +639,7 @@ element_override: Optional[int]     # None = natural element; int = override (Se
 
 | Item | Reason |
 |------|--------|
-| SC_SIEGFRIED player-side elemental resist | Affects incoming pipeline; deferred to Session R. |
-| SC_DRUMBATTLE / SC_NIBELUNGEN WATK timing | Needs Hercules grep for pipeline position. |
-| SC_WHISTLE / SC_HUMMING formulas | Needs targeted Hercules grep before Session M2 implementation. |
-| SC_CURSE / SC_BLIND player debuff formulas | Stat reductions; needs Hercules grep before Session R. |
 | Guild GD_BLOODLUST | HP drain on hit — post-hit modelling required. |
 | SC_DEVOTION (Crusader) | Damage redirect; requires attacker/defender pairing. |
-| Target Strip/Divest | Deferred to Session R. |
-| Target Stone Skin / Anti-Magic | Deferred to Session R. |
-| Status ailments (advanced) | Simple stat-effect toggles implemented in Session R. Turn-sequence / proc mechanics deferred to Session Adv-2. |
+| Status ailments (advanced) | Simple toggle effects done in Session R. Turn-sequence / proc mechanics deferred to Session Adv-2. |
+| Target Stone Skin / Anti-Magic | No Hercules source read yet. Deferred post-Session R. |
