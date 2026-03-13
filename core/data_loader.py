@@ -80,18 +80,29 @@ class DataLoader:
                 file=__import__("sys").stderr,
             )
             return Target()  # all-default: DEF 0, VIT 0, Medium, Formless, Neutral/1, not boss, level 1
-        stats = entry.get("stats", {})
+        stats  = entry.get("stats", {})
+        level  = entry["level"]
+        agi    = stats.get("agi", 0)
+        dex    = stats.get("dex", 0)
         return Target(
             def_=entry["def_"],
             vit=stats.get("vit", entry.get("vit", 0)),
             luk=stats.get("luk", 0),
-            agi=stats.get("agi", 0),
+            agi=agi,
+            str=stats.get("str", 0),
+            dex=dex,
+            # Pre-compute flee and hit (status.c:3864-3865 #else not RENEWAL):
+            #   st->flee += level + st->agi
+            #   st->hit  += level + st->dex
+            # apply_mob_scs() mutates these after SC effects are applied.
+            flee=level + agi,
+            hit=level + dex,
             size=entry["size"],
             race=entry["race"],
             element=entry["element"],
             element_level=entry["element_level"],
             is_boss=entry["is_boss"],
-            level=entry["level"],
+            level=level,
             mdef_=entry.get("mdef", 0),
             int_=stats.get("int", 0),
         )
