@@ -1,6 +1,6 @@
 # PS_Calc — Debuff Architecture
 
-_Written after Session SC2. Purpose: audit surface for fixing routing inconsistencies._
+_Written after Session SC2. Updated after Session SC2-Arch to resolve all ⚠️ routing inconsistencies._
 
 ---
 
@@ -20,21 +20,26 @@ The routing for target-side and player-side should be **symmetrical**:
 
 ## Target-Side Routing (debuffs the player applies to the enemy)
 
-### Data Store: `build.support_buffs` (via `TargetStateSection.collect_into`)
-These are persisted across sessions because they represent deliberate player choices:
-- `SC_ETERNALCHAOS` → stored as `support_buffs["SC_ETERNALCHAOS"]`
-- `SC_PROVOKE` (level) → stored as `support_buffs["SC_PROVOKE"]`
-- `SC_DECREASEAGI` (level) → stored as `support_buffs["SC_DECREASEAGI"]`
-- `PR_LEXAETERNA` → stored as `support_buffs["PR_LEXAETERNA"]`
-- `SC_QUAGMIRE` (level) → stored as `support_buffs["SC_QUAGMIRE"]`
-- `SC_MINDBREAKER` (level) → stored as `support_buffs["SC_MINDBREAKER"]`
+### Data Store: `build.target_debuffs` (via `TargetStateSection.collect_into`)
+Persisted across sessions — deliberate player choices about the target's state:
+- `SC_ETERNALCHAOS` → `target_debuffs["SC_ETERNALCHAOS"]`
+- `SC_PROVOKE` (level) → `target_debuffs["SC_PROVOKE"]`
+- `SC_DECREASEAGI` (level) → `target_debuffs["SC_DECREASEAGI"]`
+- `PR_LEXAETERNA` → `target_debuffs["PR_LEXAETERNA"]`
+- `SC_QUAGMIRE` (level) → `target_debuffs["SC_QUAGMIRE"]`
+- `SC_MINDBREAKER` (level) → `target_debuffs["SC_MINDBREAKER"]`
+
+Note: `support_buffs` no longer carries any target-side debuff keys.
 
 ### Data Store: `target.target_active_scs` (via `TargetStateSection.apply_to_target`)
-Session-only flags written directly to the resolved Target before pipeline runs:
+All debuff flags written to the resolved Target before pipeline runs:
 - `SC_STUN`, `SC_FREEZE`, `SC_STONE`, `SC_SLEEP` → force-hit flags
-- `SC_POISON`, `SC_BLIND`, `SC_CURSE` → also set here (consumed by apply_mob_scs)
+- `SC_POISON`, `SC_BLIND`, `SC_CURSE` → consumed by apply_mob_scs / hit_chance / crit_chance
 - `SC_DONTFORGETME` (level) + `SC_DONTFORGETME_agi` → mob ASPD slowdown
-- `SC_MINDBREAKER`, `SC_QUAGMIRE`, `SC_DECREASEAGI` → also set here
+- `SC_MINDBREAKER`, `SC_QUAGMIRE`, `SC_DECREASEAGI` → stat mutations via apply_mob_scs
+- `SC_ETERNALCHAOS` → def2=0; consumed by defense_fix.py via target_active_scs
+- `SC_PROVOKE` (level) → def_percent reduction; applied by apply_mob_scs for mobs
+- `PR_LEXAETERNA` → ×2 multiplier; consumed by battle_pipeline and magic_pipeline
 - `SC_CRUCIS`, `SC_BLESSING` → mob-only (set only when `not target.is_pc`)
 
 ### Mob path: `core/calculators/target_utils.apply_mob_scs(target)`
@@ -43,30 +48,20 @@ Reads `target.target_active_scs`, mutates mob Target fields directly:
 - SC_BLIND → hit×75%, flee×75%
 - SC_CURSE → luk=0
 - SC_POISON → def_percent−=25
+- SC_PROVOKE → def_percent−=(5+5×lv)  [NoBoss]
 - SC_QUAGMIRE → agi−=10lv, dex−=10lv, flee/hit propagated
 - SC_BLESSING → str>>=1, dex>>=1 (Undead/Demon only)
 - SC_CRUCIS → def−=def×val2/100 (Undead/Demon only)
 - SC_MINDBREAKER → matk_percent+=20lv, mdef_percent−=12lv
 - SC_DONTFORGETME → aspd_rate+=10×val2
 - SC_SLEEP: NO stat mutation — force-hit via hit_chance.py, crit×2 via crit_chance.py
+- SC_ETERNALCHAOS: NO stat mutation — defense_fix.py reads flag from target_active_scs
 
 ### PvP target path: `TargetStateSection.collect_target_player_scs()`
 For player targets: returns stat-cascade SCs → merged into `pvp_eff.player_active_scs`
 before StatusCalculator runs on the enemy player build:
-- SC_DECREASEAGI, SC_BLIND, SC_CURSE, SC_SLEEP, SC_QUAGMIRE, SC_MINDBREAKER
-
-### ⚠️ Inconsistency: some target SCs bypass target_active_scs
-These go to `support_buffs` and are read directly from `build` in modifier files,
-**not** through `target_active_scs` / `apply_mob_scs`:
-- `SC_ETERNALCHAOS` → read in `defense_fix.py`: `build.support_buffs.get("SC_ETERNALCHAOS")` → `def2=0`
-- `SC_PROVOKE` → read in `defense_fix.py`: `build.support_buffs.get("SC_PROVOKE")` → scales vit_def by `(100-(5+5*lv))/100`
-- `PR_LEXAETERNA` → read in `magic_pipeline.py` and `battle_pipeline._run_branch()`: `build.support_buffs.get("PR_LEXAETERNA")` → ×2 multiplier
-
-These three were implemented before the target_active_scs architecture existed and were
-never migrated. They should ideally be moved to go through `target_active_scs` and
-`apply_mob_scs` (for mob targets) and `collect_target_player_scs` (for PvP targets),
-but doing so requires touching defense_fix.py, magic_pipeline.py, battle_pipeline.py,
-and the section files.
+- SC_DECREASEAGI, SC_BLIND, SC_CURSE, SC_SLEEP, SC_QUAGMIRE, SC_MINDBREAKER,
+  SC_ETERNALCHAOS, SC_PROVOKE
 
 ---
 
@@ -125,17 +120,12 @@ goes through StatusCalculator; mobs don't), but worth noting for symmetry.
 
 ## Lex Aeterna Routing (specific to G77)
 
-`PR_LEXAETERNA` is stored in `build.support_buffs` (target state section → collect_into).
+`PR_LEXAETERNA` is persisted in `build.target_debuffs` and written to
+`target.target_active_scs` by `apply_to_target()`.
 
-Applied in TWO places:
+Applied in TWO places, both reading `target.target_active_scs.get("PR_LEXAETERNA")`:
 1. `magic_pipeline.py` — after FinalRateBonus, for BF_MAGIC
-2. `battle_pipeline._run_branch()` — after FinalRateBonus, for BF_WEAPON (added SC2)
-
-Both read the same key: `build.support_buffs.get("PR_LEXAETERNA")`.
-
-This is consistent between the two pipelines but is architecturally in the wrong bucket
-(should be in target_active_scs like other debuffs that affect "the enemy"). Left as-is
-since moving it requires more pipeline plumbing.
+2. `battle_pipeline._run_branch()` — after FinalRateBonus, for BF_WEAPON
 
 ---
 
@@ -150,14 +140,14 @@ since moving it requires more pipeline plumbing.
 | SC_POISON | target_active_scs | apply_mob_scs (def_percent) | player_active_scs | StatusCalculator (def_percent) |
 | SC_BLIND | target_active_scs | apply_mob_scs (hit/flee) | player_active_scs | StatusCalculator (hit/flee) |
 | SC_CURSE | target_active_scs | apply_mob_scs (luk/batk) | player_active_scs | StatusCalculator (luk/batk) |
-| SC_DECREASEAGI | support_buffs + target_active_scs | apply_mob_scs (agi) | player_active_scs | StatusCalculator (agi) |
-| SC_QUAGMIRE | support_buffs + target_active_scs | apply_mob_scs (agi/dex) | player_active_scs | StatusCalculator (agi/dex) |
-| SC_MINDBREAKER | support_buffs + target_active_scs | apply_mob_scs (matk/mdef%) | player_active_scs | StatusCalculator (matk/mdef) |
+| SC_DECREASEAGI | target_active_scs | apply_mob_scs (agi) | player_active_scs | StatusCalculator (agi) |
+| SC_QUAGMIRE | target_active_scs | apply_mob_scs (agi/dex) | player_active_scs | StatusCalculator (agi/dex) |
+| SC_MINDBREAKER | target_active_scs | apply_mob_scs (matk/mdef%) | player_active_scs | StatusCalculator (matk/mdef) |
 | SC_DONTFORGETME | target_active_scs | apply_mob_scs (aspd_rate) | player_active_scs | StatusCalculator (aspd_rate) |
-| SC_ETERNALCHAOS | **support_buffs** ⚠️ | **defense_fix.py direct** ⚠️ | player_active_scs | StatusCalculator (def2=0) |
-| SC_PROVOKE | **support_buffs** ⚠️ | **defense_fix.py direct** ⚠️ | player_active_scs | StatusCalculator (def_percent) |
-| PR_LEXAETERNA | **support_buffs** ⚠️ | **magic_pipeline + battle_pipeline direct** ⚠️ | N/A (player applies it to target) | N/A |
+| SC_ETERNALCHAOS | target_active_scs | defense_fix.py (def2=0 via flag) | player_active_scs | StatusCalculator (def2=0); player_build_to_target propagates flag |
+| SC_PROVOKE | target_active_scs | apply_mob_scs (def_percent) | player_active_scs | StatusCalculator (def_percent) |
+| PR_LEXAETERNA | target_active_scs | battle_pipeline + magic_pipeline (×2) | N/A (player applies it to target) | N/A |
 | SC_CRUCIS | target_active_scs | apply_mob_scs (def reduction) | N/A (BL_PC blocked) | N/A |
 | SC_BLESSING | target_active_scs | apply_mob_scs (str/dex halve) | N/A (BL_PC blocked) | N/A |
 
-⚠️ = routing inconsistency vs the majority pattern; candidates for refactor.
+All ⚠️ inconsistencies resolved in Session SC2-Arch.

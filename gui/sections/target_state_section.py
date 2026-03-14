@@ -35,21 +35,18 @@ class TargetStateSection(Section):
     """
     Debuffs/ailments applied by the player to the target.
 
-    Three-method API:
-      collect_into(build)            — writes SC_ETERNALCHAOS / SC_PROVOKE /
-                                       SC_DECREASEAGI / PR_LEXAETERNA to
-                                       build.support_buffs. Called from
-                                       _collect_build() uniformly with all other sections.
-      collect_target_player_scs()    — returns stat-cascade SCs (e.g. SC_DECREASEAGI)
-                                       as a dict for player targets. These must flow
-                                       through StatusCalculator before target resolution.
-                                       Called in _run_battle_pipeline() before
-                                       StatusCalculator runs on the pvp build.
-      apply_to_target(target)        — writes pipeline-level effects directly to the
-                                       resolved Target: target_active_scs flags,
-                                       element overrides, DEF strip. Called after
+    Two-method pipeline API:
+      collect_target_player_scs()    — returns stat-cascade SCs as a dict for player
+                                       targets. Merged into pvp_eff.player_active_scs
+                                       before StatusCalculator runs on the pvp build.
+      apply_to_target(target)        — writes ALL debuff flags to target.target_active_scs
+                                       plus element overrides and DEF strip. Called after
                                        target resolution. No element restore needed —
                                        target is re-resolved each pipeline run.
+
+    Persistence API:
+      collect_into(build)            — writes persisted debuffs to build.target_debuffs.
+      load_build(build)              — restores widget state from build.target_debuffs.
 
     Mob path:  apply_to_target() → target_utils.apply_mob_scs()
     PvP path:  collect_target_player_scs() → pvp_eff.player_active_scs
@@ -317,29 +314,30 @@ class TargetStateSection(Section):
                     w.setValue(0)
 
     def collect_into(self, build: PlayerBuild) -> None:
-        """Write debuffs that feed the pipeline via build.support_buffs.
-        Called from _collect_build() uniformly with all other sections."""
-        support = build.support_buffs
+        """Persist deliberate target debuffs to build.target_debuffs.
+        Also clears any stale keys that previous sessions wrote to support_buffs."""
         for key in ("SC_ETERNALCHAOS", "SC_PROVOKE", "SC_DECREASEAGI", "PR_LEXAETERNA",
                     "SC_QUAGMIRE", "SC_MINDBREAKER"):
-            support.pop(key, None)
+            build.support_buffs.pop(key, None)
+
+        td: dict = {}
         if self._chk_chaos.isChecked():
-            support["SC_ETERNALCHAOS"] = 1
+            td["SC_ETERNALCHAOS"] = 1
         prov_lv = self._lw_provoke.value()
         if prov_lv:
-            support["SC_PROVOKE"] = prov_lv
+            td["SC_PROVOKE"] = prov_lv
         decagi_lv = self._lw_decagi.value()
         if decagi_lv:
-            support["SC_DECREASEAGI"] = decagi_lv
+            td["SC_DECREASEAGI"] = decagi_lv
         if self._chk_lex.isChecked():
-            support["PR_LEXAETERNA"] = 1
+            td["PR_LEXAETERNA"] = 1
         qua_lv = self._lw_quagmire.value()
         if qua_lv:
-            support["SC_QUAGMIRE"] = qua_lv
+            td["SC_QUAGMIRE"] = qua_lv
         mb_lv = self._lw_mindbreaker.value()
         if mb_lv:
-            support["SC_MINDBREAKER"] = mb_lv
-        build.support_buffs = support
+            td["SC_MINDBREAKER"] = mb_lv
+        build.target_debuffs = td
 
     def collect_target_player_scs(self) -> dict[str, int]:
         """Return stat-cascade SCs as a dict for player targets.
@@ -366,6 +364,11 @@ class TargetStateSection(Section):
         mb_lv = self._lw_mindbreaker.value()
         if mb_lv:
             scs["SC_MINDBREAKER"] = mb_lv
+        if self._chk_chaos.isChecked():
+            scs["SC_ETERNALCHAOS"] = 1
+        prov_lv = self._lw_provoke.value()
+        if prov_lv:
+            scs["SC_PROVOKE"] = prov_lv
         return scs
 
     def apply_to_target(self, target: Target) -> None:
@@ -426,6 +429,15 @@ class TargetStateSection(Section):
         if mb_lv:
             scs["SC_MINDBREAKER"] = mb_lv
 
+        # Previously routed via support_buffs; now written here for all targets.
+        if self._chk_chaos.isChecked():
+            scs["SC_ETERNALCHAOS"] = 1
+        prov_lv = self._lw_provoke.value()
+        if prov_lv:
+            scs["SC_PROVOKE"] = prov_lv
+        if self._chk_lex.isChecked():
+            scs["PR_LEXAETERNA"] = 1
+
         # Monster-only SCs
         if not target.is_pc:
             crucis_lv = self._lw_crucis.value()
@@ -447,9 +459,9 @@ class TargetStateSection(Section):
             # Strip Weapon: no outgoing pipeline effect
 
     def load_build(self, build: PlayerBuild) -> None:
-        """Restore persisted debuff levels from build.support_buffs.
+        """Restore persisted debuff levels from build.target_debuffs.
         Ailments and Monster State are session-only and always reset."""
-        support = build.support_buffs
+        td = build.target_debuffs
         all_widgets = [
             self._chk_chaos, self._lw_provoke, self._lw_decagi, self._chk_lex,
             self._lw_quagmire, self._lw_dontforgetme, self._sb_dfm_agi, self._lw_mindbreaker,
@@ -464,12 +476,12 @@ class TargetStateSection(Section):
             w.blockSignals(True)
 
         # Persisted debuffs
-        self._chk_chaos.setChecked(bool(support.get("SC_ETERNALCHAOS", False)))
-        self._lw_provoke.setValue(int(support.get("SC_PROVOKE", 0)))
-        self._lw_decagi.setValue(int(support.get("SC_DECREASEAGI", 0)))
-        self._chk_lex.setChecked(bool(support.get("PR_LEXAETERNA", False)))
-        self._lw_quagmire.setValue(int(support.get("SC_QUAGMIRE", 0)))
-        self._lw_mindbreaker.setValue(int(support.get("SC_MINDBREAKER", 0)))
+        self._chk_chaos.setChecked(bool(td.get("SC_ETERNALCHAOS", False)))
+        self._lw_provoke.setValue(int(td.get("SC_PROVOKE", 0)))
+        self._lw_decagi.setValue(int(td.get("SC_DECREASEAGI", 0)))
+        self._chk_lex.setChecked(bool(td.get("PR_LEXAETERNA", False)))
+        self._lw_quagmire.setValue(int(td.get("SC_QUAGMIRE", 0)))
+        self._lw_mindbreaker.setValue(int(td.get("SC_MINDBREAKER", 0)))
 
         # Session-only — always reset on build load
         self._lw_dontforgetme.setValue(0)

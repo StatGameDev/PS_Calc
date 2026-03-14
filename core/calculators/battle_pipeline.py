@@ -467,7 +467,7 @@ class BattlePipeline:
         # === PR_LEXAETERNA ×2 — applies to ALL damage types (G77) ===
         # SC_LEXAETERNA doubles the next hit regardless of physical/magic.
         # Source: battle.c (battle_calc_damage path); status.c:8490 (SC init)
-        if build.support_buffs.get("PR_LEXAETERNA"):
+        if target.target_active_scs.get("PR_LEXAETERNA"):
             pmf = _scale_floor(pmf, 2, 1)
             mn, mx, av = pmf_stats(pmf)
             result.add_step(

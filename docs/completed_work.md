@@ -541,3 +541,47 @@ pvp stats.
 **Architecture note**: See `docs/debuff_architecture.md` for full routing map of both target-side
 and player-side debuffs, including known inconsistencies with routing through support_buffs
 vs target_active_scs for some target-side SCs (PROVOKE, ETERNALCHAOS, LEX).
+
+---
+
+## Session SC2-Arch — 2026-03-14 — Debuff Routing Refactor
+
+Resolved all three ⚠️ routing inconsistencies identified in `docs/debuff_architecture.md`.
+SC_ETERNALCHAOS, SC_PROVOKE, and PR_LEXAETERNA were previously bypassing `target_active_scs`
+and being read directly from `build.support_buffs` by pipeline modifier files.
+
+**`core/models/build.py`**:
+- Added `target_debuffs: Dict[str, object]` field — dedicated storage for persisted target
+  debuffs (SC_ETERNALCHAOS, SC_PROVOKE, SC_DECREASEAGI, SC_QUAGMIRE, SC_MINDBREAKER,
+  PR_LEXAETERNA). Pipeline never reads this dict; only used for save/load round-trip.
+
+**`gui/sections/target_state_section.py`**:
+- `collect_into()`: now writes to `build.target_debuffs` (was `build.support_buffs`);
+  also clears the stale support_buffs keys from previous sessions.
+- `apply_to_target()`: now writes SC_ETERNALCHAOS, SC_PROVOKE, and PR_LEXAETERNA into
+  `target_active_scs` (previously absent — they went to support_buffs only).
+- `collect_target_player_scs()`: added SC_ETERNALCHAOS and SC_PROVOKE so the PvP path
+  feeds these through StatusCalculator correctly.
+- `load_build()`: reads from `build.target_debuffs` (was `build.support_buffs`).
+- Docstring updated to reflect two-method pipeline API.
+
+**`core/calculators/target_utils.py`**:
+- Added SC_PROVOKE to `apply_mob_scs()`: `target.def_percent -= (5 + 5*lv)`.
+  NoBoss guard via existing `_BOSS_IMMUNE_NOBOSS`. Source: status.c:4401-4402.
+
+**`core/calculators/modifiers/defense_fix.py`**:
+- SC_ETERNALCHAOS: now reads from `target_scs` (target.target_active_scs) instead of
+  `build.support_buffs`. Works for mob, PvP, and incoming player paths.
+- SC_PROVOKE: removed all `prov_lv` logic. Effect is now pre-applied in `target.def_percent`
+  by `apply_mob_scs` (mob) or `StatusCalculator` (player), so defense_fix.py reads it
+  uniformly via `target.def_percent` / `dp`.
+
+**`core/calculators/battle_pipeline.py`** and **`core/calculators/magic_pipeline.py`**:
+- PR_LEXAETERNA check: changed from `build.support_buffs.get(...)` to
+  `target.target_active_scs.get("PR_LEXAETERNA")`.
+
+**`core/build_manager.py`**:
+- `player_build_to_target()`: propagates SC_ETERNALCHAOS from `player_active_scs` to
+  `target_scs` so the incoming pipeline's defense_fix.py sees the flag.
+
+**`docs/debuff_architecture.md`**: fully updated to reflect resolved routing; ⚠️ markers removed.

@@ -101,7 +101,7 @@ class DefenseFix:
 
         def2 = max(1, target.vit)
 
-        if build is not None and build.support_buffs.get("SC_ETERNALCHAOS"):
+        if "SC_ETERNALCHAOS" in target_scs:
             def2 = 0  # status.c:5090: returns 0 from status_calc_def2
 
         # VIT penalty (full mechanic – uses target.targeted_count, respects bitmask)
@@ -118,7 +118,6 @@ class DefenseFix:
                         def2 -= penalty
 
         is_pdef2 = (skill is not None and skill.name == "MO_INVESTIGATE")
-        prov_lv = int(build.support_buffs.get("SC_PROVOKE", 0)) if build is not None else 0
 
         # Soft VIT DEF range computation (needed for both normal and pdef=2 paths).
         # _subtract_uniform convolves the PMF with the negated uniform for exact crossing.
@@ -133,9 +132,9 @@ class DefenseFix:
             vd_avg = def2 // 2 + (variance_max // 2 if variance_max > 0 else 0)
             # SC_ANGELUS: vit_def *= def_percent/100 (battle.c:1492, pre-renewal PC path only)
             # Hard DEF (def1) is NOT scaled for PCs in pre-renewal (only mob/pet targets).
+            # SC_PROVOKE effect is already in target.def_percent (StatusCalculator for player
+            # targets, apply_mob_scs for mob targets) — no separate prov_lv needed here.
             dp = getattr(target, "def_percent", 100)
-            if prov_lv:
-                dp = max(0, dp - (5 + 5 * prov_lv))  # status.c:4401-4402
             if dp != 100:
                 vd_min = vd_min * dp // 100
                 vd_max = vd_max * dp // 100
@@ -150,11 +149,7 @@ class DefenseFix:
             vd_max = def2 + (variance_max - 1 if variance_max > 0 else 0)
             # avg of rnd()%n is (n-1)/2; n//2 rounds half-up (C1a fix)
             vd_avg = def2 + (variance_max // 2 if variance_max > 0 else 0)
-            if prov_lv:
-                prov_pct = 5 + 5 * prov_lv
-                vd_min = vd_min * (100 - prov_pct) // 100
-                vd_max = vd_max * (100 - prov_pct) // 100
-                vd_avg = vd_avg * (100 - prov_pct) // 100
+            # SC_PROVOKE effect is already in target.def_percent (via apply_mob_scs).
             mob_dp = target.def_percent
             if mob_dp != 100:
                 vd_min = vd_min * mob_dp // 100

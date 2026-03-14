@@ -142,7 +142,7 @@ class MagicPipeline:
         # weapon_damage_rate also applies to magic in the source (same final multiplier)
         pmf = FinalRateBonus.calculate(is_ranged=False, pmf=pmf, config=self.config, result=result)
 
-        if build.support_buffs.get("PR_LEXAETERNA"):
+        if target.target_active_scs.get("PR_LEXAETERNA"):
             pmf = _scale_floor(pmf, 2, 1)
             mn, mx, av = pmf_stats(pmf)
             result.add_step("Lex Aeterna", value=av, min_value=mn, max_value=mx,

@@ -96,6 +96,13 @@ def apply_mob_scs(target: Target) -> None:
             val2 = 10 + 4 * lv
             target.def_ = max(0, target.def_ - target.def_ * val2 // 100)
 
+    # ── SC_PROVOKE ────────────────────────────────────────────────────────────
+    # def_percent -= 5+5×lv  (status.c:4401-4402)
+    # NoBoss flag — already in _BOSS_IMMUNE_NOBOSS (status.c:7472, sc_config.conf)
+    if "SC_PROVOKE" in scs and not _blocked("SC_PROVOKE"):
+        lv = int(scs["SC_PROVOKE"])
+        target.def_percent = max(0, target.def_percent - (5 + 5 * lv))
+
     # ── SC_MINDBREAKER ───────────────────────────────────────────────────────
     # matk_percent += 20×lv  (status.c:4376-4377, 8379-8382)
     # mdef_percent -= 12×lv  (status.c:4453-4454, 8379-8382)

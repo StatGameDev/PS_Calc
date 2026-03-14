@@ -107,6 +107,13 @@ class PlayerBuild:
     player_active_scs: Dict[str, object] = field(default_factory=dict)
     # e.g. {"SC_ETERNALCHAOS": False, "SC_CURSE": False, ...}
 
+    # Arch: Persisted target debuffs — the player's intended state for the enemy target.
+    # Written by TargetStateSection.collect_into(); read back by load_build().
+    # Pipeline never reads this dict — it reads target.target_active_scs after apply_to_target().
+    target_debuffs: Dict[str, object] = field(default_factory=dict)
+    # Keys: SC_ETERNALCHAOS, SC_PROVOKE (level), SC_DECREASEAGI (level),
+    #       SC_QUAGMIRE (level), SC_MINDBREAKER (level), PR_LEXAETERNA
+
     # M2: Bard/Dancer song state — caster stats + per-song levels + per-stat overrides.
     # Bard keys: "caster_agi/dex/vit/int/luk", "mus_lesson", "SC_ASSNCROS" (level), "SC_ASSNCROS_agi" (None=shared), etc.
     # Dancer keys: "dancer_agi/dex/vit/int/luk", "dance_lesson", "SC_HUMMING" (level), etc.

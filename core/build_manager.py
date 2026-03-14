@@ -216,11 +216,11 @@ class BuildManager:
         not defensive resistance. Add a sub_size field to GearBonuses when cards
         that reduce damage by size are implemented.
         """
-        # Propagate force-hit ailments so the incoming hit_chance.py sees them,
-        # mirroring what apply_to_target() does for mob targets.
+        # Propagate force-hit ailments and def-zeroing flags so the incoming
+        # pipeline sees them, mirroring what apply_to_target() does for mob targets.
         player_scs = getattr(build, "player_active_scs", {})
         target_scs: dict = {}
-        for _sc in ("SC_STUN", "SC_FREEZE", "SC_STONE", "SC_SLEEP"):
+        for _sc in ("SC_STUN", "SC_FREEZE", "SC_STONE", "SC_SLEEP", "SC_ETERNALCHAOS"):
             if player_scs.get(_sc):
                 target_scs[_sc] = int(player_scs[_sc])
 
