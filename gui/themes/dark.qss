@@ -131,7 +131,6 @@ QComboBox {
     padding: 3px 8px 3px 8px;
     color: #dde1e8;
     min-height: 22px;
-    min-width: 180px;
 }
 
 QComboBox:hover {

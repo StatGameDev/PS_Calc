@@ -64,26 +64,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | SC2 | Player debuffs + G77. Full player_debuffs_section.py UI (14 widgets). StatusCalculator: SC_POISON (def_percent−25), SC_PROVOKE (def_percent−(5+5lv)), SC_ETERNALCHAOS (def2=0), SC_DONTFORGETME (aspd_rate+=10×val2), SC_MINDBREAKER (matk boost). player_build_to_target(): STUN/FREEZE/STONE/SLEEP → target_active_scs + FREEZE→Water/STONE→Earth element. G77: Lex Aeterna ×2 in _run_branch() after FinalRateBonus (all BF_WEAPON). | G77, G80 |
 | S-1 – S-6 | Item Scripts Pass (complete). S-1: bonus_definitions.py table-driven refactor + bAgiVit/bAgiDexStr fix. S-2: bMatkRate/bMaxHPrate wired; build_applicator.py extracted. S-3: bAtkEle/bDefEle element precedence; resolve_armor_element(); DerivedSection ATK/DEF Ele rows. S-4: scraper expanded (3837 items); SCEffect model + parse_sc_start(). S-5: consumable_buffs + bonus_matk_flat; consumables_section.py. S-6 + G82: dual-wield LH element routing (script_atk_ele_rh/lh, lr_flag, pc.c:2588-2609); skill element in AttrFix (battle.c:4807 skill->get_ele). | G82 |
 | T | Job Stat Bonuses (G64, G65): job_db2.txt parsed in DataLoader; get_job_bonus_stats() applied in StatusCalculator; StatsSection gains Next+ column, stat points spent/remaining label, job bonus in tooltip; JOBL_UPPER +52 for trans jobs. Stat cost formula: 1+(v+9)//10 (pc.c:7191). | G64, G65 |
-
----
-
-
-
----
-
-## Session Pre-Alpha-2 — Consumables Format-Change Bug
-
-**Symptom:** Expanding the Consumables section causes the Base Stats section to change visual format (appears to switch to compact/slim layout unexpectedly).
-
-**Investigation so far (Pre-Alpha-1):**
-- `consumables_section.py` — clean; no cross-section signals, `expand_requested` never emitted.
-- `panel_container.py` — `set_slim_mode` only called from `set_focus_state()`; no path from consumables expanding to slim mode.
-- `panel.py` — builder panel uses `QScrollArea(ScrollBarAsNeeded vertical)`; when consumables expands, vertical scrollbar may appear, narrowing viewport by ~15px.
-- Root cause not confirmed.
-
-**Next step:** Add `print(..., file=sys.stderr)` to `StatsSection._enter_slim()`. Ask user to open consumables and report whether the print fires. If it fires → slim mode is being triggered somewhere unexpected; trace back the `set_slim_mode(True)` call. If it does not fire → the format change is a grid/layout reflow from the viewport width change, not a compact-mode switch.
-
-**Estimated tokens:** 10–20k (likely quick once runtime confirms or denies slim mode path).
+| Pre-Alpha-2 | Layout overflow fix: removed `min-width: 180px` from global QComboBox in dark.qss; added `minimumSizeHint()` override to NoWheelCombo returning zero width. Sections with combos can no longer force the panel wider than the viewport. | — |
 
 ---
 

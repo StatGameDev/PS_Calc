@@ -270,8 +270,7 @@ Always grep first. Never load entire files.
 
 ## Bug Investigation Protocol
 
-When a runtime bug cannot be found through static analysis (e.g. a value
-shows as 0 in the GUI despite code tracing showing it should be non-zero):
+**Logic bugs** (wrong value, missing calculation, incorrect behaviour):
 
 1. Add a targeted `print(..., file=sys.stderr)` at the suspect site.
 2. **Ask the user to run the app and reproduce the issue**, then report
@@ -280,6 +279,19 @@ shows as 0 in the GUI despite code tracing showing it should be non-zero):
 
 Do not spend more than one read-through attempting to find a pure
 static-analysis explanation. Ask the user for runtime cooperation.
+
+**Visual / layout bugs** (wrong size, clipping, unexpected reflow):
+
+Debug prints are useless for layout bugs. Instead:
+
+1. Read `gui/themes/dark.qss` — CSS rules (`min-width`, `min-height`,
+   `width`, `height`) directly affect Qt layout and are a common cause.
+2. Read `gui/panel_container.py` and `gui/panel.py` — they own sizing,
+   splitter behaviour, and slim-mode triggers.
+3. Only read individual section files after the above two steps rule out
+   a systemic cause.
+
+Never propose a fix for a layout bug before reading the QSS file.
 
 ---
 

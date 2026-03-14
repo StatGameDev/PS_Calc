@@ -887,3 +887,25 @@ SC_PLUSATTACKPOWER confirmed: `batk += val1` (status.c:4476, `#ifndef RENEWAL`).
 - `set_slim_mode` (which triggers the compact widget) is only called from `PanelContainer.set_focus_state()` — no path from consumables open to slim mode via that route.
 - Builder panel uses `QScrollArea(setWidgetResizable=True, ScrollBarAsNeeded vertical)`. When consumables expands and the content overflows panel height, the vertical scrollbar appears, reducing viewport width by ~15px.
 - Root cause not confirmed. Next step: confirm whether the compact widget is being triggered or if it's a grid reflow. Add debug print to `StatsSection._enter_slim()` or observe directly.
+
+---
+
+## Session Pre-Alpha-2 — 2026-03-14 — Layout Overflow Fix
+
+**Root cause:** `dark.qss` had `min-width: 180px` on the global `QComboBox` rule. When a
+collapsed section containing combos (Consumables, Buffs) was expanded, those combos became
+visible and reported a 180px minimum width to Qt's layout system. `setWidgetResizable(True)`
+on the panel's QScrollArea sizes the inner widget to `max(viewport_width, widget_minimum_width)`.
+When the combo minimum pushed the inner widget wider than the viewport, all sections overflowed
+the panel's right edge (clipped, since horizontal scrollbar is disabled).
+Affected any narrow window size or any section with combos.
+
+**Fix — two files:**
+- `gui/themes/dark.qss`: removed `min-width: 180px` from global `QComboBox {}` rule.
+- `gui/widgets/level_widget.py`: added `minimumSizeHint()` override to `NoWheelCombo` returning
+  `QSize(0, height)` — combos never report a minimum width to the layout system regardless of
+  item text length or CSS. Permanent fix for all combo instances app-wide.
+
+**Also updated:** `CLAUDE.md` Bug Investigation Protocol — added separate layout/visual bug
+protocol directing Claude to read `dark.qss` and `panel_container.py` first, before any
+section-level code or debug prints.

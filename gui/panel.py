@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QSize, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -16,6 +16,21 @@ from PySide6.QtWidgets import (
 
 from core.models.damage import BattleResult
 from gui.section import Section
+
+class _ClippingScrollArea(QScrollArea):
+    """
+    QScrollArea whose minimum width is always zero, regardless of content.
+
+    With ScrollBarAlwaysOff horizontal and setWidgetResizable(True), content
+    already fills the viewport at any width. The default QScrollArea propagates
+    the widget's minimumSizeHint upward, which forces the splitter wider whenever
+    a section with long combo text is expanded. This subclass breaks that chain.
+    """
+
+    def minimumSizeHint(self) -> QSize:
+        h = super().minimumSizeHint()
+        return QSize(0, h.height())
+
 
 # Width of the narrow collapsed bar (px)
 _BAR_W = 22
@@ -204,7 +219,7 @@ class Panel(QWidget):
         outer.setSpacing(0)
 
         # ── Scrollable sections area ──────────────────────────────────────
-        self._scroll = QScrollArea()
+        self._scroll = _ClippingScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QSize, Signal
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
 _HOVER_DELAY = 0.3  # seconds of continuous hover before scroll wheel is accepted
@@ -22,6 +22,10 @@ class NoWheelCombo(QComboBox):
     def leaveEvent(self, event) -> None:
         self._hover_start = None
         super().leaveEvent(event)
+
+    def minimumSizeHint(self) -> QSize:
+        h = super().minimumSizeHint()
+        return QSize(0, h.height())
 
     def wheelEvent(self, event) -> None:
         if self._hover_start is not None and time.monotonic() - self._hover_start >= _HOVER_DELAY:
