@@ -853,3 +853,37 @@ SC_PLUSATTACKPOWER confirmed: `batk += val1` (status.c:4476, `#ifndef RENEWAL`).
 
 **`gui/main_window.py`**:
 - `_run_status_calc()`: computes `jb_bonuses = loader.get_job_bonus_stats(build.job_id, build.job_level)` and passes `jb=jb_bonuses, base_level=build.base_level, job_id=build.job_id` to `update_from_bonuses()`.
+
+---
+
+## Session Pre-Alpha-1 — 2026-03-14 — Bonus Stats Display Fix
+
+### Bonus column now reflects all stat sources
+
+**Problem:** The "Bonus" column in Base Stats and the Flat Bonuses sub-section only showed gear + active items + manual adjustments. All SC stat changes (party buffs, self buffs, passives, consumable foods, player debuffs) were invisible; totals did not match the actual StatusCalculator output.
+
+**Fix — `gui/sections/stats_section.py`:**
+- `update_from_bonuses()` gains `sc_flat: dict[str, int] | None = None` parameter.
+- Flat bonuses loop now adds `sc_flat.get(key_s, 0)` to total and shows "Buffs: X" in tooltip.
+
+**Fix — `gui/main_window.py` (`_run_status_calc`):**
+- Moved `update_from_bonuses()` call to **after** `StatusCalculator.calculate()` (it was previously called before, so SC/passive/debuff effects on stats were always zero).
+- `sc_display[stat]` computed as `status.stat − base − gear − jb − ai − manual` — difference method ensures the displayed total always matches StatusCalculator regardless of what internal SC/passive/debuff effects are active.
+- `sc_flat` dict computed for flat bonus rows:
+  - BATK: SC_GS_MADNESSCANCEL (+100), SC_GS_GATLINGFEVER (+20+10lv), BS_HILTBINDING (+4), consumable atk_item
+  - HIT: SC_GS_ACCURACY (+20), SC_GS_ADJUSTMENT (−30), SC_HUMMING, BS_WEAPONRESEARCH, AC_VULTURE, GS_SINGLEACTION/SNAKEEYE (gun), consumable hit_food
+  - FLEE: SC_GS_ADJUSTMENT (+30), SC_RG_CCONFINE_M (+10), SC_GS_GATLINGFEVER (−5lv), SC_VIOLENTGALE, SC_WHISTLE, TF_MISS, MO_DODGE, consumable flee_food
+  - CRI: SC_EXPLOSIONSPIRITS ((75+25lv)//10), SC_FORTUNE, consumable cri_food
+  - DEF: SC_DRUMBATTLE (+( drum_lv+1)×2)
+  - MDEF: SC_ENDURE (+lv)
+  - ASPD%: consumable aspd_potion
+
+### Consumables format-change bug — investigation in progress
+
+**Symptom:** Expanding the Consumables section causes the Base Stats section to change visual format.
+**Files read:** `consumables_section.py` (clean), `panel_container.py`, `panel.py`.
+**Findings:**
+- ConsumablesSection emits no cross-section signals; `expand_requested` is never fired by it.
+- `set_slim_mode` (which triggers the compact widget) is only called from `PanelContainer.set_focus_state()` — no path from consumables open to slim mode via that route.
+- Builder panel uses `QScrollArea(setWidgetResizable=True, ScrollBarAsNeeded vertical)`. When consumables expands and the content overflows panel height, the vertical scrollbar appears, reducing viewport width by ~15px.
+- Root cause not confirmed. Next step: confirm whether the compact widget is being triggered or if it's a grid reflow. Add debug print to `StatsSection._enter_slim()` or observe directly.

@@ -389,18 +389,12 @@ class MainWindow(QMainWindow):
         build.bonus_matk_flat = 0
 
     def _run_status_calc(self) -> None:
-        """Run StatusCalculator and push results to DerivedSection."""
+        """Run StatusCalculator and push results to DerivedSection and StatsSection."""
         build = self._current_build
         if build is None:
             return
-        # Compute gear bonuses once — used for stats display and effective build.
         gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
-        sc_bonuses = build_applicator.compute_sc_stat_bonuses(build.support_buffs)
         jb_bonuses = loader.get_job_bonus_stats(build.job_id, build.job_level)
-        self._stats_section.update_from_bonuses(
-            gb, build.active_items_bonuses, build.manual_adj_bonuses, sc_bonuses,
-            jb=jb_bonuses, base_level=build.base_level, job_id=build.job_id,
-        )
         eff_build = build_applicator.apply_gear_bonuses(build, gb)
         weapon = BuildManager.resolve_weapon(
             eff_build.equipped.get("right_hand"),
@@ -415,6 +409,134 @@ class MainWindow(QMainWindow):
         resolved_armor_ele = build_applicator.resolve_armor_element(eff_build.armor_element, gb)
         status = StatusCalculator(self._config).calculate(eff_build, weapon)
         self._derived_section.refresh(status, atk_ele=weapon.element, def_ele=resolved_armor_ele)
+
+        # ── Stat bonus display ─────────────────────────────────────────────
+        # sc_display: everything that isn't gear/job/ai/manual — party buffs,
+        # self buffs, passives, consumable foods, debuff penalties — computed as
+        # the difference so the displayed total always matches StatusCalculator.
+        _STAT_MAP = [
+            ("str", "str_",  "str",  "base_str"),
+            ("agi", "agi",   "agi",  "base_agi"),
+            ("vit", "vit",   "vit",  "base_vit"),
+            ("int", "int_",  "int_", "base_int"),
+            ("dex", "dex",   "dex",  "base_dex"),
+            ("luk", "luk",   "luk",  "base_luk"),
+        ]
+        sc_display: dict[str, int] = {}
+        for key_s, gb_attr, status_attr, build_base_attr in _STAT_MAP:
+            final = getattr(status, status_attr)
+            base  = getattr(build, build_base_attr)
+            gear  = int(getattr(gb, gb_attr, 0))
+            jb_v  = jb_bonuses.get(gb_attr, 0)
+            ai_v  = build.active_items_bonuses.get(key_s, 0)
+            ma_v  = build.manual_adj_bonuses.get(key_s, 0)
+            sc_display[key_s] = final - base - gear - jb_v - ai_v - ma_v
+
+        # ── Flat bonus SC/passive/consumable contributions ─────────────────
+        _cons = build_applicator.compute_consumable_bonuses(build.consumable_buffs)
+        active_sc = build.active_status_levels
+        song = build.song_state
+        sc_flat: dict[str, int] = {}
+
+        # BATK+
+        batk_sc = 0
+        if "SC_GS_MADNESSCANCEL" in active_sc:
+            batk_sc += 100
+        if "SC_GS_GATLINGFEVER" in active_sc:
+            batk_sc += 20 + 10 * active_sc["SC_GS_GATLINGFEVER"]
+        if build.mastery_levels.get("BS_HILTBINDING", 0):
+            batk_sc += 4
+        batk_sc += _cons.get("batk", 0)
+        if batk_sc:
+            sc_flat["batk"] = batk_sc
+
+        # HIT+
+        _GUN_TYPES = frozenset({"Revolver", "Rifle", "Gatling", "Shotgun", "Grenade"})
+        hit_sc = 0
+        if "SC_GS_ACCURACY" in active_sc:
+            hit_sc += 20
+        if "SC_GS_ADJUSTMENT" in active_sc:
+            hit_sc -= 30
+        if song.get("SC_HUMMING"):
+            _lv = int(song["SC_HUMMING"])
+            _dlv = int(song.get("dance_lesson", 0))
+            _sdex = int(song["SC_HUMMING_dex"] if song.get("SC_HUMMING_dex") is not None
+                        else song.get("dancer_dex", 1))
+            hit_sc += 2 * _lv + _sdex // 10 + _dlv
+        _bs_wr = build.mastery_levels.get("BS_WEAPONRESEARCH", 0)
+        if _bs_wr:
+            hit_sc += _bs_wr * 2
+        _ac_v = build.mastery_levels.get("AC_VULTURE", 0)
+        if _ac_v:
+            hit_sc += _ac_v
+        _gs_sa = build.mastery_levels.get("GS_SINGLEACTION", 0)
+        if _gs_sa and weapon.weapon_type in _GUN_TYPES:
+            hit_sc += 2 * _gs_sa
+        _gs_se = build.mastery_levels.get("GS_SNAKEEYE", 0)
+        if _gs_se and weapon.weapon_type in _GUN_TYPES:
+            hit_sc += _gs_se
+        hit_sc += _cons.get("hit", 0)
+        if hit_sc:
+            sc_flat["hit"] = hit_sc
+
+        # FLEE+
+        flee_sc = 0
+        if "SC_GS_ADJUSTMENT" in active_sc:
+            flee_sc += 30
+        if "SC_RG_CCONFINE_M" in active_sc:
+            flee_sc += 10
+        if "SC_GS_GATLINGFEVER" in active_sc:
+            flee_sc -= 5 * active_sc["SC_GS_GATLINGFEVER"]
+        if build.support_buffs.get("ground_effect") == "SC_VIOLENTGALE":
+            flee_sc += int(build.support_buffs.get("ground_effect_lv", 1)) * 3
+        if song.get("SC_WHISTLE"):
+            _lv = int(song["SC_WHISTLE"])
+            _mlv = int(song.get("mus_lesson", 0))
+            _sagi = int(song["SC_WHISTLE_agi"] if song.get("SC_WHISTLE_agi") is not None
+                        else song.get("caster_agi", 1))
+            flee_sc += _lv + _sagi // 10 + _mlv
+        _tf_miss = build.mastery_levels.get("TF_MISS", 0)
+        if _tf_miss:
+            flee_sc += _tf_miss * 4 if build.job_id in {12, 17, 4013, 4018} else _tf_miss * 3
+        _mo_dodge = build.mastery_levels.get("MO_DODGE", 0)
+        if _mo_dodge:
+            flee_sc += (_mo_dodge * 3) >> 1
+        flee_sc += _cons.get("flee", 0)
+        if flee_sc:
+            sc_flat["flee"] = flee_sc
+
+        # CRI+ (in bonus_cri units: 1 unit = 1% crit)
+        cri_sc = 0
+        if "SC_EXPLOSIONSPIRITS" in active_sc:
+            cri_sc += (75 + 25 * active_sc["SC_EXPLOSIONSPIRITS"]) // 10
+        if song.get("SC_FORTUNE"):
+            _lv = int(song["SC_FORTUNE"])
+            _dlv = int(song.get("dance_lesson", 0))
+            _sluk = int(song["SC_FORTUNE_luk"] if song.get("SC_FORTUNE_luk") is not None
+                        else song.get("dancer_luk", 1))
+            cri_sc += 10 + _lv + _sluk // 10 + _dlv
+        cri_sc += _cons.get("cri", 0)
+        if cri_sc:
+            sc_flat["cri"] = cri_sc
+
+        # Hard DEF
+        _drum_lv = int(song.get("SC_DRUMBATTLE", 0))
+        if _drum_lv:
+            sc_flat["def"] = (_drum_lv + 1) * 2
+
+        # Hard MDEF
+        if "SC_ENDURE" in active_sc:
+            sc_flat["mdef"] = active_sc["SC_ENDURE"]
+
+        # ASPD% (consumable potions only; SC ASPD is a rate multiplier, not a % bonus)
+        _aspd_cons = _cons.get("aspd_percent", 0)
+        if _aspd_cons:
+            sc_flat["aspd_pct"] = _aspd_cons
+
+        self._stats_section.update_from_bonuses(
+            gb, build.active_items_bonuses, build.manual_adj_bonuses, sc_display,
+            jb=jb_bonuses, sc_flat=sc_flat, base_level=build.base_level, job_id=build.job_id,
+        )
 
     def _run_battle_pipeline(self) -> None:
         """Run BattlePipeline and push BattleResult to combat sections."""

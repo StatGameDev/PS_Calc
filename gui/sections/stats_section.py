@@ -268,18 +268,23 @@ class StatsSection(Section):
         ma: dict[str, int],
         sc: dict[str, int] | None = None,
         jb: dict[str, int] | None = None,
+        sc_flat: dict[str, int] | None = None,
         base_level: int = 1,
         job_id: int = 0,
     ) -> None:
         """Refresh auto-computed bonus labels from all sources.
 
-        Called by MainWindow whenever the build changes (gear, active items,
-        manual adjustments, SC buffs, or job bonus). sc/jb keys use gb_attr names.
+        sc: comprehensive non-gear/job/ai/manual stat bonuses (party buffs, self buffs,
+            passives, consumable foods, debuff penalties) — computed from StatusCalculator
+            output difference so the total always matches the actual calculated stat.
+        sc_flat: SC/passive/consumable contributions to flat bonus rows (batk/hit/flee/etc).
         """
         if sc is None:
             sc = {}
         if jb is None:
             jb = {}
+        if sc_flat is None:
+            sc_flat = {}
         self._base_level = base_level
         self._job_id = job_id
         for _display, key_s, _base_attr, gb_attr in _STATS:
@@ -298,11 +303,12 @@ class StatsSection(Section):
             gear_val = int(getattr(gb, gb_attr, 0)) if gb_attr else 0
             ai_val   = ai.get(ai_key, 0)
             ma_val   = ma.get(ai_key, 0)
-            total    = gear_val + ai_val + ma_val
+            sc_val   = sc_flat.get(key_s, 0)
+            total    = gear_val + ai_val + ma_val + sc_val
             self._flat_values[key_s] = total
             lbl = self._flat_labels[key_s]
             lbl.setText(_fmt_bonus(total) if total else "0")
-            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val))
+            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val, sc=sc_val))
 
         self._update_totals()
 

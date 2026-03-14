@@ -71,6 +71,22 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 
 ---
 
+## Session Pre-Alpha-2 — Consumables Format-Change Bug
+
+**Symptom:** Expanding the Consumables section causes the Base Stats section to change visual format (appears to switch to compact/slim layout unexpectedly).
+
+**Investigation so far (Pre-Alpha-1):**
+- `consumables_section.py` — clean; no cross-section signals, `expand_requested` never emitted.
+- `panel_container.py` — `set_slim_mode` only called from `set_focus_state()`; no path from consumables expanding to slim mode.
+- `panel.py` — builder panel uses `QScrollArea(ScrollBarAsNeeded vertical)`; when consumables expands, vertical scrollbar may appear, narrowing viewport by ~15px.
+- Root cause not confirmed.
+
+**Next step:** Add `print(..., file=sys.stderr)` to `StatsSection._enter_slim()`. Ask user to open consumables and report whether the print fires. If it fires → slim mode is being triggered somewhere unexpected; trace back the `set_slim_mode(True)` call. If it does not fire → the format change is a grid/layout reflow from the viewport width change, not a compact-mode switch.
+
+**Estimated tokens:** 10–20k (likely quick once runtime confirms or denies slim mode path).
+
+---
+
 ## Session Scale — UI Scaling
 
 **Goal**: App scales correctly across common resolutions and provides a manual override.
