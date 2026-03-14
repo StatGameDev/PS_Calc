@@ -7,7 +7,6 @@ from typing import Optional
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication,
     QButtonGroup,
     QComboBox,
     QFrame,
@@ -248,12 +247,11 @@ class MainWindow(QMainWindow):
 
     def _adjust_scale(self, delta: float) -> None:
         app_config.set_scale_override(app_config.scale_override() + delta)
-        QApplication.instance().setStyleSheet(app_config.get_scaled_qss())
         self._show_scale_toast()
 
     def _show_scale_toast(self) -> None:
         pct = round(app_config.effective_scale() * 100)
-        self._scale_toast.setText(f"  Scale: {pct}%  ")
+        self._scale_toast.setText(f"  Scale: {pct}% — restart to apply  ")
         self._scale_toast.adjustSize()
         self._reposition_toast()
         self._scale_toast.raise_()
