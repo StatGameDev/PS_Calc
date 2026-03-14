@@ -4,9 +4,10 @@ import json
 import os
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QComboBox,
     QFrame,
@@ -152,6 +153,11 @@ class MainWindow(QMainWindow):
             lambda: self._adjust_scale(-app_config._SCALE_STEP)
         )
 
+        # Ctrl+scroll: accumulate wheel delta so smooth-scroll devices still
+        # produce one step per notch-equivalent (120 units) rather than many.
+        self._wheel_accum: int = 0
+        QApplication.instance().installEventFilter(self)
+
     # ── Top bar construction ───────────────────────────────────────────────
 
     def _build_top_bar(self) -> QFrame:
@@ -252,6 +258,19 @@ class MainWindow(QMainWindow):
         self._combat_controls.spirit_spheres_changed.connect(self._buffs_section.set_spirit_spheres)
 
     # ── UI scale ───────────────────────────────────────────────────────────
+
+    def eventFilter(self, obj, event) -> bool:
+        if (event.type() == QEvent.Type.Wheel
+                and event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            self._wheel_accum += event.angleDelta().y()
+            while self._wheel_accum >= 120:
+                self._adjust_scale(app_config._SCALE_STEP)
+                self._wheel_accum -= 120
+            while self._wheel_accum <= -120:
+                self._adjust_scale(-app_config._SCALE_STEP)
+                self._wheel_accum += 120
+            return True  # consume event; don't scroll the widget underneath
+        return False
 
     def _adjust_scale(self, delta: float) -> None:
         app_config.set_scale_override(app_config.scale_override() + delta)
