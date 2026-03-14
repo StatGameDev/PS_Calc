@@ -775,3 +775,48 @@ SC_PLUSATTACKPOWER confirmed: `batk += val1` (status.c:4476, `#ifndef RENEWAL`).
 - `_consumables.changed` wired to `_on_build_changed`.
 - load_build / collect_into calls added for both sections.
 - `bonus_matk_flat = 0` added to the bonus-zeroing block in `_collect_build()`.
+
+---
+
+## Session S-6 — 2026-03-14 — Dual-Wield LH Element + Skill Element Fix
+
+### S-6: Dual-wield LH element correctness
+
+**Source confirmed (read 2026-03-14):**
+- `pc.c:2588-2609`: `SP_ATKELE` uses `lr_flag` — `lr_flag==1` (LH slot) → `bst->lhw.ele = val`; `lr_flag==0` (RH slot) → `bst->rhw.ele = val`.
+- `battle.c:4810-4811`: `s_ele = sstatus->rhw.ele; s_ele_ = sstatus->lhw.ele;`
+- `battle.c:4856-4862`: skills always use only RH (`flag.lh` set only when `!skill_id`).
+
+**`core/models/gear_bonuses.py`**:
+- Renamed `script_atk_ele` → `script_atk_ele_rh`; added `script_atk_ele_lh: int | None = None`.
+
+**`core/bonus_definitions.py`**:
+- `bAtkEle` field updated: `"script_atk_ele"` → `"script_atk_ele_rh"` (default path for all non-LH slots).
+
+**`core/gear_bonus_aggregator.py`**:
+- Imported `_ELE_STR_TO_INT` from bonus_definitions.
+- Inner loop: `bAtkEle` on `slot == "left_hand"` bypasses `_apply()` and writes directly to `bonuses.script_atk_ele_lh`. All other slots use the `_apply()` path → `script_atk_ele_rh`.
+
+**`core/build_manager.py`**:
+- `resolve_weapon()` param renamed `script_atk_ele` → `script_atk_ele_rh`. Docstring updated with slot-specific usage note.
+
+**`core/calculators/battle_pipeline.py`**:
+- Dual-wield section: computes `_dw_gb = GearBonusAggregator.compute(...)` to access LH element.
+- LH `resolve_weapon()` call now passes `script_atk_ele_rh=_dw_gb.script_atk_ele_lh`.
+
+**`gui/main_window.py`**:
+- 3 `resolve_weapon()` call sites updated: `script_atk_ele=gb.script_atk_ele` → `script_atk_ele_rh=gb.script_atk_ele_rh` (×2 RH, ×1 PvP RH).
+
+### Skill element in AttrFix (G82)
+
+**Source:** `battle.c:4807`: `s_ele = skill_id ? skill->get_ele(skill_id, skill_lv) : -1`. Skills with a fixed element (e.g. `TF_POISON` = `Ele_Poison`) use that element; skills with `Ele_Weapon` / `Ele_Endowed` / `Ele_Random` use the fallback weapon path.
+
+**`core/calculators/modifiers/attr_fix.py`**:
+- `calculate()` gains optional `atk_element: int | None = None` parameter.
+- `eff_ele = atk_element if atk_element is not None else weapon.element` used for both the table lookup and the ground-effect element check.
+
+**`core/calculators/battle_pipeline.py`**:
+- Imported `_ELE_STR_TO_INT` from `bonus_definitions`.
+- `_run_branch()`: `skill_data` load moved up from ForgeBonus section.
+- Before AttrFix: resolves `eff_atk_ele` from `skill_data["element"][lv_idx]` via `_ELE_STR_TO_INT`. `Ele_Weapon`/`Ele_Endowed`/`Ele_Random` not in dict → `None` → falls back to `weapon.element`.
+- Passes `atk_element=eff_atk_ele` to `AttrFix.calculate()`.

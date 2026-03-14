@@ -1,4 +1,5 @@
 from core.build_manager import BuildManager, effective_is_ranged
+from core.bonus_definitions import _ELE_STR_TO_INT
 
 # G52: Jobs that can dual-wield (Assassin, Assassin Cross).
 # Source: battle.c:4855-4859 — skills always use RH only; dual-wield is normal attack only.
@@ -198,6 +199,9 @@ class BattlePipeline:
         if build.job_id in _DUAL_WIELD_JOBS and skill.id == 0:
             as_right_lv = build.mastery_levels.get("AS_RIGHT", 0)
             as_left_lv  = build.mastery_levels.get("AS_LEFT", 0)
+            # S-6: compute gb here to resolve LH element from bAtkEle scripts.
+            # pc.c:2588-2609: lr_flag==1 → lhw.ele; gb.script_atk_ele_lh carries that value.
+            _dw_gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
             lh_weapon = BuildManager.resolve_weapon(
                 build.equipped.get("left_hand"),
                 build.refine_levels.get("left_hand", 0),
@@ -206,6 +210,7 @@ class BattlePipeline:
                 forge_sc_count=build.lh_forge_sc_count,
                 forge_ranked=build.lh_forge_ranked,
                 forge_element=build.lh_forge_element,
+                script_atk_ele_rh=_dw_gb.script_atk_ele_lh,
             )
             if lh_weapon.weapon_type != "Unarmed":
                 # Apply RH penalty rate to existing normal/crit results.
@@ -450,11 +455,23 @@ class BattlePipeline:
         pmf = MasteryFix.calculate(weapon, build, target, pmf, result, skill)
 
         # === ATTR FIX ===
-        pmf = AttrFix.calculate(weapon, target, pmf, result, build)
+        # Resolve attacking element — battle.c:4807: s_ele = skill_id ? skill->get_ele() : -1
+        # If get_ele() returns -1 (Ele_Weapon), weapon element is used — this is the default path.
+        # If get_ele() returns a fixed element (e.g. Ele_Poison for TF_POISON), that element wins.
+        # Ele_Weapon / Ele_Endowed / Ele_Random are absent from _ELE_STR_TO_INT → None → weapon.element.
+        skill_data = loader.get_skill(skill.id)  # also used by ForgeBonus below
+        eff_atk_ele = weapon.element
+        if skill.id != 0 and skill_data:
+            ele_list = skill_data.get("element", [])
+            if ele_list:
+                idx = min(skill.level - 1, len(ele_list) - 1)
+                v = _ELE_STR_TO_INT.get(ele_list[idx])
+                if v is not None:
+                    eff_atk_ele = v
+        pmf = AttrFix.calculate(weapon, target, pmf, result, build, atk_element=eff_atk_ele)
 
         # === FORGE BONUS — flat star ATK × div, after AttrFix, before CardFix ===
         # Source: battle.c:5864 (#ifndef RENEWAL): ATK_ADD2(wd.div_*right_weapon.star, ...)
-        skill_data = loader.get_skill(skill.id)
         div = skill_data.get("hit", 1) if skill_data else 1
         pmf = ForgeBonus.calculate(weapon, div, pmf, result)
 

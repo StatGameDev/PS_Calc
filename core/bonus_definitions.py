@@ -173,9 +173,11 @@ BONUS1: dict[str, BonusDef] = {
     # Element overrides — script assigns element to weapon / armor (S-3)
     # bAtkEle / bDefEle params arrive as strings: "Ele_Fire", "Ele_Water", etc.
     # _ELE_STR_TO_INT maps them to the int 0-9 used throughout the pipeline.
+    # Default path writes to script_atk_ele_rh; aggregator overrides to script_atk_ele_lh
+    # for items equipped in the left_hand slot (S-6: pc.c:2588-2609 lr_flag routing).
     "bAtkEle": BonusDef(
         lambda v: f"Changes weapon element to {ELEMENT_NAMES.get(str(v), str(v))}.",
-        field="script_atk_ele", mode="assign", transform=_ELE_STR_TO_INT.get,
+        field="script_atk_ele_rh", mode="assign", transform=_ELE_STR_TO_INT.get,
     ),
     "bDefEle": BonusDef(
         lambda v: f"Changes armor element to {ELEMENT_NAMES.get(str(v), str(v))}.",

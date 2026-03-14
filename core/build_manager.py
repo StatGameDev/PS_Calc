@@ -270,7 +270,7 @@ class BuildManager:
         forge_sc_count: int = 0,
         forge_ranked: bool = False,
         forge_element: int = 0,
-        script_atk_ele: Optional[int] = None,
+        script_atk_ele_rh: Optional[int] = None,
     ) -> Weapon:
         """
         Resolve an item ID to a Weapon via item_db.
@@ -279,9 +279,10 @@ class BuildManager:
         - item_id is None (slot unequipped)
         - the item ID is not found in item_db
 
-        Element priority (G17 + S-3):
+        Element priority (G17 + S-3 + S-6):
           1. element_override (manual "Weapon Element" override — always wins)
-          2. script_atk_ele (bAtkEle from any equipped item script, e.g. endow card)
+          2. script_atk_ele_rh (bAtkEle from slot-appropriate item scripts)
+             Pass gb.script_atk_ele_rh for RH weapon, gb.script_atk_ele_lh for LH weapon.
           3. forge_element when is_forged=True (elemental stone from forging)
           4. item_db element (base weapon, usually 0 for forgeable weapons)
         """
@@ -300,8 +301,8 @@ class BuildManager:
 
         if element_override is not None:
             element = element_override
-        elif script_atk_ele is not None:
-            element = script_atk_ele     # bAtkEle from equipped item scripts (S-3)
+        elif script_atk_ele_rh is not None:
+            element = script_atk_ele_rh  # bAtkEle from slot-appropriate item scripts (S-6)
         elif is_forged:
             element = forge_element      # elemental stone from forging
         else:

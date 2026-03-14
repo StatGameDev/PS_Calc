@@ -43,8 +43,10 @@ class GearBonuses:
     matk_rate: int = 0   # bMatkRate  — % rate bonus to MATK  (S-2)
 
     # Element overrides from scripts — int 0-9 or None if not overridden (S-3 wiring)
-    script_atk_ele: int | None = None  # bAtkEle — weapon element from script
-    script_def_ele: int | None = None  # bDefEle — armor element from script
+    # S-6: split by hand slot to mirror pc_bonus SP_ATKELE lr_flag routing (pc.c:2588-2609)
+    script_atk_ele_rh: int | None = None  # bAtkEle on RH-slot items → rhw.ele
+    script_atk_ele_lh: int | None = None  # bAtkEle on LH-slot items → lhw.ele
+    script_def_ele: int | None = None     # bDefEle — armor element from script
 
     # ASPD
     aspd_percent: int = 0   # bAspdRate

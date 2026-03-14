@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-from core.bonus_definitions import BONUS1, BONUS2
+from core.bonus_definitions import BONUS1, BONUS2, _ELE_STR_TO_INT
 from core.data_loader import loader
 from core.item_script_parser import parse_sc_start, parse_script
 from core.models.gear_bonuses import GearBonuses
@@ -61,7 +61,15 @@ class GearBonusAggregator:
             bonuses.all_effects.extend(effects)
 
             for eff in effects:
-                GearBonusAggregator._apply(bonuses, eff)
+                # S-6: bAtkEle on left_hand slot → lhw.ele (pc.c:2588-2609 lr_flag==1).
+                # All other slots including right_hand use the default _apply path → rhw.ele.
+                if eff.bonus_type == "bAtkEle" and slot == "left_hand":
+                    if eff.arity == 1 and eff.params:
+                        v = _ELE_STR_TO_INT.get(str(eff.params[0]))
+                        if v is not None:
+                            bonuses.script_atk_ele_lh = v
+                else:
+                    GearBonusAggregator._apply(bonuses, eff)
 
             bonuses.sc_effects.extend(parse_sc_start(script))
 

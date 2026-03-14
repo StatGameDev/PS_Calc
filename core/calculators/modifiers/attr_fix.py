@@ -27,9 +27,14 @@ class AttrFix:
 
     @staticmethod
     def calculate(weapon: Weapon, target: Target, pmf: dict, result: DamageResult,
-                  build: PlayerBuild | None = None) -> dict:
+                  build: PlayerBuild | None = None,
+                  atk_element: int | None = None) -> dict:
+        """atk_element: effective attacking element. If None, uses weapon.element (auto-attack path).
+        For skills: pass the skill's element from skills.json (battle.c:4807 skill->get_ele()).
+        Ele_Weapon / Ele_Endowed / Ele_Random fall back to weapon.element at the call site."""
+        eff_ele = atk_element if atk_element is not None else weapon.element
         defending = loader.get_element_name(target.element)
-        attacking = loader.get_element_name(weapon.element)
+        attacking = loader.get_element_name(eff_ele)
         multiplier = loader.get_attr_fix_multiplier(attacking, defending, target.element_level or 1)
 
         # Ground element attack amplification: ratio += enchant_eff[lv-1] when
@@ -43,7 +48,7 @@ class AttrFix:
         # checks atk_elem (the weapon/skill attack element).
         if build is not None:
             ge = build.support_buffs.get("ground_effect")
-            if ge in _GROUND_ELEMENT and weapon.element == _GROUND_ELEMENT[ge]:
+            if ge in _GROUND_ELEMENT and eff_ele == _GROUND_ELEMENT[ge]:
                 ge_lv = int(build.support_buffs.get("ground_effect_lv", 1))
                 enchant_bonus = _ENCHANT_EFF[ge_lv - 1]
                 multiplier += enchant_bonus

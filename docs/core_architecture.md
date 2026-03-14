@@ -259,7 +259,10 @@ Weapon and armor effective elements follow a three-tier precedence chain, resolv
 
 ```
 explicit_element_override (user-set, stored on PlayerBuild)
-  → script_atk_ele / script_def_ele (from GearBonuses, populated by bAtkEle/bDefEle script bonuses)
+  → script_atk_ele_rh / script_atk_ele_lh / script_def_ele (from GearBonuses)
+      bAtkEle from right_hand or non-LH slot → script_atk_ele_rh (pc.c:2588 lr_flag==0 → rhw.ele)
+      bAtkEle from left_hand slot             → script_atk_ele_lh (pc.c:2609 lr_flag==1 → lhw.ele)
+      bDefEle → script_def_ele (slot-agnostic; only one armor slot)
     → item_db_element (from item_db.json)
 ```
 
