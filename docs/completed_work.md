@@ -719,3 +719,59 @@ always incorrect for items with these bonuses.
 
 **`docs/lookup/item_ref.tsv`**:
 - Regenerated from updated item_db.json — 3837 rows (was 2760).
+
+---
+
+## Session S-5 — 2026-03-14 — SC Effects Routing + Consumable UI
+
+**No gaps closed. Infrastructure + UI for consumable buffs.**
+
+SC_PLUSATTACKPOWER confirmed: `batk += val1` (status.c:4476, `#ifndef RENEWAL`).
+
+**`core/models/build.py`**:
+- Added `consumable_buffs: Dict[str, object]` — stores all consumable selections (value-based, same pattern as support_buffs). Keys defined in docs/consumables_design.md.
+- Added `bonus_matk_flat: int = 0` — flat MATK addend from SC_MATKFOOD/SC_PLUSMAGICPOWER consumables; computed by apply_gear_bonuses(), applied in StatusCalculator after rate scaling.
+
+**`core/build_applicator.py`**:
+- New `compute_consumable_bonuses(consumable_buffs: dict) -> dict[str, int]`.
+  SC conflict routing: max() per SC slot (Hercules blocks lower val1, status.c:7362-7363).
+  food_str/agi/int compete with food_all and grilled_corn (gc=2); food_vit/dex/luk compete with food_all only.
+  ASPD potions: _ASPD_VALS=(0,10,15,20) for indices 0-3. HIT/FLEE/CRI/ATK/MATK routed directly.
+  SC_PLUSMAGICPOWER (matk_item) + SC_MATKFOOD (matk_food) are separate SC slots — stack into matk_flat.
+- `apply_gear_bonuses()`: now calls compute_consumable_bonuses() and folds all consumable stats into dataclasses.replace(), including bonus_matk_flat.
+
+**`core/calculators/status_calculator.py`**:
+- After bMatkRate scaling and SC_MINDBREAKER: `matk_min/max += build.bonus_matk_flat` (status.c:4635-4638).
+
+**`core/build_manager.py`**:
+- save_build(): serialises `consumable_buffs`.
+- load_build(): restores `consumable_buffs` from `data.get("consumable_buffs", {})`.
+
+**`gui/sections/consumables_section.py`** (new file):
+- 10-row QGridLayout with all consumable widgets.
+- Stat Foods: 6 inline NoWheelCombo (STR/AGI/VIT/INT/DEX/LUK), 52px each; LUK has extra values +15/+20/+21.
+- All-Stats Food: NoWheelCombo (0/+3/+6/+10 all).
+- Grilled Corn: QCheckBox (+2 STR/AGI/INT tooltip).
+- ASPD Potion: NoWheelCombo (None/Concentration/Awakening/Berserk).
+- HIT Food: NoWheelCombo (0/+10/+20/+30/+33/+100).
+- FLEE Food: NoWheelCombo (0/+10/+20/+30/+33).
+- CRI Food: QCheckBox "Arunafeltz Desert Sandwich" (+7 CRI tooltip).
+- ATK Item: NoWheelCombo (SC_PLUSATTACKPOWER; 0/+5/+10/+15/+20/+30); Payon Stories values deferred.
+- MATK Item: NoWheelCombo (SC_PLUSMAGICPOWER; 0/+5/+10/+15/+20/+30); Payon Stories values deferred.
+- MATK Food: QCheckBox "Rainbow Cake (SC_MATKFOOD, stacks)" (+10 flat, stacks with MATK Item).
+- Header summary: auto-computed text of all active consumable effects.
+- load_build() / collect_into() fully symmetrical via findData/currentData.
+
+**`gui/sections/misc_section.py`** (new stub file):
+- Section subclass with placeholder label. Auto-compute logic deferred to a future session.
+- load_build() / collect_into() are no-ops.
+
+**`gui/layout_config.json`**:
+- Added `consumables_section` (header_summary, collapsed, builder panel) and `misc_section` (header_summary, collapsed, builder panel) between player_debuffs_section and active_items_section.
+
+**`gui/main_window.py`**:
+- Imports ConsumablesSection and MiscSection.
+- Typed refs `_consumables` and `_misc_section`.
+- `_consumables.changed` wired to `_on_build_changed`.
+- load_build / collect_into calls added for both sections.
+- `bonus_matk_flat = 0` added to the bonus-zeroing block in `_collect_build()`.

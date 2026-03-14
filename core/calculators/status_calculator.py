@@ -409,6 +409,12 @@ class StatusCalculator:
             status.matk_min = status.matk_min * pct // 100
             status.matk_max = status.matk_max * pct // 100
 
+        # bonus_matk_flat: SC_PLUSMAGICPOWER (matk_item) + SC_MATKFOOD consumables — flat addend.
+        # Applied after rate scaling and SC% effects (status.c:4635-4638).
+        if build.bonus_matk_flat:
+            status.matk_min += build.bonus_matk_flat
+            status.matk_max += build.bonus_matk_flat
+
         # === MDEF ===
         # Hard MDEF (mdef): from bMdef item scripts, routed through equip_mdef on PlayerBuild
         status.mdef = build.equip_mdef

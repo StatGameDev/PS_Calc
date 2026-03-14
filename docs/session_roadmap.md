@@ -65,6 +65,8 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | S-1 | bonus_definitions.py: BonusDef + BONUS1/2/3 tables. Parser + aggregator refactored to table-driven. bAgiVit + bAgiDexStr fixed (were silently dropped). Pure refactor, no behavior change. | — |
 | S-2 | GearBonuses: matk_rate/maxhp_rate/script_atk_ele/script_def_ele added. bMatkRate+bMaxHPrate wired in bonus_definitions (were display-only). PlayerBuild: bonus_crit_atk_rate/matk_rate/maxhp_rate added. StatusCalculator: bMatkRate×(100+rate)/100 (status.c:1995-1997), bMaxHPrate×(100+rate)/100 (status.c:1937). New core/build_applicator.py extracted from MainWindow (_apply_gear_bonuses→apply_gear_bonuses, _sc_stat_bonuses→compute_sc_stat_bonuses). GearBonuses now computed once per pipeline run (was computed twice). Bugs fixed: bMatkRate (131 items) and bMaxHPrate (45 items) were parsed but silently dropped. | — |
 | S-3 | Element precedence wired: bAtkEle/bDefEle → script_atk_ele/script_def_ele (mode="assign" in aggregator). resolve_weapon() adds script_atk_ele param (override → script → forge → item_db). resolve_armor_element() added to build_applicator. player_build_to_target() uses resolved armor element. DerivedSection: ATK Ele + DEF Ele rows. All 3 main_window resolve_weapon() calls thread script_atk_ele. | — |
+| S-4 | Scraper expanded to IT_USABLE+IT_HEALING (item_db now 3837 items). SCEffect model + parse_sc_start(). sc_effects in GearBonuses. | — |
+| S-5 | consumable_buffs+bonus_matk_flat on PlayerBuild. compute_consumable_bonuses() in build_applicator (max() per SC slot). bonus_matk_flat in StatusCalculator after rate scaling. consumables_section.py (10 widget rows) + misc_section.py (stub). layout_config + main_window wired. | — |
 
 ---
 
@@ -109,18 +111,10 @@ Non-numeric tokens (SCFLAG_NONE, Ele_Neutral, etc.) are silently skipped in the 
 
 ---
 
-### S-5: SC Effects Routing + Consumable UI
+### ~~S-5: SC Effects Routing + Consumable UI~~ ✅ DONE (2026-03-14)
 
-**Goal:** Items' SC effects reach StatusCalculator. User can select consumable items from a browsable list.
-
-1. `PlayerBuild` — add `consumable_item_ids: list[int]` (persisted).
-2. `build_applicator.py` — extract SC_FOOD_* and other stat SCs from `GearBonuses.sc_effects`; merge into transient `consumable_scs: dict[str, int]` on the effective build (computed each run, not saved).
-3. `StatusCalculator` — read `consumable_scs` and apply stat effects. Mapping source: `docs/buffs/stat_foods.md`.
-4. New UI subsection in Buffs panel — consumable item browser filtered to IT_USABLE/IT_HEALING; user adds items to `consumable_item_ids`; parsed effects shown as description text.
-5. G46 Active Items spinboxes — kept as manual fallback for unlisted items; labelled "Manual Override".
-
-**Files:** `core/models/build.py`, `core/build_applicator.py`, `core/calculators/status_calculator.py`, new GUI subsection file.
-**Hercules reads:** None — `stat_foods.md` already has confirmed SC→stat mappings.
+SC_PLUSATTACKPOWER confirmed: `batk += val1` (status.c:4476, `#ifndef RENEWAL`).
+All 8 files implemented. See `docs/completed_work.md` Session S-5 for details.
 
 ---
 

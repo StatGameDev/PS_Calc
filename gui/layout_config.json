@@ -56,6 +56,20 @@
       "compact_modes": ["slim_content"]
     },
     {
+      "key": "consumables_section",
+      "panel": "builder",
+      "display_name": "Consumables",
+      "default_collapsed": true,
+      "compact_modes": ["header_summary"]
+    },
+    {
+      "key": "misc_section",
+      "panel": "builder",
+      "display_name": "Active Effects",
+      "default_collapsed": true,
+      "compact_modes": ["header_summary"]
+    },
+    {
       "key": "active_items_section",
       "panel": "builder",
       "display_name": "Active Items",

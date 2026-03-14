@@ -90,6 +90,7 @@ class BuildManager:
             "support_buffs": dict(build.support_buffs),
             "player_active_scs": dict(build.player_active_scs),
             "song_state": dict(build.song_state),
+            "consumable_buffs": dict(build.consumable_buffs),
         }
 
         # cached_display — read by PlayerTargetBrowserDialog to show build stats
@@ -195,6 +196,7 @@ class BuildManager:
             support_buffs=support_buffs,
             player_active_scs=data.get("player_active_scs", {}),
             song_state=song_state,
+            consumable_buffs=data.get("consumable_buffs", {}),
         )
 
     @staticmethod

@@ -41,6 +41,8 @@ from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
 from gui.sections.active_items_section import ActiveItemsSection
 from gui.sections.buffs_section import BuffsSection
+from gui.sections.consumables_section import ConsumablesSection
+from gui.sections.misc_section import MiscSection
 from gui.sections.player_debuffs_section import PlayerDebuffsSection
 from gui.sections.passive_section import PassiveSection
 from gui.sections.stats_section import StatsSection
@@ -99,6 +101,8 @@ class MainWindow(QMainWindow):
         self._passive_section:   PassiveSection       = self._panel_container.get_section("passive_section")        # type: ignore[assignment]
         self._buffs_section:     BuffsSection         = self._panel_container.get_section("buffs_section")          # type: ignore[assignment]
         self._player_debuffs:    PlayerDebuffsSection = self._panel_container.get_section("player_debuffs_section") # type: ignore[assignment]
+        self._consumables:       ConsumablesSection   = self._panel_container.get_section("consumables_section")    # type: ignore[assignment]
+        self._misc_section:      MiscSection          = self._panel_container.get_section("misc_section")           # type: ignore[assignment]
         self._active_items:      ActiveItemsSection   = self._panel_container.get_section("active_items_section")   # type: ignore[assignment]
 
         # ── Typed section references — combat ─────────────────────────────
@@ -208,6 +212,7 @@ class MainWindow(QMainWindow):
         self._buffs_section.changed.connect(self._on_build_changed)
         self._buffs_section.spirit_spheres_changed.connect(self._combat_controls.set_spirit_spheres)
         self._player_debuffs.changed.connect(self._on_build_changed)
+        self._consumables.changed.connect(self._on_build_changed)
         self._active_items.bonuses_changed.connect(self._on_build_changed)
         self._target_state.state_changed.connect(self._on_build_changed)
         self._incoming_damage.config_changed.connect(self._run_battle_pipeline)
@@ -334,6 +339,8 @@ class MainWindow(QMainWindow):
         self._passive_section.load_build(build)
         self._buffs_section.load_build(build)
         self._player_debuffs.load_build(build)
+        self._consumables.load_build(build)
+        self._misc_section.load_build(build)
         self._active_items.load_build(build)
         self._combat_controls.load_build(build)
         self._target_state.load_build(build)
@@ -359,6 +366,8 @@ class MainWindow(QMainWindow):
         self._passive_section.collect_into(build)
         self._buffs_section.collect_into(build)
         self._player_debuffs.collect_into(build)
+        self._consumables.collect_into(build)
+        self._misc_section.collect_into(build)
         self._active_items.collect_into(build)
         self._combat_controls.collect_into(build)
         self._target_state.collect_into(build)
@@ -377,6 +386,7 @@ class MainWindow(QMainWindow):
         build.equip_def = 0
         build.equip_mdef = 0
         build.bonus_aspd_percent = 0
+        build.bonus_matk_flat = 0
 
     def _run_status_calc(self) -> None:
         """Run StatusCalculator and push results to DerivedSection."""

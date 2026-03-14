@@ -132,3 +132,15 @@ class PlayerBuild:
     #       "TK_JUMPKICK_combo" (bool, SC_COMBOATTACK active),
     #       "TK_JUMPKICK_running" (bool, SC_STRUP / TK_RUN active).
     skill_params: Dict[str, Any] = field(default_factory=dict)
+
+    # S-5: Consumable buffs — stat foods, ASPD potions, ATK/MATK items, combat stat items.
+    # Keys defined in docs/consumables_design.md "Storage Keys" section. Same typing as support_buffs.
+    # food_str/agi/vit/int/dex/luk (int 0-21), food_all (0/3/6/10), grilled_corn (bool),
+    # aspd_potion (0-3), hit_food (int), flee_food (int), cri_food (bool),
+    # atk_item (int), matk_item (int), matk_food (bool).
+    consumable_buffs: Dict[str, object] = field(default_factory=dict)
+
+    # S-5: Flat MATK addend from SC_PLUSMAGICPOWER / SC_MATKFOOD consumables.
+    # Accumulated in apply_gear_bonuses(); applied in StatusCalculator after rate scaling.
+    # source: status.c:4635-4638.
+    bonus_matk_flat: int = 0
