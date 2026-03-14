@@ -133,6 +133,14 @@ class MainWindow(QMainWindow):
         self._scale_timer.setSingleShot(True)
         self._scale_timer.timeout.connect(self._scale_toast.hide)
 
+        # Debounce timer: applies stylesheet 200ms after last adjustment.
+        # Decouples rapid Ctrl+scroll (toast updates every event) from the
+        # expensive setStyleSheet call (fires once after scrolling stops).
+        self._apply_scale_timer = QTimer(self)
+        self._apply_scale_timer.setSingleShot(True)
+        self._apply_scale_timer.setInterval(200)
+        self._apply_scale_timer.timeout.connect(self._apply_scaled_qss)
+
         # ── Scale keybinds ────────────────────────────────────────────────
         QShortcut(QKeySequence("Ctrl++"), self).activated.connect(
             lambda: self._adjust_scale(app_config._SCALE_STEP)
@@ -248,10 +256,15 @@ class MainWindow(QMainWindow):
     def _adjust_scale(self, delta: float) -> None:
         app_config.set_scale_override(app_config.scale_override() + delta)
         self._show_scale_toast()
+        self._apply_scale_timer.start()  # restart debounce on each event
+
+    def _apply_scaled_qss(self) -> None:
+        """Apply the scaled stylesheet to the main window. Called via debounce timer."""
+        self.setStyleSheet(app_config.get_scaled_qss())
 
     def _show_scale_toast(self) -> None:
         pct = round(app_config.effective_scale() * 100)
-        self._scale_toast.setText(f"  Scale: {pct}% — restart to apply  ")
+        self._scale_toast.setText(f"  Scale: {pct}%  ")
         self._scale_toast.adjustSize()
         self._reposition_toast()
         self._scale_toast.raise_()
