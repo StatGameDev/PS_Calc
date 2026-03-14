@@ -63,28 +63,11 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | SC1 | Target debuffs: SC_BLIND/CURSE/SLEEP/POISON/QUAGMIRE/MINDBREAKER/CRUCIS/BLESSING in apply_mob_scs + StatusCalculator player path. SC_DONTFORGETME with dancer AGI QSpinBox (val2=agi/10+3×lv+5, skill.c:13270; aspd_rate+=10×val2, status.c:5667). Boss protocol: set_is_boss() disables immune widgets; apply_mob_scs guards per-SC. New Target fields: str/dex/hit/def_percent/mdef_percent/matk_percent/aspd_rate. | G79, G81 |
 | SC2 | Player debuffs + G77. Full player_debuffs_section.py UI (14 widgets). StatusCalculator: SC_POISON (def_percent−25), SC_PROVOKE (def_percent−(5+5lv)), SC_ETERNALCHAOS (def2=0), SC_DONTFORGETME (aspd_rate+=10×val2), SC_MINDBREAKER (matk boost). player_build_to_target(): STUN/FREEZE/STONE/SLEEP → target_active_scs + FREEZE→Water/STONE→Earth element. G77: Lex Aeterna ×2 in _run_branch() after FinalRateBonus (all BF_WEAPON). | G77, G80 |
 | S-1 – S-6 | Item Scripts Pass (complete). S-1: bonus_definitions.py table-driven refactor + bAgiVit/bAgiDexStr fix. S-2: bMatkRate/bMaxHPrate wired; build_applicator.py extracted. S-3: bAtkEle/bDefEle element precedence; resolve_armor_element(); DerivedSection ATK/DEF Ele rows. S-4: scraper expanded (3837 items); SCEffect model + parse_sc_start(). S-5: consumable_buffs + bonus_matk_flat; consumables_section.py. S-6 + G82: dual-wield LH element routing (script_atk_ele_rh/lh, lr_flag, pc.c:2588-2609); skill element in AttrFix (battle.c:4807 skill->get_ele). | G82 |
+| T | Job Stat Bonuses (G64, G65): job_db2.txt parsed in DataLoader; get_job_bonus_stats() applied in StatusCalculator; StatsSection gains Next+ column, stat points spent/remaining label, job bonus in tooltip; JOBL_UPPER +52 for trans jobs. Stat cost formula: 1+(v+9)//10 (pc.c:7191). | G64, G65 |
 
 ---
 
 
-
-## Session T — Job Stat Bonuses + Stat Planner
-
-**Goal**: Two foundational features that share a stat data focus and fit one context window.
-
-**Job Stat Bonuses (G64 + G65)**:
-- Job bonus table from Hercules `pc.c` — stat gain per job level per job.
-- Apply in StatusCalculator per `job_id` / `job_level`.
-- Bonus stat display column updated to show job bonus as a named source.
-
-**Stat Planner (Phase 5 partial)**:
-- Stat point cost curve: each successive point in a stat costs more points
-  (Hercules `pc.c` `pc_gets_status_point` or equivalent).
-- New UI widget in StatsSection (or dedicated sub-section): shows remaining
-  stat points, cost of next point per stat, and current total spent.
-- No "what-if" mode. No comparison. Budget display only.
-
-**Estimated tokens**: 30–40k (2 Hercules reads + implementation + UI).
 
 ---
 

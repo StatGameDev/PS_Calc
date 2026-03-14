@@ -18,13 +18,17 @@ class StatusCalculator:
     def calculate(self, build: PlayerBuild, weapon: Weapon) -> StatusData:
         status = StatusData()
 
-        # Total stats (base + equipment/cards/buffs)
-        status.str = build.base_str + build.bonus_str
-        status.agi = build.base_agi + build.bonus_agi
-        status.vit = build.base_vit + build.bonus_vit
-        status.int_ = build.base_int + build.bonus_int
-        status.dex = build.base_dex + build.bonus_dex
-        status.luk = build.base_luk + build.bonus_luk
+        # Job stat bonuses — cumulative per-stat gain from job_db2.txt
+        # Source: Hercules/db/job_db2.txt; pc.c:2489 param_bonus[type-SP_STR]+=val
+        jb = loader.get_job_bonus_stats(build.job_id, build.job_level)
+
+        # Total stats (base + job bonus + equipment/cards/buffs)
+        status.str = build.base_str + build.bonus_str + jb["str_"]
+        status.agi = build.base_agi + build.bonus_agi + jb["agi"]
+        status.vit = build.base_vit + build.bonus_vit + jb["vit"]
+        status.int_ = build.base_int + build.bonus_int + jb["int_"]
+        status.dex = build.base_dex + build.bonus_dex + jb["dex"]
+        status.luk = build.base_luk + build.bonus_luk + jb["luk"]
 
         # === PARTY BUFF SCs (support_buffs) ===
         # SC_BLESSING/SC_INC_AGI/SC_GLORIA stat bonuses are folded into build.bonus_*

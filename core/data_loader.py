@@ -299,6 +299,81 @@ class DataLoader:
         return data.get("bonuses", {}).get(status_key, {})
 
     # =============================================================
+    # Job stat bonuses (Hercules/db/job_db2.txt)
+    # =============================================================
+
+    # Jobs with JOBL_UPPER flag — get +52 extra stat points on rebirth.
+    # Source: pc.c:7522 ((sd->job & JOBL_UPPER) != 0 ? 52 : 0)
+    # Range 4001–4022 = Novice High through Paladin (Peco).
+    _JOBL_UPPER_JOBS: ClassVar[frozenset] = frozenset(range(4001, 4023))
+
+    @lru_cache(maxsize=None)
+    def _parse_job_bonus_table(self) -> dict:
+        """Parse Hercules/db/job_db2.txt.
+
+        Format: JobID,stat_code_lv1,stat_code_lv2,...
+        Codes: 0=none 1=STR 2=AGI 3=VIT 4=INT 5=DEX 6=LUK
+        Source: Hercules/db/job_db2.txt; applied via param_bonus[] in pc.c:2489
+        """
+        table = {}
+        path = Path("Hercules/db/job_db2.txt")
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.split("//")[0].strip()
+                if not line:
+                    continue
+                parts = [int(x.strip()) for x in line.split(",")]
+                if parts:
+                    table[parts[0]] = parts[1:]
+        return table
+
+    def get_job_bonus_stats(self, job_id: int, job_level: int) -> dict:
+        """Cumulative job stat bonuses up to job_level.
+
+        Source: Hercules/db/job_db2.txt; pc.c:2489 param_bonus[type-SP_STR]+=val
+        Keys match GearBonuses attr names: str_, agi, vit, int_, dex, luk
+        """
+        table = self._parse_job_bonus_table()
+        codes = table.get(job_id, [])
+        result = {"str_": 0, "agi": 0, "vit": 0, "int_": 0, "dex": 0, "luk": 0}
+        code_to_key = {1: "str_", 2: "agi", 3: "vit", 4: "int_", 5: "dex", 6: "luk"}
+        for code in codes[:job_level]:
+            key = code_to_key.get(code)
+            if key:
+                result[key] += 1
+        return result
+
+    @lru_cache(maxsize=None)
+    def _parse_statpoint_table(self) -> tuple:
+        """Parse Hercules/db/pre-re/statpoint.txt.
+
+        Line N (1-indexed) = cumulative stat points at base level N.
+        Source: Hercules/db/pre-re/statpoint.txt; pc.c:11870 statp[] seed=45
+        Returns a tuple (hashable for lru_cache compatibility).
+        """
+        path = Path("Hercules/db/pre-re/statpoint.txt")
+        values = []
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                stripped = line.split("//")[0].strip()
+                if stripped.lstrip("-").isdigit():
+                    values.append(int(stripped))
+        return tuple(values)
+
+    def get_stat_points_at_level(self, base_level: int, job_id: int) -> int:
+        """Total stat points available at this base level.
+
+        Non-trans: statpoint_table[base_level-1]
+        JOBL_UPPER (4001–4022): +52 extra (pc.c:7522)
+        """
+        table = self._parse_statpoint_table()
+        idx = min(max(base_level, 1), len(table)) - 1
+        points = table[idx] if table else 48
+        if job_id in self._JOBL_UPPER_JOBS:
+            points += 52
+        return points
+
+    # =============================================================
     # Cache control (for hot-reload during development)
     # =============================================================
     def clear_cache(self):

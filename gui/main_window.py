@@ -396,8 +396,10 @@ class MainWindow(QMainWindow):
         # Compute gear bonuses once — used for stats display and effective build.
         gb = GearBonusAggregator.compute(build.equipped, build.refine_levels)
         sc_bonuses = build_applicator.compute_sc_stat_bonuses(build.support_buffs)
+        jb_bonuses = loader.get_job_bonus_stats(build.job_id, build.job_level)
         self._stats_section.update_from_bonuses(
-            gb, build.active_items_bonuses, build.manual_adj_bonuses, sc_bonuses
+            gb, build.active_items_bonuses, build.manual_adj_bonuses, sc_bonuses,
+            jb=jb_bonuses, base_level=build.base_level, job_id=build.job_id,
         )
         eff_build = build_applicator.apply_gear_bonuses(build, gb)
         weapon = BuildManager.resolve_weapon(

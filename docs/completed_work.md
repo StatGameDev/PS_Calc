@@ -820,3 +820,36 @@ SC_PLUSATTACKPOWER confirmed: `batk += val1` (status.c:4476, `#ifndef RENEWAL`).
 - `_run_branch()`: `skill_data` load moved up from ForgeBonus section.
 - Before AttrFix: resolves `eff_atk_ele` from `skill_data["element"][lv_idx]` via `_ELE_STR_TO_INT`. `Ele_Weapon`/`Ele_Endowed`/`Ele_Random` not in dict → `None` → falls back to `weapon.element`.
 - Passes `atk_element=eff_atk_ele` to `AttrFix.calculate()`.
+
+---
+
+## Session T — 2026-03-14 — Job Stat Bonuses + Stat Points Display
+
+### G64 — Job Stat Bonuses
+
+**Source:** `Hercules/db/job_db2.txt` — format: `JobID,stat_code_lv1,...`; codes 1=STR 2=AGI 3=VIT 4=INT 5=DEX 6=LUK. Applied via `param_bonus[type-SP_STR] += val` in `pc.c:2489`.
+
+**`core/data_loader.py`**:
+- `_parse_job_bonus_table()` — lru_cached parser for `Hercules/db/job_db2.txt`.
+- `get_job_bonus_stats(job_id, job_level)` — returns cumulative `{str_, agi, vit, int_, dex, luk: int}` up to job_level.
+- `_JOBL_UPPER_JOBS` class var — frozenset(range(4001, 4023)) for trans/high jobs.
+- `_parse_statpoint_table()` — lru_cached parser for `Hercules/db/pre-re/statpoint.txt` (255 entries).
+- `get_stat_points_at_level(base_level, job_id)` — cumulative stat points; +52 for JOBL_UPPER jobs (`pc.c:7522`).
+
+**`core/calculators/status_calculator.py`**:
+- `calculate()`: calls `loader.get_job_bonus_stats(build.job_id, build.job_level)` and adds `jb["str_"]` etc. to each stat before all further derivation.
+
+### G65 — Stat Bonus Display + Stat Points Remaining
+
+**Source:** `pc.c:7191 #else RENEWAL`: pre-renewal stat cost = `1 + (current_value + 9) // 10`.
+
+**`gui/sections/stats_section.py`**:
+- `_stat_cost(v)` and `_spent_points(base)` module-level helpers.
+- `_make_tooltip()` gains `jb: int = 0` param; "Job Bonus" shows between Gear and Buffs.
+- Stats grid gains "Next+" column (col 6) — `_next_labels` dict showing cost-of-next-point per stat.
+- `StatsSection.__init__`: adds `_next_labels`, `_base_level=1`, `_job_id=0` instance vars; `_points_label` text changed from "Base Stat Total" to "Stat Points — Spent: N / Total  |  Left: N".
+- `_update_totals()`: computes spent/available/remaining + fills `_next_labels`.
+- `update_from_bonuses()`: gains `jb`, `base_level`, `job_id` params; stores level/job for planner; applies `jb.get(gb_attr, 0)` per stat row.
+
+**`gui/main_window.py`**:
+- `_run_status_calc()`: computes `jb_bonuses = loader.get_job_bonus_stats(build.job_id, build.job_level)` and passes `jb=jb_bonuses, base_level=build.base_level, job_id=build.job_id` to `update_from_bonuses()`.

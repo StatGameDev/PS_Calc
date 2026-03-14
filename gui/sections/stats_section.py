@@ -10,10 +10,24 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from core.data_loader import loader
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
 from gui.section import Section
 from gui.widgets import NoWheelSpin
+
+
+def _stat_cost(v: int) -> int:
+    """Cost to raise a stat from v to v+1 (pre-renewal).
+    Source: pc.c:7191 #else RENEWAL: sp += (1 + (final + 9) / 10)
+    """
+    return 1 + (v + 9) // 10
+
+
+def _spent_points(base: int) -> int:
+    """Total stat points spent to raise a stat from 1 to base."""
+    return sum(_stat_cost(i) for i in range(1, base))
+
 
 # (display_label, key, base_attr, gb_attr)
 # gb_attr: attribute name on GearBonuses, or None if not tracked there
@@ -43,16 +57,18 @@ def _fmt_bonus(v: int) -> str:
     return f"+{v}" if v > 0 else str(v)
 
 
-def _make_tooltip(gear: int, ai: int, ma: int, sc: int = 0) -> str:
+def _make_tooltip(gear: int, ai: int, ma: int, sc: int = 0, jb: int = 0) -> str:
     parts = []
     if gear:
         parts.append(f"Gear: {_fmt_bonus(gear)}")
+    if jb:
+        parts.append(f"Job Bonus: {_fmt_bonus(jb)}")
+    if sc:
+        parts.append(f"Buffs: {_fmt_bonus(sc)}")
     if ai:
         parts.append(f"Active Items: {_fmt_bonus(ai)}")
     if ma:
         parts.append(f"Manual: {_fmt_bonus(ma)}")
-    if sc:
-        parts.append(f"Buffs: {_fmt_bonus(sc)}")
     return "  |  ".join(parts) if parts else "No bonuses"
 
 
@@ -79,8 +95,12 @@ class StatsSection(Section):
         self._bonus_values: dict[str, int] = {k: 0 for _, k, *_ in _STATS}
         self._flat_values:  dict[str, int] = {k: 0 for _, k, *_ in _FLAT_BONUSES}
 
+        # Base level / job_id — updated by update_from_bonuses() for stat planner
+        self._base_level: int = 1
+        self._job_id: int = 0
+
         # ── Stat point counter ────────────────────────────────────────────
-        self._points_label = QLabel("Base Stat Total: 6")
+        self._points_label = QLabel("Stat Points: —")
         self._points_label.setObjectName("stat_points_label")
         self.add_content_widget(self._points_label)
 
@@ -91,7 +111,7 @@ class StatsSection(Section):
         grid.setHorizontalSpacing(6)
         grid.setVerticalSpacing(3)
 
-        for col, header in enumerate(("", "Base", "+", "Bonus", "=", "Total"), start=0):
+        for col, header in enumerate(("", "Base", "+", "Bonus", "=", "Total", "Next+"), start=0):
             if header:
                 lbl = QLabel(header)
                 lbl.setObjectName("stat_col_header")
@@ -100,6 +120,7 @@ class StatsSection(Section):
         self._base_spins:   dict[str, QSpinBox] = {}
         self._bonus_labels: dict[str, QLabel]   = {}
         self._total_labels: dict[str, QLabel]   = {}
+        self._next_labels:  dict[str, QLabel]   = {}
 
         for row, (display, key_s, _base_attr, _gb_attr) in enumerate(_STATS, start=1):
             name_lbl = QLabel(display)
@@ -133,6 +154,13 @@ class StatsSection(Section):
             total_lbl.setFixedWidth(38)
             self._total_labels[key_s] = total_lbl
             grid.addWidget(total_lbl, row, 5)
+
+            next_lbl = QLabel("2")
+            next_lbl.setObjectName("stat_next_cost")
+            next_lbl.setFixedWidth(30)
+            next_lbl.setToolTip("Stat points to raise this stat by 1")
+            self._next_labels[key_s] = next_lbl
+            grid.addWidget(next_lbl, row, 6)
 
             base_spin.valueChanged.connect(self._on_stat_changed)
 
@@ -176,13 +204,18 @@ class StatsSection(Section):
         self.stats_changed.emit()
 
     def _update_totals(self) -> None:
-        total_base = 0
+        spent = 0
         for key_s in self._base_spins:
             base = self._base_spins[key_s].value()
             bonus = self._bonus_values.get(key_s, 0)
             self._total_labels[key_s].setText(str(base + bonus))
-            total_base += base
-        self._points_label.setText(f"Base Stat Total: {total_base}")
+            self._next_labels[key_s].setText(str(_stat_cost(base)))
+            spent += _spent_points(base)
+        available = loader.get_stat_points_at_level(self._base_level, self._job_id)
+        remaining = available - spent
+        self._points_label.setText(
+            f"Stat Points — Spent: {spent} / {available}  |  Left: {remaining}"
+        )
         if self._compact_widget is not None:
             self._update_compact_labels()
 
@@ -234,24 +267,32 @@ class StatsSection(Section):
         ai: dict[str, int],
         ma: dict[str, int],
         sc: dict[str, int] | None = None,
+        jb: dict[str, int] | None = None,
+        base_level: int = 1,
+        job_id: int = 0,
     ) -> None:
         """Refresh auto-computed bonus labels from all sources.
 
         Called by MainWindow whenever the build changes (gear, active items,
-        manual adjustments, or SC buffs). sc keys match ai/ma key names.
+        manual adjustments, SC buffs, or job bonus). sc/jb keys use gb_attr names.
         """
         if sc is None:
             sc = {}
+        if jb is None:
+            jb = {}
+        self._base_level = base_level
+        self._job_id = job_id
         for _display, key_s, _base_attr, gb_attr in _STATS:
             gear_val = int(getattr(gb, gb_attr, 0)) if gb_attr else 0
             ai_val   = ai.get(key_s, 0)
             ma_val   = ma.get(key_s, 0)
             sc_val   = sc.get(key_s, 0)
-            total    = gear_val + ai_val + ma_val + sc_val
+            jb_val   = jb.get(gb_attr, 0)  # gb_attr = "str_"/"int_"/etc.
+            total    = gear_val + ai_val + ma_val + sc_val + jb_val
             self._bonus_values[key_s] = total
             lbl = self._bonus_labels[key_s]
             lbl.setText(_fmt_bonus(total) if total else "0")
-            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val, sc_val))
+            lbl.setToolTip(_make_tooltip(gear_val, ai_val, ma_val, sc_val, jb_val))
 
         for _display, key_s, gb_attr, ai_key in _FLAT_BONUSES:
             gear_val = int(getattr(gb, gb_attr, 0)) if gb_attr else 0
