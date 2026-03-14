@@ -398,9 +398,11 @@ class MainWindow(QMainWindow):
             forge_sc_count=eff_build.forge_sc_count,
             forge_ranked=eff_build.forge_ranked,
             forge_element=eff_build.forge_element,
+            script_atk_ele=gb.script_atk_ele,
         )
+        resolved_armor_ele = build_applicator.resolve_armor_element(eff_build.armor_element, gb)
         status = StatusCalculator(self._config).calculate(eff_build, weapon)
-        self._derived_section.refresh(status)
+        self._derived_section.refresh(status, atk_ele=weapon.element, def_ele=resolved_armor_ele)
 
     def _run_battle_pipeline(self) -> None:
         """Run BattlePipeline and push BattleResult to combat sections."""
@@ -418,6 +420,7 @@ class MainWindow(QMainWindow):
             forge_sc_count=eff_build.forge_sc_count,
             forge_ranked=eff_build.forge_ranked,
             forge_element=eff_build.forge_element,
+            script_atk_ele=gb.script_atk_ele,
         )
         status = StatusCalculator(self._config).calculate(eff_build, weapon)
         skill = self._combat_controls.get_skill_instance()
@@ -446,6 +449,7 @@ class MainWindow(QMainWindow):
                     forge_sc_count=pvp_eff.forge_sc_count,
                     forge_ranked=pvp_eff.forge_ranked,
                     forge_element=pvp_eff.forge_element,
+                    script_atk_ele=pvp_gb.script_atk_ele,
                 )
                 # Merge stat-cascade debuffs into pvp_eff before StatusCalculator runs,
                 # so effects like DECREASEAGI → AGI → FLEE/ASPD cascade correctly.

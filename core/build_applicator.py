@@ -1,5 +1,5 @@
 """
-core/build_applicator.py — S-2
+core/build_applicator.py — S-2/S-3
 
 Business logic extracted from MainWindow: applying aggregated gear bonuses and
 computing SC stat bonuses belongs in core, not in the GUI layer.
@@ -46,6 +46,21 @@ def apply_gear_bonuses(build: PlayerBuild, gear_bonuses: GearBonuses) -> PlayerB
         bonus_matk_rate=build.bonus_matk_rate + gb.matk_rate,
         bonus_maxhp_rate=build.bonus_maxhp_rate + gb.maxhp_rate,
     )
+
+
+def resolve_armor_element(armor_element_override: int, gear_bonuses: GearBonuses) -> int:
+    """Resolve effective armor element using three-tier precedence.
+
+    Precedence:
+      1. armor_element_override (non-zero = user has explicitly set an element)
+      2. gear_bonuses.script_def_ele (bDefEle from equipped item scripts, e.g. Pasana Card)
+      3. 0 / Neutral (all armors are Neutral by default in pre-renewal)
+    """
+    if armor_element_override != 0:
+        return armor_element_override
+    if gear_bonuses.script_def_ele is not None:
+        return gear_bonuses.script_def_ele
+    return 0
 
 
 def compute_sc_stat_bonuses(support_buffs: dict) -> dict[str, int]:

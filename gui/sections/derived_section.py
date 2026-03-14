@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QGridLayout, QLabel, QWidget
 
+from core.data_loader import loader
 from core.models.status import StatusData
 from gui.section import Section
 
@@ -38,6 +39,8 @@ class DerivedSection(Section):
             ("HIT",   "hit",   "—"),
             ("CRI",   "cri",   "—"),
             ("ASPD",  "aspd",  "—"),
+            ("ATK Ele", "atk_ele", "—"),  # resolved weapon element (S-3)
+            ("DEF Ele", "def_ele", "—"),  # resolved armor element (S-3)
             ("HP",       "hp",       "—"),
             ("HP Regen", "hp_regen", "—"),
             ("SP",       "sp",       "—"),
@@ -109,8 +112,17 @@ class DerivedSection(Section):
 
     # ── Public API ────────────────────────────────────────────────────────
 
-    def refresh(self, status: StatusData) -> None:
-        """Update all displayed values from a freshly computed StatusData."""
+    def refresh(
+        self,
+        status: StatusData,
+        atk_ele: int | None = None,
+        def_ele: int | None = None,
+    ) -> None:
+        """Update all displayed values from a freshly computed StatusData.
+
+        atk_ele: resolved weapon element int (0-9); None → show "—".
+        def_ele: resolved armor element int (0-9); None → show "—".
+        """
         cri_pct = status.cri / 10.0  # cri stored in 0.1% units
 
         self._value_labels["batk"].setText(str(status.batk))
@@ -124,6 +136,12 @@ class DerivedSection(Section):
         self._value_labels["hit"].setText(str(status.hit))
         self._value_labels["cri"].setText(f"{cri_pct:.1f}%")
         self._value_labels["aspd"].setText(f"{status.aspd:.1f}")
+        self._value_labels["atk_ele"].setText(
+            loader.get_element_name(atk_ele) if atk_ele is not None else "—"
+        )
+        self._value_labels["def_ele"].setText(
+            loader.get_element_name(def_ele) if def_ele is not None else "—"
+        )
         self._value_labels["hp"].setText(str(status.max_hp))
         self._value_labels["hp_regen"].setText(f"{status.hp_regen}/tick")
         self._value_labels["sp"].setText(str(status.max_sp))

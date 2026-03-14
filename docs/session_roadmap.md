@@ -64,6 +64,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | SC2 | Player debuffs + G77. Full player_debuffs_section.py UI (14 widgets). StatusCalculator: SC_POISON (def_percent−25), SC_PROVOKE (def_percent−(5+5lv)), SC_ETERNALCHAOS (def2=0), SC_DONTFORGETME (aspd_rate+=10×val2), SC_MINDBREAKER (matk boost). player_build_to_target(): STUN/FREEZE/STONE/SLEEP → target_active_scs + FREEZE→Water/STONE→Earth element. G77: Lex Aeterna ×2 in _run_branch() after FinalRateBonus (all BF_WEAPON). | G77, G80 |
 | S-1 | bonus_definitions.py: BonusDef + BONUS1/2/3 tables. Parser + aggregator refactored to table-driven. bAgiVit + bAgiDexStr fixed (were silently dropped). Pure refactor, no behavior change. | — |
 | S-2 | GearBonuses: matk_rate/maxhp_rate/script_atk_ele/script_def_ele added. bMatkRate+bMaxHPrate wired in bonus_definitions (were display-only). PlayerBuild: bonus_crit_atk_rate/matk_rate/maxhp_rate added. StatusCalculator: bMatkRate×(100+rate)/100 (status.c:1995-1997), bMaxHPrate×(100+rate)/100 (status.c:1937). New core/build_applicator.py extracted from MainWindow (_apply_gear_bonuses→apply_gear_bonuses, _sc_stat_bonuses→compute_sc_stat_bonuses). GearBonuses now computed once per pipeline run (was computed twice). Bugs fixed: bMatkRate (131 items) and bMaxHPrate (45 items) were parsed but silently dropped. | — |
+| S-3 | Element precedence wired: bAtkEle/bDefEle → script_atk_ele/script_def_ele (mode="assign" in aggregator). resolve_weapon() adds script_atk_ele param (override → script → forge → item_db). resolve_armor_element() added to build_applicator. player_build_to_target() uses resolved armor element. DerivedSection: ATK Ele + DEF Ele rows. All 3 main_window resolve_weapon() calls thread script_atk_ele. | — |
 
 ---
 
@@ -93,18 +94,9 @@ incoming pipelines via `player_build_to_target()` before this session — item 5
 
 ---
 
-### S-3: Element Precedence + DerivedSection Display
+### ~~S-3: Element Precedence + DerivedSection Display~~ ✅ DONE (2026-03-14)
 
-**Goal:** `bAtkEle`/`bDefEle` from scripts correctly override item DB element. Effective elements visible in UI.
-
-1. `gear_bonus_aggregator._apply()` — add `mode="assign"` handling: `setattr(bonuses, field, v)` (last-wins, not +=). Update `bAtkEle`/`bDefEle` in `bonus_definitions.py` to use `mode="assign"` with fields `"script_atk_ele"`/`"script_def_ele"`. (`GearBonusDef._apply` currently handles only "add"/"multi"/"dict".)
-2. `BuildManager.resolve_weapon()` — add `script_atk_ele: int | None` param. Precedence: `explicit_weapon_element → script_atk_ele → item_db_element`.
-3. `build_applicator.py` — add `resolve_armor_element(equipped, gear_bonuses) -> int`. Same precedence chain for armor. Feeds `Target.armor_element` on the player-as-target path.
-4. `DerivedSection` — two new read-only rows: **ATK Element** and **DEF Element** (shown as element name strings). Fed from resolved values at calc time.
-5. Thread `gear_bonuses.script_atk_ele` through all `resolve_weapon()` call sites in `main_window.py`.
-
-**Files:** `core/gear_bonus_aggregator.py`, `core/bonus_definitions.py`, `core/build_manager.py`, `core/build_applicator.py`, `gui/sections/derived_section.py`, `gui/main_window.py`.
-**Hercules reads:** None.
+**Note:** Zero IT_CARD items in current DB have `bAtkEle`. Dual-wield LH element gap documented in S-6 below.
 
 ---
 
@@ -140,6 +132,34 @@ incoming pipelines via `player_build_to_target()` before this session — item 5
 ---
 
 **Token estimates:** S-1: ~20–25k. S-2: ~30–40k. S-3: ~15k (bundle with S-2 if budget allows). S-4: ~20–25k. S-5: ~30–35k.
+
+---
+
+### S-6: Dual-Wield LH Element Correctness
+
+**Goal:** LH weapon element respects `bAtkEle` scripts on LH-slot items, matching Hercules' `lr_flag` routing.
+
+**Source findings (read 2026-03-14):**
+- `battle_calc_base_damage2` (battle.c:4810-4811): `s_ele = sstatus->rhw.ele; s_ele_ = sstatus->lhw.ele;`
+- `battle_calc_elefix` (battle.c:962): when `left=true` uses `s_ele_` (LH), else uses `s_ele` (RH).
+- `pc_bonus SP_ATKELE` (pc.c:2588-2609): `lr_flag==1` → `bst->lhw.ele = val`; `lr_flag==0` → `bst->rhw.ele = val`. lr_flag is 1 when item is equipped in the LH slot.
+- Weapons' own `bAtkEle` is already scraped into item_db `element` field — no gap there.
+- Zero IT_CARD items in current pre-re DB have `bAtkEle`. SC-based endows (SA_*, AS_*, etc.) use `calc_attack_element()` which already applies to both RH and LH identically and are handled separately in our system.
+- **Practical impact**: nil with current DB. Would matter if a future DB expansion adds endow cards.
+
+**Current gap:** `GearBonuses` has a single `script_atk_ele` (last-wins, slot-agnostic). `bAtkEle` on an LH-slot item incorrectly feeds the RH element instead of the LH element.
+
+**Work items:**
+1. `GearBonuses` — rename `script_atk_ele` → `script_atk_ele_rh`; add `script_atk_ele_lh: int | None = None`.
+2. `gear_bonus_aggregator.compute()` — when processing `slot == "left_hand"`, route `bAtkEle` assign to `script_atk_ele_lh` instead of `script_atk_ele_rh`.
+   Requires: `_apply()` to receive the current slot name, OR a two-pass approach (process LH slot separately).
+3. `bonus_definitions.py` — `bAtkEle` field stays `"script_atk_ele_rh"` (default path); aggregator overrides field to `script_atk_ele_lh` for LH slot items.
+4. `build_manager.resolve_weapon()` — rename param `script_atk_ele` → `script_atk_ele_rh`.
+5. `battle_pipeline.py` LH `resolve_weapon()` call — pass `script_atk_ele_rh=gb.script_atk_ele_lh`. Requires `gb` to be accessible in battle_pipeline (currently not threaded through).
+6. `main_window.py` — rename usages from `script_atk_ele` → `script_atk_ele_rh`.
+
+**Files:** `core/models/gear_bonuses.py`, `core/gear_bonus_aggregator.py`, `core/bonus_definitions.py`, `core/build_manager.py`, `core/calculators/battle_pipeline.py`, `gui/main_window.py`.
+**Hercules reads:** Already read — sources cited above.
 
 ---
 

@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from core.build_applicator import resolve_armor_element
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
 from core.models.status import StatusData
@@ -224,9 +225,10 @@ class BuildManager:
             if player_scs.get(_sc):
                 target_scs[_sc] = int(player_scs[_sc])
 
-        # Freeze/Stone override the player's armor element for elemental calc.
-        # Mirrors apply_to_target() in target_state_section.py (status.c:5880-5883).
-        element = build.armor_element
+        # Resolve effective armor element (S-3): bDefEle scripts > explicit override > Neutral.
+        # Freeze/Stone then override the effective element for damage calc only.
+        base_armor_ele = resolve_armor_element(build.armor_element, gear_bonuses)
+        element = base_armor_ele
         if player_scs.get("SC_FREEZE"):
             element = 1  # Ele_Water
         elif player_scs.get("SC_STONE"):
@@ -240,7 +242,7 @@ class BuildManager:
             size="Medium",
             race="DemiHuman",
             element=element,
-            armor_element=build.armor_element,
+            armor_element=base_armor_ele,
             element_level=1,
             luk=status.luk,
             agi=status.agi,
@@ -266,6 +268,7 @@ class BuildManager:
         forge_sc_count: int = 0,
         forge_ranked: bool = False,
         forge_element: int = 0,
+        script_atk_ele: Optional[int] = None,
     ) -> Weapon:
         """
         Resolve an item ID to a Weapon via item_db.
@@ -274,10 +277,11 @@ class BuildManager:
         - item_id is None (slot unequipped)
         - the item ID is not found in item_db
 
-        Element priority (G17):
+        Element priority (G17 + S-3):
           1. element_override (manual "Weapon Element" override — always wins)
-          2. forge_element when is_forged=True (elemental stone from forging)
-          3. item_db element (base weapon, usually 0 for forgeable weapons)
+          2. script_atk_ele (bAtkEle from any equipped item script, e.g. endow card)
+          3. forge_element when is_forged=True (elemental stone from forging)
+          4. item_db element (base weapon, usually 0 for forgeable weapons)
         """
         from core.data_loader import loader  # local import — avoids circular dependency
 
@@ -294,6 +298,8 @@ class BuildManager:
 
         if element_override is not None:
             element = element_override
+        elif script_atk_ele is not None:
+            element = script_atk_ele     # bAtkEle from equipped item scripts (S-3)
         elif is_forged:
             element = forge_element      # elemental stone from forging
         else:

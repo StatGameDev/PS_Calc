@@ -646,3 +646,41 @@ always incorrect for items with these bonuses.
 - Removed `_BONUS1_ROUTES` dict (27 entries), `_noop`, `_apply_all_stats` (~45 lines).
 - Removed arity-2 if/elif chain (9 branches).
 - `_apply()` rewritten as ~15 lines of table-driven logic: BONUS1 lookup for arity-1 (handles scalar/multi), BONUS2 lookup for arity-2 (handles dict/add modes).
+
+
+---
+
+## Session S-3 — 2026-03-14 — Element Precedence + DerivedSection Display
+
+**No gaps closed. Correctness fix: bAtkEle/bDefEle scripts now wire into the pipeline.**
+
+**`core/bonus_definitions.py`**:
+- Added `_ELE_STR_TO_INT: dict[str, int]` — maps `"Ele_Fire"` etc. to int 0–9 (matches `data_loader.get_element_name`).
+- Added `transform: Callable | None = None` field to `BonusDef` — used by mode="assign" to convert raw params before assignment.
+- Added `mode="assign"` to BonusDef docstring.
+- `bAtkEle`: changed from `field=None` (display-only) → `field="script_atk_ele"`, `mode="assign"`, `transform=_ELE_STR_TO_INT.get`.
+- `bDefEle`: same, `field="script_def_ele"`.
+
+**`core/gear_bonus_aggregator.py`** (`_apply()`):
+- Added `mode=="assign"` branch for arity-1: calls `defn.transform(raw)` if transform present, then `setattr(bonuses, field, v)` when result is not None. Last-wins semantics.
+
+**`core/build_manager.py`** (`resolve_weapon()`):
+- Added `script_atk_ele: Optional[int] = None` parameter.
+- Element precedence updated: `element_override → script_atk_ele → forge_element (if forged) → item_db`.
+
+**`core/build_applicator.py`**:
+- New `resolve_armor_element(armor_element_override: int, gear_bonuses: GearBonuses) -> int`.
+- Precedence: non-zero override → `gear_bonuses.script_def_ele` → 0 (Neutral).
+
+**`core/build_manager.py`** (`player_build_to_target()`):
+- Imports `resolve_armor_element` from `build_applicator`.
+- Now calls `resolve_armor_element(build.armor_element, gear_bonuses)` for `base_armor_ele`; uses it for both `element` (before SC override) and `armor_element` in the returned Target.
+
+**`gui/sections/derived_section.py`**:
+- Added two rows: `"ATK Ele"` and `"DEF Ele"` after ASPD, before HP.
+- `refresh()` signature: added `atk_ele: int | None = None, def_ele: int | None = None`.
+- Element rows display `loader.get_element_name(ele)` when value provided, else `"—"`.
+
+**`gui/main_window.py`**:
+- All 3 `resolve_weapon()` call sites (RH in `_run_status_calc`, RH in `_run_battle_pipeline`, PvP RH) now pass `script_atk_ele=gb.script_atk_ele`.
+- `_run_status_calc`: computes `resolved_armor_ele = build_applicator.resolve_armor_element(eff_build.armor_element, gb)`, passes `atk_ele=weapon.element, def_ele=resolved_armor_ele` to `_derived_section.refresh()`.

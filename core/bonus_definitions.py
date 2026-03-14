@@ -29,6 +29,13 @@ ELEMENT_NAMES: dict[str, str] = {
     "Ele_Undead": "Undead", "Ele_All": "all elements",
 }
 
+# Hercules element string constant → int ID (matches data_loader.get_element_name ordering)
+_ELE_STR_TO_INT: dict[str, int] = {
+    "Ele_Neutral": 0, "Ele_Water": 1, "Ele_Earth": 2, "Ele_Fire": 3,
+    "Ele_Wind": 4, "Ele_Poison": 5, "Ele_Holy": 6, "Ele_Dark": 7,
+    "Ele_Ghost": 8, "Ele_Undead": 9,
+}
+
 SIZE_NAMES: dict[str, str] = {
     "Size_Small": "Small", "Size_Medium": "Medium", "Size_Large": "Large",
     "Size_All": "all sizes",
@@ -82,15 +89,19 @@ class BonusDef:
                  Arity-3 signature: (str, str, int) or similar
     field        GearBonuses attribute name to accumulate into.
                  None = display-only (no GearBonuses mutation).
-    mode         "add"   scalar: bonuses.<field> += value
-                 "dict"  keyed dict: bonuses.<field>[key] += value
-                 "multi" multiple scalars: each name in `fields` gets += value
+    mode         "add"    scalar: bonuses.<field> += value
+                 "dict"   keyed dict: bonuses.<field>[key] += value
+                 "multi"  multiple scalars: each name in `fields` gets += value
+                 "assign" last-wins scalar: bonuses.<field> = transform(value)
     fields       For mode="multi": list of GearBonuses attribute names.
+    transform    Optional callable applied to the raw param before assignment.
+                 Used with mode="assign" to convert string tokens to int IDs.
     """
     description: Callable
     field: str | None = None
     mode: str = "add"
     fields: list[str] | None = None
+    transform: Callable | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -159,9 +170,17 @@ BONUS1: dict[str, BonusDef] = {
     # MATK%  — status.c:1995-1997: matk *= matk_rate/100; matk_rate starts at 100, gear adds delta
     "bMatkRate": BonusDef(lambda v: f"MATK +{v}%." if v > 0 else f"MATK {v}%.", "matk_rate"),
 
-    # Element overrides (display-only; precedence logic in S-3)
-    "bAtkEle": BonusDef(lambda v: f"Changes weapon element to {ELEMENT_NAMES.get(str(v), str(v))}."),
-    "bDefEle": BonusDef(lambda v: f"Changes armor element to {ELEMENT_NAMES.get(str(v), str(v))}."),
+    # Element overrides — script assigns element to weapon / armor (S-3)
+    # bAtkEle / bDefEle params arrive as strings: "Ele_Fire", "Ele_Water", etc.
+    # _ELE_STR_TO_INT maps them to the int 0-9 used throughout the pipeline.
+    "bAtkEle": BonusDef(
+        lambda v: f"Changes weapon element to {ELEMENT_NAMES.get(str(v), str(v))}.",
+        field="script_atk_ele", mode="assign", transform=_ELE_STR_TO_INT.get,
+    ),
+    "bDefEle": BonusDef(
+        lambda v: f"Changes armor element to {ELEMENT_NAMES.get(str(v), str(v))}.",
+        field="script_def_ele", mode="assign", transform=_ELE_STR_TO_INT.get,
+    ),
 
     # Display-only miscellaneous
     "bIgnoreDefRace": BonusDef(lambda v: f"Ignores DEF of {RACE_NAMES.get(str(v), str(v))}."),

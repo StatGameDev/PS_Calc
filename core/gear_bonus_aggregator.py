@@ -103,12 +103,19 @@ class GearBonusAggregator:
             defn = BONUS1.get(bt)
             if defn is None:
                 return
-            v = p[0] if isinstance(p[0], int) else 0
-            if defn.mode == "multi" and defn.fields:
-                for f in defn.fields:
-                    setattr(bonuses, f, getattr(bonuses, f) + v)
-            elif defn.field is not None:
-                setattr(bonuses, defn.field, getattr(bonuses, defn.field) + v)
+            if defn.mode == "assign" and defn.field is not None:
+                # Last-wins assignment; optional transform converts raw param to stored type.
+                raw = p[0]
+                v = defn.transform(raw) if defn.transform else raw
+                if v is not None:
+                    setattr(bonuses, defn.field, v)
+            else:
+                v = p[0] if isinstance(p[0], int) else 0
+                if defn.mode == "multi" and defn.fields:
+                    for f in defn.fields:
+                        setattr(bonuses, f, getattr(bonuses, f) + v)
+                elif defn.field is not None:
+                    setattr(bonuses, defn.field, getattr(bonuses, defn.field) + v)
 
         elif eff.arity == 2 and len(p) >= 2:
             defn = BONUS2.get(bt)
