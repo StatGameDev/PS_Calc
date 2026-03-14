@@ -10,3 +10,6 @@ __pycache__/
 
 # Claude Code local state (project instructions live in CLAUDE.md instead)
 .claude/
+
+# User-generated runtime config (scale override, future prefs)
+settings.json

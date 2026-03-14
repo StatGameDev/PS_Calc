@@ -257,7 +257,8 @@ Always grep first. Never load entire files.
 
 ### GUI (`gui/`)
 
-    main_window.py          — QMainWindow, signal routing, pipeline triggers
+    app_config.py           — DPI auto-detect (UI_SCALE), QSS font scaling, settings.json persistence (ui_scale_override)
+    main_window.py          — QMainWindow, signal routing, pipeline triggers; Ctrl+/-/= scale keybinds + scale toast
     panel_container.py      — PanelContainer(QSplitter), focus states, snap
     panel.py                — Panel(QWidget), StepsBar
     section.py              — Section base class, compact_modes protocol (slim_content/header_summary/hidden flags)
@@ -265,6 +266,7 @@ Always grep first. Never load entire files.
     dialogs/                — EquipmentBrowserDialog, SkillBrowserDialog, etc.
     themes/dark.qss         — all styling (no inline styles anywhere)
     layout_config.json      — section registry: key, panel, compact_modes list
+    ../settings.json        — auto-generated at project root; persists ui_scale_override (and future user prefs)
 
 ---
 

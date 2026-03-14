@@ -628,3 +628,13 @@ QLabel#subgroup_title {
     font-size: 11px;
     font-weight: bold;
 }
+
+/* ── Scale Toast ─────────────────────────────────────────────────────────── */
+QLabel#scale_toast {
+    background-color: #2a2f3d;
+    border: 1px solid #4d8fff;
+    border-radius: 4px;
+    color: #4d8fff;
+    font-size: 12px;
+    padding: 4px 10px;
+}

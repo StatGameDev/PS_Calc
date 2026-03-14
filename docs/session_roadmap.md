@@ -65,21 +65,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | S-1 – S-6 | Item Scripts Pass (complete). S-1: bonus_definitions.py table-driven refactor + bAgiVit/bAgiDexStr fix. S-2: bMatkRate/bMaxHPrate wired; build_applicator.py extracted. S-3: bAtkEle/bDefEle element precedence; resolve_armor_element(); DerivedSection ATK/DEF Ele rows. S-4: scraper expanded (3837 items); SCEffect model + parse_sc_start(). S-5: consumable_buffs + bonus_matk_flat; consumables_section.py. S-6 + G82: dual-wield LH element routing (script_atk_ele_rh/lh, lr_flag, pc.c:2588-2609); skill element in AttrFix (battle.c:4807 skill->get_ele). | G82 |
 | T | Job Stat Bonuses (G64, G65): job_db2.txt parsed in DataLoader; get_job_bonus_stats() applied in StatusCalculator; StatsSection gains Next+ column, stat points spent/remaining label, job bonus in tooltip; JOBL_UPPER +52 for trans jobs. Stat cost formula: 1+(v+9)//10 (pc.c:7191). | G64, G65 |
 | Pre-Alpha-2 | Layout overflow fix: removed `min-width: 180px` from global QComboBox in dark.qss; added `minimumSizeHint()` override to NoWheelCombo returning zero width. Sections with combos can no longer force the panel wider than the viewport. | — |
-
----
-
-## Session Scale — UI Scaling
-
-**Goal**: App scales correctly across common resolutions and provides a manual override.
-
-- Auto-detect active monitor DPI / resolution; derive a base scale factor.
-- Apply scale factor to fonts, widget sizes, and layout spacing via QSS variables
-  or programmatic scaling at startup.
-- Manual adjustment slider in a settings area: further multiplies the auto-derived scale.
-- Verify layout at 1280×720, 1920×1080, and at least one HiDPI config.
-- `ui_scale_override: float` persisted in settings JSON.
-
-**Estimated tokens**: 20–35k depending on how many layout fixes are needed.
+| Scale | UI scaling: DPI auto-detect (UI_SCALE=DPI/96), Ctrl+/-/= keybinds ±10%, font-only QSS regex scaling, scale toast (bottom-left, 2s), settings.json persistence. PyInstaller frozen CWD fix in main.py. G83 opened (drag-to-reorder layout). | — |
 
 ---
 

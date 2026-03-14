@@ -890,6 +890,32 @@ SC_PLUSATTACKPOWER confirmed: `batk += val1` (status.c:4476, `#ifndef RENEWAL`).
 
 ---
 
+## Session Scale — 2026-03-15 — UI Scaling + Packaging Prep
+
+**Scope**: Font scaling via DPI auto-detect and Ctrl+/- manual override. Tier 1 (fonts only) chosen for pre-alpha; full layout scaling deferred to UX pass. G83 opened for post-alpha drag-to-reorder layout customisation.
+
+**`gui/app_config.py`** — extended:
+- `load_qss()`: reads `dark.qss` into `_raw_qss` module-level cache (called once from `main.py`)
+- `get_scaled_qss()` / `apply_qss_scale(raw, scale)`: regex-replaces all `font-size: Npx` values by `effective_scale()` factor. Leaves borders, padding, heights untouched (Tier 1).
+- `effective_scale()`: `UI_SCALE × _ui_scale_override`
+- `scale_override()` / `set_scale_override(value)`: clamp to `[0.7, 1.5]`, persist to `settings.json` (merged into any existing keys)
+- `_SETTINGS_PATH = "settings.json"`, `_SCALE_MIN/MAX/STEP` constants
+
+**`main.py`** — two changes:
+- Frozen CWD fix: `if getattr(sys, "frozen", False): os.chdir(os.path.dirname(sys.executable))` — ensures all relative paths (saves/, gui/themes/, core/data/) resolve correctly in a PyInstaller bundle.
+- Uses `app_config.load_qss()` + `app_config.get_scaled_qss()` instead of raw stylesheet load; persisted override applied automatically on startup.
+
+**`gui/main_window.py`** — scale controls:
+- Toast: `QLabel#scale_toast` parented to central widget; `_show_scale_toast()` displays "Scale: N%" for 2 s via `QTimer.singleShot`; `_reposition_toast()` places it 12px from bottom-left; `resizeEvent()` keeps it positioned while visible.
+- `_adjust_scale(delta)`: calls `set_scale_override`, re-applies QSS via `QApplication.instance().setStyleSheet()`, shows toast.
+- Three `QShortcut`s: `Ctrl++`, `Ctrl+=` (covers keyboard layout variants), `Ctrl+-`.
+
+**`gui/themes/dark.qss`** — added `QLabel#scale_toast` rule (blue border, blue text, rounded).
+
+**`docs/gaps.md`** — G83 opened: user-configurable section layout (drag handles, cross-panel transfer, position_range constraints, settings.json persistence). UX-pass target.
+
+---
+
 ## Session Pre-Alpha-2 — 2026-03-14 — Layout Overflow Fix
 
 **Root cause:** `dark.qss` had `min-width: 180px` on the global `QComboBox` rule. When a

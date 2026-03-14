@@ -4,8 +4,10 @@ import json
 import os
 from typing import Optional
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QComboBox,
     QFrame,
@@ -123,6 +125,26 @@ class MainWindow(QMainWindow):
 
         self._refresh_builds()
 
+        # ── Scale toast ───────────────────────────────────────────────────
+        self._scale_toast = QLabel(central)
+        self._scale_toast.setObjectName("scale_toast")
+        self._scale_toast.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._scale_toast.hide()
+        self._scale_timer = QTimer(self)
+        self._scale_timer.setSingleShot(True)
+        self._scale_timer.timeout.connect(self._scale_toast.hide)
+
+        # ── Scale keybinds ────────────────────────────────────────────────
+        QShortcut(QKeySequence("Ctrl++"), self).activated.connect(
+            lambda: self._adjust_scale(app_config._SCALE_STEP)
+        )
+        QShortcut(QKeySequence("Ctrl+="), self).activated.connect(
+            lambda: self._adjust_scale(app_config._SCALE_STEP)
+        )
+        QShortcut(QKeySequence("Ctrl+-"), self).activated.connect(
+            lambda: self._adjust_scale(-app_config._SCALE_STEP)
+        )
+
     # ── Top bar construction ───────────────────────────────────────────────
 
     def _build_top_bar(self) -> QFrame:
@@ -221,6 +243,34 @@ class MainWindow(QMainWindow):
         """Wire combat section change signals to _on_build_changed."""
         self._combat_controls.combat_settings_changed.connect(self._on_build_changed)
         self._combat_controls.spirit_spheres_changed.connect(self._buffs_section.set_spirit_spheres)
+
+    # ── UI scale ───────────────────────────────────────────────────────────
+
+    def _adjust_scale(self, delta: float) -> None:
+        app_config.set_scale_override(app_config.scale_override() + delta)
+        QApplication.instance().setStyleSheet(app_config.get_scaled_qss())
+        self._show_scale_toast()
+
+    def _show_scale_toast(self) -> None:
+        pct = round(app_config.effective_scale() * 100)
+        self._scale_toast.setText(f"  Scale: {pct}%  ")
+        self._scale_toast.adjustSize()
+        self._reposition_toast()
+        self._scale_toast.raise_()
+        self._scale_toast.show()
+        self._scale_timer.start(2000)
+
+    def _reposition_toast(self) -> None:
+        cw = self.centralWidget()
+        if cw is None:
+            return
+        margin = 12
+        self._scale_toast.move(margin, cw.height() - self._scale_toast.height() - margin)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if hasattr(self, "_scale_toast") and self._scale_toast.isVisible():
+            self._reposition_toast()
 
     # ── Build list helpers ─────────────────────────────────────────────────
 

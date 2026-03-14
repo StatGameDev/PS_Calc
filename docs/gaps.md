@@ -133,6 +133,7 @@ _Status: [ ] open, [x] done, [~] partial_
 | G65 | [x] | Stat Bonuses etc. missing from Base Stats section's Bonus Stat display. Job bonus, stat points spent/remaining, Next+ cost column all added. | Session T |
 | G66 | [ ] | Blacksmith Weaponry Mastery missing ATK Bonus; Overthrust goes to 10 instead of 5, should be party buff; Adrenaline Rush update: self->Self Buffs, party->Party Buffs; Skin Tempering does nothing right now, add Def increas, implement resistance. Cart Revolution is missing from Skill List, Mammonite does nothing; Loud->Loud Exclamation.|
 | G67 | [ ] | Equipment section: Widen card fields, rework card selection in general->Make List useful, allow editing multiple through List dialogue? |
+| G83 | [ ] | User-configurable section layout: drag-handle reorder within panels, optional cross-panel transfer, persist custom order in settings.json. Each section gets `movable: bool`, `allowed_panels: list`, `position_range: [min, max]` in layout_config.json. Panel gets drag logic + drop indicator; PanelContainer gets `transfer_section()` for cross-panel moves. Interaction model: grip icon on section header, drag-to-reorder within panel with live drop indicator. Custom order stored as ordered key list per panel in settings.json; applied at startup as post-construction reorder. Also covers any custom non-section panel widgets (e.g. vertical steps bar position). | UX-pass |
 
 ---
 
