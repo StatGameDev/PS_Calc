@@ -127,9 +127,22 @@ class StatusCalculator:
         # Hard DEF (def1) is NOT scaled for PC targets in pre-renewal (only for mob/pet targets).
         angelus_lv = int(support.get("SC_ANGELUS", 0))
         status.def_percent = 100 + 5 * angelus_lv
+
+        # SC_POISON: def_percent -= 25 (status.c:4431-4432, no guard)
+        if "SC_POISON" in player_scs:
+            status.def_percent = max(0, status.def_percent - 25)
+
+        # SC_PROVOKE: def_percent -= 5+5*lv (status.c:4401-4402)
+        if "SC_PROVOKE" in player_scs:
+            status.def_percent = max(0, status.def_percent - (5 + 5 * int(player_scs["SC_PROVOKE"])))
+
         # Scale def2 for display (def2 is display-only; DefenseFix uses target.vit directly).
-        if angelus_lv:
+        if status.def_percent != 100:
             status.def2 = status.def2 * status.def_percent // 100
+
+        # SC_ETERNALCHAOS: VIT DEF → 0 (status.c:5090: status_calc_def2 returns 0)
+        if "SC_ETERNALCHAOS" in player_scs:
+            status.def2 = 0
 
         # AL_DP: vit_def += lv*(3 + (base_level+1)*4//100) vs Demon/Undead mob (battle.c:1494)
         _al_dp_lv = build.mastery_levels.get("AL_DP", 0)
@@ -320,6 +333,14 @@ class StatusCalculator:
             _lv = active_sc["SC_DEFENDER"]
             sc_aspd_rate += 250 - 50 * _lv
 
+        # SC_DONTFORGETME: aspd_rate += 10*val2 (status.c:5667)
+        # val2 = caster_agi//10 + 3*lv + 5 (skill.c:13270 #else pre-renewal)
+        if "SC_DONTFORGETME" in player_scs:
+            _lv = int(player_scs["SC_DONTFORGETME"])
+            _caster_agi = int(player_scs.get("SC_DONTFORGETME_agi", 0))
+            _val2 = _caster_agi // 10 + 3 * _lv + 5
+            sc_aspd_rate += 10 * _val2
+
         # SA_ADVANCEDBOOK: #ifndef RENEWAL_ASPD aspd_rate -= 5*lv (W_BOOK only) (status.c:2116)
         _sa_advbook_lv = build.mastery_levels.get("SA_ADVANCEDBOOK", 0)
         if _sa_advbook_lv and weapon.weapon_type == "Book":
@@ -369,6 +390,13 @@ class StatusCalculator:
         status.matk_min = status.int_ + (status.int_ // 7) ** 2
         status.matk_max = status.int_ + (status.int_ // 5) ** 2
 
+        # SC_MINDBREAKER: matk_percent += 20*lv — boosts outgoing magic damage (status.c:4376-4377)
+        if "SC_MINDBREAKER" in player_scs:
+            lv = int(player_scs["SC_MINDBREAKER"])
+            pct = 100 + 20 * lv
+            status.matk_min = status.matk_min * pct // 100
+            status.matk_max = status.matk_max * pct // 100
+
         # === MDEF ===
         # Hard MDEF (mdef): from bMdef item scripts, routed through equip_mdef on PlayerBuild
         status.mdef = build.equip_mdef
@@ -381,7 +409,7 @@ class StatusCalculator:
         if "SC_ENDURE" in active_sc:
             status.mdef += active_sc["SC_ENDURE"]
 
-        # SC_MINDBREAKER: mdef_percent -= 12*lv (status.c:4453-4454)
+        # SC_MINDBREAKER: mdef_percent -= 12*lv; matk_percent += 20*lv (status.c:4376,4453)
         if "SC_MINDBREAKER" in player_scs:
             lv = int(player_scs["SC_MINDBREAKER"])
             status.mdef = max(0, status.mdef * (100 - 12 * lv) // 100)

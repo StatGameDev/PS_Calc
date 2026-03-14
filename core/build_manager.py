@@ -216,6 +216,22 @@ class BuildManager:
         not defensive resistance. Add a sub_size field to GearBonuses when cards
         that reduce damage by size are implemented.
         """
+        # Propagate force-hit ailments so the incoming hit_chance.py sees them,
+        # mirroring what apply_to_target() does for mob targets.
+        player_scs = getattr(build, "player_active_scs", {})
+        target_scs: dict = {}
+        for _sc in ("SC_STUN", "SC_FREEZE", "SC_STONE", "SC_SLEEP"):
+            if player_scs.get(_sc):
+                target_scs[_sc] = int(player_scs[_sc])
+
+        # Freeze/Stone override the player's armor element for elemental calc.
+        # Mirrors apply_to_target() in target_state_section.py (status.c:5880-5883).
+        element = build.armor_element
+        if player_scs.get("SC_FREEZE"):
+            element = 1  # Ele_Water
+        elif player_scs.get("SC_STONE"):
+            element = 2  # Ele_Earth
+
         return Target(
             def_=status.def_,
             vit=status.vit,
@@ -223,7 +239,7 @@ class BuildManager:
             is_pc=True,
             size="Medium",
             race="DemiHuman",
-            element=build.armor_element,
+            element=element,
             armor_element=build.armor_element,
             element_level=1,
             luk=status.luk,
@@ -238,6 +254,7 @@ class BuildManager:
             long_attack_def_rate=gear_bonuses.long_atk_def_rate,
             magic_def_rate=gear_bonuses.magic_def_rate,
             def_percent=status.def_percent,
+            target_active_scs=target_scs,
         )
 
     @staticmethod

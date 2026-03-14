@@ -464,6 +464,18 @@ class BattlePipeline:
         # === FINAL RATE BONUS ===
         pmf = FinalRateBonus.calculate(is_ranged, pmf, self.config, result)
 
+        # === PR_LEXAETERNA ×2 — applies to ALL damage types (G77) ===
+        # SC_LEXAETERNA doubles the next hit regardless of physical/magic.
+        # Source: battle.c (battle_calc_damage path); status.c:8490 (SC init)
+        if build.support_buffs.get("PR_LEXAETERNA"):
+            pmf = _scale_floor(pmf, 2, 1)
+            mn, mx, av = pmf_stats(pmf)
+            result.add_step(
+                "Lex Aeterna", value=av, min_value=mn, max_value=mx,
+                multiplier=2.0, note="PR_LEXAETERNA doubles next hit",
+                formula="dmg × 2", hercules_ref="status.c:8490",
+            )
+
         # Final summary step
         mn, mx, av = pmf_stats(pmf)
         result.add_step(

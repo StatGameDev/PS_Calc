@@ -61,6 +61,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | R | Target debuff system: target_active_scs on Target; TargetStateSection UI; SC_STONE/FREEZE/STUN/PROVOKE/EC in defense_fix + hit_chance; PR_LEXAETERNA in magic_pipeline; SC_SIEGFRIED moved to support_buffs; G70 skill combo fix on load. | G48, G70 |
 | Arch | Debuff routing fix: `collect_target_player_scs()` on TargetStateSection; new `target_utils.apply_mob_scs()`; pvp path feeds stat-cascade SCs into pvp_eff before StatusCalculator. | G78 |
 | SC1 | Target debuffs: SC_BLIND/CURSE/SLEEP/POISON/QUAGMIRE/MINDBREAKER/CRUCIS/BLESSING in apply_mob_scs + StatusCalculator player path. SC_DONTFORGETME with dancer AGI QSpinBox (val2=agi/10+3×lv+5, skill.c:13270; aspd_rate+=10×val2, status.c:5667). Boss protocol: set_is_boss() disables immune widgets; apply_mob_scs guards per-SC. New Target fields: str/dex/hit/def_percent/mdef_percent/matk_percent/aspd_rate. | G79, G81 |
+| SC2 | Player debuffs + G77. Full player_debuffs_section.py UI (14 widgets). StatusCalculator: SC_POISON (def_percent−25), SC_PROVOKE (def_percent−(5+5lv)), SC_ETERNALCHAOS (def2=0), SC_DONTFORGETME (aspd_rate+=10×val2), SC_MINDBREAKER (matk boost). player_build_to_target(): STUN/FREEZE/STONE/SLEEP → target_active_scs + FREEZE→Water/STONE→Earth element. G77: Lex Aeterna ×2 in _run_branch() after FinalRateBonus (all BF_WEAPON). | G77, G80 |
 
 ---
 
@@ -75,39 +76,6 @@ Scope to be finalised in a dedicated planning step before implementation begins.
 ---
 
 
-## Session SC2 — Player Debuffs + G77
-
-**Source reads**: minimal — formulas confirmed in SC1; same SCs applied to player side.
-
-**Player-side gaps** (PlayerDebuffsSection + StatusCalculator):
-
-| SC | Effect | Already? |
-|---|---|---|
-| SC_BLIND | HIT/FLEE ×75% | ✅ done |
-| SC_CURSE | LUK → 0, BATK ×75% | ✅ done |
-| SC_DECREASEAGI | AGI −(2+lv) | ✅ done |
-| SC_STUN | incoming: enemy force-hits player | ❌ |
-| SC_FREEZE | incoming: force-hit + player element → Water | ❌ |
-| SC_STONE | incoming: force-hit + player element → Earth | ❌ |
-| SC_SLEEP | incoming: force-hit | ❌ |
-| SC_POISON | stat effect (confirm in SC1) | ❌ |
-| SC_DONTFORGETME | ASPD reduction (no FLEE — confirmed SC1-research) | ❌ |
-| SC_ETERNALCHAOS | VIT DEF → 0 (incoming calc) | ❌ |
-| SC_MINDBREAKER | MDEF reduction (incoming magic) | ❌ |
-| SC_PROVOKE | DEF% penalty | ❌ |
-| SC_QUAGMIRE | AGI + DEX reduction | ❌ |
-| ~~SC_SIGNUCRUCIS~~ | mob-only (BL_PC blocked in Hercules) — removed from player scope | N/A |
-| ~~SC_BLESSING debuff~~ | mob-only (BL_PC always gets buff path) — removed from player scope | N/A |
-
-**G77**: PR_LEXAETERNA ×2 for BF_WEAPON. After FinalRateBonus in `BattlePipeline._run_branch()`,
-check `target.target_active_scs` for SC_LEXAETERNA and apply ×2. Source: battle.c.
-
-**Files touched**: `status_calculator.py`, `battle_pipeline.py`, `player_debuffs_section.py`.
-Closes G80, G77.
-
-**Estimated tokens**: 25–35k (minimal source reads, implementation + UI).
-
----
 
 ## Session T — Job Stat Bonuses + Stat Planner
 

@@ -506,3 +506,38 @@ pvp stats.
   `def_percent`, `mdef_percent`, `matk_percent`, `aspd_rate` (SC_POISON/MINDBREAKER/DONTFORGETME).
 
 **Gaps closed**: G79 (target debuffs), G81 (boss protocol).
+
+---
+
+## Session SC2 — 2026-03-14 — Player Debuffs + G77 Lex Aeterna
+
+**Gaps closed**: G77 (Lex Aeterna for BF_WEAPON), G80 (player-side debuffs).
+
+**`core/calculators/battle_pipeline.py`** (_run_branch):
+- Added PR_LEXAETERNA ×2 step after FinalRateBonus (G77).
+- Reads `build.support_buffs.get("PR_LEXAETERNA")` — same key as magic_pipeline.py.
+- Now applies to all BF_WEAPON hits (normal, crit, katar, dual-wield, proc branches).
+
+**`core/calculators/status_calculator.py`** (player_active_scs path):
+- SC_POISON: `def_percent -= 25` (status.c:4431-4432)
+- SC_PROVOKE: `def_percent -= 5+5*lv` (status.c:4401-4402)
+- def2 display scaling now triggers on `def_percent != 100` (was `if angelus_lv`)
+- SC_ETERNALCHAOS: `def2 = 0` after def_percent scaling (status.c:5090)
+- SC_DONTFORGETME: `aspd_rate += 10*val2` in ASPD slowdown section; val2=agi//10+3lv+5; `SC_DONTFORGETME_agi` aux key mirrors mob path (status.c:5667, skill.c:13270)
+- SC_MINDBREAKER matk boost: `matk_min/max *= (100+20*lv)//100` after MATK computed (status.c:4376-4377)
+
+**`gui/sections/player_debuffs_section.py`** (full rewrite):
+- 14 debuff widgets: Curse, Blind, Decrease AGI, Quagmire, Mind Breaker, Poison, Provoke,
+  Eternal Chaos, Don't Forget Me (LevelWidget + AGI spinbox), Stunned, Frozen, Petrified, Asleep.
+- Freeze/Stone mutex (same as target_state_section).
+- All debuffs persisted in `build.player_active_scs`.
+- load_build() / collect_into() fully symmetrical.
+
+**`core/build_manager.py`** (player_build_to_target):
+- Propagates SC_STUN/FREEZE/STONE/SLEEP from `build.player_active_scs` to `target_active_scs`
+  so incoming hit_chance.py sees force-hit flags (mirrors apply_to_target() on target side).
+- FREEZE → element=1 (Water), STONE → element=2 (Earth) override on player Target.
+
+**Architecture note**: See `docs/debuff_architecture.md` for full routing map of both target-side
+and player-side debuffs, including known inconsistencies with routing through support_buffs
+vs target_active_scs for some target-side SCs (PROVOKE, ETERNALCHAOS, LEX).
