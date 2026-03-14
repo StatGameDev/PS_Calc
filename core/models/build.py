@@ -36,6 +36,9 @@ class PlayerBuild:
     bonus_aspd_add: int = 0      # flat amotion reduction from bAspd (Session 4 stub)
     bonus_maxhp: int = 0         # flat MaxHP addend from items/cards (Session 4 stub)
     bonus_maxsp: int = 0         # flat MaxSP addend from items/cards (Session 4 stub)
+    bonus_crit_atk_rate: int = 0  # bCritAtkRate — % bonus to crit damage (S-2)
+    bonus_matk_rate: int = 0      # bMatkRate — % rate bonus to MATK (S-2)
+    bonus_maxhp_rate: int = 0     # bMaxHPrate — % rate bonus to MaxHP (S-2)
 
     # None = derive from equipped weapon's weapon_type at calc time.
     # Set True/False explicitly to override (e.g. musical instrument played melee).

@@ -379,6 +379,11 @@ class StatusCalculator:
         if _cr_trust_lv:
             status.max_hp += _cr_trust_lv * 200
 
+        # bMaxHPrate: max_hp = APPLY_RATE(max_hp, hprate); hprate starts at 100, gear adds delta.
+        # Applied after flat bonuses, before SC song/ground effects. (status.c:1936-1937)
+        if build.bonus_maxhp_rate:
+            status.max_hp = status.max_hp * (100 + build.bonus_maxhp_rate) // 100
+
         # === MAX SP ===
         # Same pattern: SPTable[job_id][base_level - 1] * (100 + int_) // 100
         sp_base = loader.get_sp_at_level(build.job_id, build.base_level)
@@ -389,6 +394,13 @@ class StatusCalculator:
         # status.c:3783-3792 #else not RENEWAL (status_base_matk_min / _max)
         status.matk_min = status.int_ + (status.int_ // 7) ** 2
         status.matk_max = status.int_ + (status.int_ // 5) ** 2
+
+        # bMatkRate: matk *= matk_rate/100; matk_rate starts at 100, gear adds delta.
+        # Applied after base MATK, before SC effects. (status.c:1995-1997)
+        if build.bonus_matk_rate:
+            _pct = 100 + build.bonus_matk_rate
+            status.matk_min = status.matk_min * _pct // 100
+            status.matk_max = status.matk_max * _pct // 100
 
         # SC_MINDBREAKER: matk_percent += 20*lv — boosts outgoing magic damage (status.c:4376-4377)
         if "SC_MINDBREAKER" in player_scs:

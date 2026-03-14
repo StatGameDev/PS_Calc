@@ -63,6 +63,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | SC1 | Target debuffs: SC_BLIND/CURSE/SLEEP/POISON/QUAGMIRE/MINDBREAKER/CRUCIS/BLESSING in apply_mob_scs + StatusCalculator player path. SC_DONTFORGETME with dancer AGI QSpinBox (val2=agi/10+3×lv+5, skill.c:13270; aspd_rate+=10×val2, status.c:5667). Boss protocol: set_is_boss() disables immune widgets; apply_mob_scs guards per-SC. New Target fields: str/dex/hit/def_percent/mdef_percent/matk_percent/aspd_rate. | G79, G81 |
 | SC2 | Player debuffs + G77. Full player_debuffs_section.py UI (14 widgets). StatusCalculator: SC_POISON (def_percent−25), SC_PROVOKE (def_percent−(5+5lv)), SC_ETERNALCHAOS (def2=0), SC_DONTFORGETME (aspd_rate+=10×val2), SC_MINDBREAKER (matk boost). player_build_to_target(): STUN/FREEZE/STONE/SLEEP → target_active_scs + FREEZE→Water/STONE→Earth element. G77: Lex Aeterna ×2 in _run_branch() after FinalRateBonus (all BF_WEAPON). | G77, G80 |
 | S-1 | bonus_definitions.py: BonusDef + BONUS1/2/3 tables. Parser + aggregator refactored to table-driven. bAgiVit + bAgiDexStr fixed (were silently dropped). Pure refactor, no behavior change. | — |
+| S-2 | GearBonuses: matk_rate/maxhp_rate/script_atk_ele/script_def_ele added. bMatkRate+bMaxHPrate wired in bonus_definitions (were display-only). PlayerBuild: bonus_crit_atk_rate/matk_rate/maxhp_rate added. StatusCalculator: bMatkRate×(100+rate)/100 (status.c:1995-1997), bMaxHPrate×(100+rate)/100 (status.c:1937). New core/build_applicator.py extracted from MainWindow (_apply_gear_bonuses→apply_gear_bonuses, _sc_stat_bonuses→compute_sc_stat_bonuses). GearBonuses now computed once per pipeline run (was computed twice). Bugs fixed: bMatkRate (131 items) and bMaxHPrate (45 items) were parsed but silently dropped. | — |
 
 ---
 
@@ -85,20 +86,10 @@ Five parts. Each is a standalone commit. Do S-1 first (pure refactor, no behavio
 
 ---
 
-### S-2: Missing Fields + Dead Field Wiring
+### ~~S-2: Missing Fields + Dead Field Wiring~~ ✅ DONE (2026-03-14)
 
-**Goal:** Fix the two real bugs. Move business logic out of GUI. Wire dead incoming-damage fields.
-
-1. `GearBonuses` — add: `matk_rate: int`, `maxhp_rate: int`, `script_atk_ele: int | None`, `script_def_ele: int | None`. Add entries in `bonus_definitions.py`.
-2. `StatusCalculator` — apply `gear_bonuses.matk_rate` to MATK and `gear_bonuses.maxhp_rate` to MaxHP. (Needs 2 source reads in `status.c` before implementing.)
-3. New `core/build_applicator.py`:
-   - `apply_gear_bonuses(build, gear_bonuses) -> PlayerBuild` — extracted from `MainWindow._apply_gear_bonuses`. Also wires `matk_rate`, `maxhp_rate`, `crit_atk_rate` into `PlayerBuild.bonus_*` fields.
-   - `compute_sc_stat_bonuses(support_buffs) -> dict[str, int]` — extracted from `MainWindow._sc_stat_bonuses`.
-4. `main_window.py` — call both from `build_applicator`; remove the two private methods.
-5. Wire dead fields into incoming pipelines: `near_atk_def_rate` + `long_atk_def_rate` → incoming physical pipeline; `magic_def_rate` → incoming magic pipeline.
-
-**Files:** `core/models/gear_bonuses.py`, `core/bonus_definitions.py`, `core/build_applicator.py` (new), `gui/main_window.py`, `core/calculators/status_calculator.py`, incoming pipeline files.
-**Hercules reads:** 2 — `bMatkRate` formula in `status.c`, `bMaxHPrate` formula in `status.c`.
+**Note:** `near_atk_def_rate`, `long_atk_def_rate`, `magic_def_rate` were already wired into
+incoming pipelines via `player_build_to_target()` before this session — item 5 was a no-op.
 
 ---
 
@@ -106,12 +97,13 @@ Five parts. Each is a standalone commit. Do S-1 first (pure refactor, no behavio
 
 **Goal:** `bAtkEle`/`bDefEle` from scripts correctly override item DB element. Effective elements visible in UI.
 
-1. `BuildManager.resolve_weapon()` — add `script_atk_ele: int | None` param. Precedence: `explicit_weapon_element → script_atk_ele → item_db_element`.
-2. `build_applicator.py` — add `resolve_armor_element(equipped, gear_bonuses) -> int`. Same precedence chain for armor. Feeds `Target.armor_element` on the player-as-target path.
-3. `DerivedSection` — two new read-only rows: **ATK Element** and **DEF Element** (shown as element name strings). Fed from resolved values at calc time.
-4. Thread `gear_bonuses.script_atk_ele` through all `resolve_weapon()` call sites in `main_window.py`.
+1. `gear_bonus_aggregator._apply()` — add `mode="assign"` handling: `setattr(bonuses, field, v)` (last-wins, not +=). Update `bAtkEle`/`bDefEle` in `bonus_definitions.py` to use `mode="assign"` with fields `"script_atk_ele"`/`"script_def_ele"`. (`GearBonusDef._apply` currently handles only "add"/"multi"/"dict".)
+2. `BuildManager.resolve_weapon()` — add `script_atk_ele: int | None` param. Precedence: `explicit_weapon_element → script_atk_ele → item_db_element`.
+3. `build_applicator.py` — add `resolve_armor_element(equipped, gear_bonuses) -> int`. Same precedence chain for armor. Feeds `Target.armor_element` on the player-as-target path.
+4. `DerivedSection` — two new read-only rows: **ATK Element** and **DEF Element** (shown as element name strings). Fed from resolved values at calc time.
+5. Thread `gear_bonuses.script_atk_ele` through all `resolve_weapon()` call sites in `main_window.py`.
 
-**Files:** `core/build_manager.py`, `core/build_applicator.py`, `gui/sections/derived_section.py`, `gui/main_window.py`.
+**Files:** `core/gear_bonus_aggregator.py`, `core/bonus_definitions.py`, `core/build_manager.py`, `core/build_applicator.py`, `gui/sections/derived_section.py`, `gui/main_window.py`.
 **Hercules reads:** None.
 
 ---

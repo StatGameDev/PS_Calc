@@ -136,7 +136,7 @@ BONUS1: dict[str, BonusDef] = {
     # HP/SP
     "bMaxHP":     BonusDef(lambda v: f"MaxHP +{v}." if v > 0 else f"MaxHP {v}.", "maxhp"),
     "bMaxSP":     BonusDef(lambda v: f"MaxSP +{v}." if v > 0 else f"MaxSP {v}.", "maxsp"),
-    "bMaxHPrate": BonusDef(lambda v: f"MaxHP +{v}%." if v > 0 else f"MaxHP {v}%."),  # display-only (field added in S-2)
+    "bMaxHPrate": BonusDef(lambda v: f"MaxHP +{v}%." if v > 0 else f"MaxHP {v}%.", "maxhp_rate"),
     "bMaxSPrate": BonusDef(lambda v: f"MaxSP +{v}%." if v > 0 else f"MaxSP {v}%."),  # display-only
 
     # Defence
@@ -156,8 +156,8 @@ BONUS1: dict[str, BonusDef] = {
     "bVarCastrate": BonusDef(lambda v: f"Casting time {'reduced' if v < 0 else 'increased'} by {abs(v)}%.", "castrate"),
     "bDelayrate":   BonusDef(lambda v: f"After-cast delay {'reduced' if v < 0 else 'increased'} by {abs(v)}%.", "delayrate"),
 
-    # MATK%  (display-only; field added in S-2)
-    "bMatkRate": BonusDef(lambda v: f"MATK +{v}%." if v > 0 else f"MATK {v}%."),
+    # MATK%  — status.c:1995-1997: matk *= matk_rate/100; matk_rate starts at 100, gear adds delta
+    "bMatkRate": BonusDef(lambda v: f"MATK +{v}%." if v > 0 else f"MATK {v}%.", "matk_rate"),
 
     # Element overrides (display-only; precedence logic in S-3)
     "bAtkEle": BonusDef(lambda v: f"Changes weapon element to {ELEMENT_NAMES.get(str(v), str(v))}."),

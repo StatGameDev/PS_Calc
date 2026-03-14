@@ -38,6 +38,12 @@ class GearBonuses:
     # Status bonuses
     maxhp: int = 0      # bMaxHP
     maxsp: int = 0      # bMaxSP
+    maxhp_rate: int = 0  # bMaxHPrate — % rate bonus to MaxHP (S-2)
+    matk_rate: int = 0   # bMatkRate  — % rate bonus to MATK  (S-2)
+
+    # Element overrides from scripts — int 0-9 or None if not overridden (S-3 wiring)
+    script_atk_ele: int | None = None  # bAtkEle — weapon element from script
+    script_def_ele: int | None = None  # bDefEle — armor element from script
 
     # ASPD
     aspd_percent: int = 0   # bAspdRate

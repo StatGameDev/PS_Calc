@@ -2,6 +2,7 @@
 
 _Decided: planning session 2026-03-14. Implemented in Session S (5 parts)._
 _Duplicate of the Session S section in `docs/core_architecture.md` — for low-token reference._
+_S-1 done 2026-03-14. S-2 done 2026-03-14. Next: S-3._
 
 ---
 
@@ -31,6 +32,12 @@ Adding a new bonus type = one entry in `bonus_definitions.py`, nothing else.
 
 Multi-field bonuses (`bAllStats`, `bAgiVit`, `bAgiDexStr`) are declared with a `fields: list[str]`
 instead of a single `field` and handled by a shared multi-field applier.
+
+**S-3 note — `mode="assign"` needed for element overrides:**
+`bAtkEle`/`bDefEle` must _assign_ (last-wins) rather than accumulate into `script_atk_ele`/`script_def_ele`.
+The aggregator's `_apply()` currently handles only "add"/"multi"/"dict". S-3 adds `mode="assign"`:
+`setattr(bonuses, field, v)` (not `+= v`). BonusDef entries for `bAtkEle`/`bDefEle` change from
+`field=None` to `field="script_atk_ele"` / `field="script_def_ele"`, `mode="assign"`.
 
 ---
 

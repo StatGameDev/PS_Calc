@@ -588,6 +588,43 @@ and being read directly from `build.support_buffs` by pipeline modifier files.
 
 ---
 
+## Session S-2 — 2026-03-14 — Missing Fields + Dead Field Wiring
+
+**Bugs fixed**: `bMatkRate` (131 items) and `bMaxHPrate` (45 items) were parsed by `item_script_parser.py`
+but their effect was silently dropped — `bonus_definitions.py` had `field=None` for both, and no
+corresponding fields existed in `GearBonuses` or `PlayerBuild`. MATK/MaxHP from gear were therefore
+always incorrect for items with these bonuses.
+
+**New fields:**
+- `GearBonuses` (`core/models/gear_bonuses.py`): `matk_rate: int`, `maxhp_rate: int`,
+  `script_atk_ele: int | None`, `script_def_ele: int | None` (last two are S-3 stubs).
+- `PlayerBuild` (`core/models/build.py`): `bonus_crit_atk_rate: int`, `bonus_matk_rate: int`,
+  `bonus_maxhp_rate: int`.
+
+**`core/bonus_definitions.py`**:
+- `bMatkRate`: `field="matk_rate"` (was `None`). Source: status.c:1995-1997 — `matk *= matk_rate/100`; starts at 100, gear adds delta.
+- `bMaxHPrate`: `field="maxhp_rate"` (was `None`). Source: status.c:1937 — `max_hp = APPLY_RATE(max_hp, hprate)`; starts at 100, gear adds delta.
+
+**`core/calculators/status_calculator.py`**:
+- MATK section: applies `build.bonus_matk_rate` as `matk *= (100+rate)//100` after base INT formula, before SC_MINDBREAKER. (status.c:1995-1997)
+- MaxHP section: applies `build.bonus_maxhp_rate` as `max_hp *= (100+rate)//100` after CR_TRUST addend, before SC_APPLEIDUN/SC_DELUGE songs. (status.c:1937)
+
+**New `core/build_applicator.py`** (extracted from MainWindow):
+- `apply_gear_bonuses(build, gear_bonuses) -> PlayerBuild`: injects GearBonuses + Active Items + Manual Adj + SC stat bonuses into PlayerBuild overlay. Now also wires `bonus_crit_atk_rate`, `bonus_matk_rate`, `bonus_maxhp_rate`.
+- `compute_sc_stat_bonuses(support_buffs) -> dict[str, int]`: SC_BLESSING/INC_AGI/GLORIA → stat deltas.
+
+**`gui/main_window.py`**:
+- Removed `_apply_gear_bonuses()` and `_sc_stat_bonuses()` private methods.
+- All call sites replaced with `build_applicator.apply_gear_bonuses(build, gb)` and `build_applicator.compute_sc_stat_bonuses(...)`.
+- `GearBonusAggregator.compute()` now called once per pipeline run (was called twice redundantly).
+- `GearBonuses` import removed (no longer directly referenced).
+
+**`core/calculators/modifiers/crit_atk_rate.py`**: `getattr(build, "bonus_crit_atk_rate", 0)` → `build.bonus_crit_atk_rate` (field now explicit).
+
+**Note**: `near_atk_def_rate`/`long_atk_def_rate`/`magic_def_rate` were already wired into incoming pipelines via `player_build_to_target()` — roadmap item 5 was a no-op.
+
+---
+
 ## Session S-1 — 2026-03-14 — Item Script Architecture Refactor (bonus_definitions.py)
 
 **Pure refactor. No behavior change. No gaps closed.**

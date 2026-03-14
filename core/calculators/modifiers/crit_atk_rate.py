@@ -21,7 +21,7 @@ class CritAtkRate:
 
     @staticmethod
     def calculate(build: PlayerBuild, pmf: dict, result: DamageResult) -> dict:
-        rate = getattr(build, "bonus_crit_atk_rate", 0)
+        rate = build.bonus_crit_atk_rate
         mn, mx, av = pmf_stats(pmf)
         if rate == 0:
             result.add_step(

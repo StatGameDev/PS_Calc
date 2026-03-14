@@ -39,6 +39,7 @@ _For pipeline step formulas, see `docs/pipeline_specs.md`._
 | `bonus_definitions.py` | `BonusDef` + `BONUS1/2/3` tables — single source of truth for item script bonus types (S-1) |
 | `item_script_parser.py` | `parse_script(script) → list[ItemEffect]`; `_make_description()` delegates to `bonus_definitions` |
 | `gear_bonus_aggregator.py` | `GearBonusAggregator.compute(equipped) → GearBonuses`; table-driven `_apply()` |
+| `build_applicator.py` | `apply_gear_bonuses(build, gb) → PlayerBuild`; `compute_sc_stat_bonuses(support_buffs) → dict` (S-2) |
 | `build_manager.py` | Save/load builds; `player_build_to_target()` |
 | `pmf/` | PMF probability operations (`operations.py`, `stats.py`) |
 
@@ -51,8 +52,9 @@ User edits widget
   → Section emits change signal
     → MainWindow._on_build_changed()
       → _collect_build()                          → PlayerBuild (manual values)
-        → _apply_gear_bonuses(build)              → PlayerBuild (+ gear overlay)
-          │  GearBonusAggregator.compute(build.equipped) → GearBonuses
+        → build_applicator.apply_gear_bonuses(build, gb)  → PlayerBuild (+ gear overlay)
+          │  gb = GearBonusAggregator.compute(build.equipped) → GearBonuses
+          │  GearBonusAggregator.apply_passive_bonuses(gb, ...)
           │  dataclasses.replace(build, ...) injects bonuses as clean overlay
           │  Original manual values preserved — gear bonuses never written to disk
           │

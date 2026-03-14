@@ -130,6 +130,11 @@ atk_rate: int = 0           # bAtkRate — generic ATK% (currently consumed in C
 castrate: int = 0           # sum of bCastrate/bVarCastrate deltas; sd->castrate = 100 + castrate
 delayrate: int = 0          # sum of bDelayrate deltas; sd->delayrate = 100 + delayrate
 skill_castrate: dict = {}   # {skill_name: pct_delta} from bonus2 bCastrate,skill_name,val
+# Added Session S-2:
+matk_rate: int = 0           # bMatkRate — % rate bonus to MATK; applied as matk*(100+rate)//100 (status.c:1995-1997)
+maxhp_rate: int = 0          # bMaxHPrate — % rate bonus to MaxHP; applied as maxhp*(100+rate)//100 (status.c:1937)
+script_atk_ele: int | None = None  # bAtkEle — weapon element from script (S-3: wired via mode="assign")
+script_def_ele: int | None = None  # bDefEle — armor element from script (S-3: wired via mode="assign")
 ```
 
 ### Fields to add [NEW]:
@@ -201,6 +206,13 @@ song_state: Dict[str, object] = field(default_factory=dict)
 ```python
 equip_mdef: int = 0     # Hard MDEF total from bMdef item scripts (PlayerBuild field;
                          # fed into StatusData.mdef via StatusCalculator + main_window)
+```
+
+### Fields added in Session S-2 [EXISTS]:
+```python
+bonus_crit_atk_rate: int = 0  # bCritAtkRate — % bonus to crit damage; read by CritAtkRate modifier
+bonus_matk_rate: int = 0      # bMatkRate — % rate bonus to MATK; applied in StatusCalculator
+bonus_maxhp_rate: int = 0     # bMaxHPrate — % rate bonus to MaxHP; applied in StatusCalculator
 ```
 
 ---
