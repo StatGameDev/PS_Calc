@@ -14,7 +14,7 @@ from typing import Dict, Optional
 
 from core.bonus_definitions import BONUS1, BONUS2
 from core.data_loader import loader
-from core.item_script_parser import parse_script
+from core.item_script_parser import parse_sc_start, parse_script
 from core.models.gear_bonuses import GearBonuses
 from core.models.item_effect import ItemEffect
 
@@ -62,6 +62,8 @@ class GearBonusAggregator:
 
             for eff in effects:
                 GearBonusAggregator._apply(bonuses, eff)
+
+            bonuses.sc_effects.extend(parse_sc_start(script))
 
         # G12: status.c ~1713: bstatus->def += (refinedef + 50) / 100
         if refinedef_units > 0:

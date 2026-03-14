@@ -100,19 +100,12 @@ incoming pipelines via `player_build_to_target()` before this session — item 5
 
 ---
 
-### S-4: Scraper Expansion + sc_start Parsing
+### ~~S-4: Scraper Expansion + sc_start Parsing~~ ✅ DONE (2026-03-14)
 
-**Goal:** IT_USABLE/IT_HEALING items in item_db. `sc_start` commands parsed. SCEffect model exists.
-
-1. `tools/import_item_db.py` — expand to include IT_USABLE and IT_HEALING types (same schema: id/aegis_name/name/type/script; no atk/def/slots fields).
-2. New `core/models/sc_effect.py` — `SCEffect(sc_name, duration_ms, val1, val2, val3, val4)`.
-3. `item_script_parser.py` — add `parse_sc_start(script) -> list[SCEffect]`. Handles `sc_start`, `sc_start2`, `sc_start4`.
-4. `GearBonuses` — add `sc_effects: list[SCEffect]`.
-5. `GearBonusAggregator.compute()` — call `parse_sc_start()` per item; accumulate into `bonuses.sc_effects`.
-6. Regenerate `docs/lookup/item_ref.tsv` after rescrape.
-
-**Files:** `tools/import_item_db.py`, `core/models/sc_effect.py` (new), `core/item_script_parser.py`, `core/models/gear_bonuses.py`, `core/gear_bonus_aggregator.py`.
-**Hercules reads:** None.
+**Note:** item_db now has 3837 items (was 2760). IT_USABLE=785, IT_HEALING=292 added.
+sc_start/sc_start2/sc_start4 (both space and parenthesis forms) all parse correctly.
+Non-numeric tokens (SCFLAG_NONE, Ele_Neutral, etc.) are silently skipped in the val collection.
+`parse_sc_start()` is also callable on equippable-item scripts (e.g. OnEquipScript SC_ENDURE items).
 
 ---
 

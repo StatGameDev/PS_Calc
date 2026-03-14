@@ -684,3 +684,38 @@ always incorrect for items with these bonuses.
 **`gui/main_window.py`**:
 - All 3 `resolve_weapon()` call sites (RH in `_run_status_calc`, RH in `_run_battle_pipeline`, PvP RH) now pass `script_atk_ele=gb.script_atk_ele`.
 - `_run_status_calc`: computes `resolved_armor_ele = build_applicator.resolve_armor_element(eff_build.armor_element, gb)`, passes `atk_ele=weapon.element, def_ele=resolved_armor_ele` to `_derived_section.refresh()`.
+
+---
+
+## Session S-4 — 2026-03-14 — Scraper Expansion + sc_start Parsing
+
+**No gaps closed. Infrastructure-only. Prerequisite for S-5 (consumable UI + routing).**
+
+**`tools/import_item_db.py`**:
+- Added `CONSUMABLE_TYPES = {"IT_USABLE", "IT_HEALING"}` alongside `EQUIP_TYPES`.
+- Removed IT_USABLE and IT_HEALING from `SKIP_TYPES`.
+- New `parse_consumable(entry, item_id, item_type)` → minimal schema: id, aegis_name, name, type, buy, sell, weight, script. No equip fields (no loc/upper/job/gender/slots).
+- Dispatcher updated to route CONSUMABLE_TYPES to `parse_consumable()`.
+- `EXPECTED_COUNTS` updated: IT_USABLE=785, IT_HEALING=292.
+- item_db now has 3837 items (was 2760). All expected counts match.
+
+**`core/models/sc_effect.py`** (new file):
+- `SCEffect(sc_name, duration_ms, val1=0, val2=0, val3=0, val4=0)` — frozen dataclass.
+- Represents one parsed `sc_start`/`sc_start2`/`sc_start4` call.
+
+**`core/item_script_parser.py`**:
+- New `parse_sc_start(script: str) -> list[SCEffect]`.
+- Handles both space-form (`sc_start SC_NAME, dur, v1;`) and parenthesis-form (`sc_start4(SC_NAME, dur, v1, v2, v3, v4);`).
+- All three variants (`sc_start`, `sc_start2`, `sc_start4`) handled uniformly.
+- Non-numeric tokens (SCFLAG_NONE, Ele_Neutral, etc.) silently skipped during val collection.
+- Duration=-1 stores as-is (permanent/OnEquip).
+
+**`core/models/gear_bonuses.py`**:
+- Added `sc_effects: List[SCEffect] = field(default_factory=list)`.
+
+**`core/gear_bonus_aggregator.py`**:
+- `compute()`: after `parse_script()`, also calls `parse_sc_start(script)` and extends `bonuses.sc_effects`.
+- Applies to all item types (equippable gear, cards, ammo, and future consumables).
+
+**`docs/lookup/item_ref.tsv`**:
+- Regenerated from updated item_db.json — 3837 rows (was 2760).

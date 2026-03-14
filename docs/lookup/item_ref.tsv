@@ -1,5 +1,186 @@
 # Item reference — generated from item_db.json
 # id	aegis_name	name	type	script	on_equip_script	on_unequip_script	notes
+501	Red_Potion	Red Potion	IT_HEALING	itemheal rand(45,65),0;			
+502	Orange_Potion	Orange Potion	IT_HEALING	itemheal rand(105,145),0;			
+503	Yellow_Potion	Yellow Potion	IT_HEALING	itemheal rand(175,235),0;			
+504	White_Potion	White Potion	IT_HEALING	itemheal rand(325,405),0;			
+505	Blue_Potion	Blue Potion	IT_HEALING	itemheal 0,rand(40,60);			
+506	Green_Potion	Green Potion	IT_HEALING	sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;			
+507	Red_Herb	Red Herb	IT_HEALING	itemheal rand(18,28),0;			
+508	Yellow_Herb	Yellow Herb	IT_HEALING	itemheal rand(38,58),0;			
+509	White_Herb	White Herb	IT_HEALING	itemheal rand(75,115),0;			
+510	Blue_Herb	Blue Herb	IT_HEALING	itemheal 0,rand(15,30);			
+511	Green_Herb	Green Herb	IT_HEALING	sc_end SC_POISON;			
+512	Apple	Apple	IT_HEALING	itemheal rand(16,22),0;			
+513	Banana	Banana	IT_HEALING	itemheal rand(17,21),0;			
+514	Grape	Grape	IT_HEALING	itemheal 0,rand(10,15);			
+515	Carrot	Carrot	IT_HEALING	itemheal rand(18,20),0;			
+516	Sweet_Potato	Potato	IT_HEALING	itemheal rand(15,23),0;			
+517	Meat	Meat	IT_HEALING	itemheal rand(70,100),0;			
+518	Honey	Honey	IT_HEALING	itemheal rand(70,100),rand(20,40);			
+519	Milk	Milk	IT_HEALING	itemheal rand(27,37),0;			
+520	Leaflet_Of_Hinal	Hinalle Leaflet	IT_HEALING	itemheal rand(175,235),0;			
+521	Leaflet_Of_Aloe	Aloe Leaflet	IT_HEALING	itemheal rand(325,405),0;			
+522	Fruit_Of_Mastela	Mastela Fruit	IT_HEALING	itemheal rand(400,600),0;			
+523	Holy_Water	Holy Water	IT_HEALING	sc_end SC_CURSE;			
+525	Panacea	Panacea	IT_HEALING	sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+526	Royal_Jelly	Royal Jelly	IT_HEALING	itemheal rand(325,405),rand(40,60);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+528	Monsters_Feed	Monster's Feed	IT_HEALING	itemheal rand(72,108),0;			
+529	Candy	Candy	IT_HEALING	itemheal rand(45,65),0;			
+530	Candy_Striper	Candy Cane	IT_HEALING	itemheal rand(105,145),0;			
+531	Apple_Juice	Apple Juice	IT_HEALING	itemheal rand(25,35),0;			
+532	Banana_Juice	Banana Juice	IT_HEALING	itemheal rand(26,34),0;			
+533	Grape_Juice	Grape Juice	IT_HEALING	itemheal 0,rand(15,25);			
+534	Carrot_Juice	Carrot Juice	IT_HEALING	itemheal rand(27,33),0;			
+535	Pumpkin	Pumpkin	IT_HEALING	itemheal 19,0;			
+536	Ice_Cream	Ice Cream	IT_HEALING	itemheal rand(105,145),0;   sc_start SC_FREEZE,10000,0,2500,SCFLAG_NONE;			
+537	Pet_Food	Pet Food	IT_HEALING	itemheal rand(50,90),0;			
+538	Well_Baked_Cookie	Well-baked Cookie	IT_HEALING	itemheal rand(160,200),0;			
+539	Piece_Of_Cake	Piece of Cake	IT_HEALING	itemheal rand(270,330),0;			
+540	Falcons_Feed	Falcon Food	IT_HEALING	itemheal rand(185,225),0;			
+541	Pecopecos_Feed	PecoPeco Food	IT_HEALING	itemheal rand(325,405),0;			
+542	Festive_Cookie	Festival Cookie	IT_HEALING	itemheal rand(325,405),0;			
+543	Festive_Rainbow_Cake	Festival Rainbow Cake	IT_HEALING	itemheal rand(325,405),0;			
+544	Fish_Slice	Raw Fish	IT_HEALING	itemheal rand(25,60),0;			
+545	Red_Slim_Potion	Condensed Red Potion	IT_HEALING	itemheal rand(45,65),0;			
+546	Yellow_Slim_Potion	Condensed Yellow Potion	IT_HEALING	itemheal rand(175,235),0;			
+547	White_Slim_Potion	Condensed White Potion	IT_HEALING	itemheal rand(325,405),0;			
+548	Cheese	Cheese	IT_HEALING	itemheal 0,rand(10,15);			
+549	Nice_Sweet_Potato	Yam	IT_HEALING	itemheal rand(50,100),0;   sc_start SC_STUN,3000,0,1500,SCFLAG_NONE;			
+550	Popped_Rice	Rice Cake	IT_HEALING	itemheal rand(10,15),0;			
+551	Shusi	Sushi	IT_HEALING	itemheal rand(50,60),0;			
+552	KETUPAT	Ketupat	IT_HEALING	itemheal rand(70,90),rand(20,30);			
+553	Bun	Bao	IT_HEALING	itemheal rand(35,70),0;			
+554	Mojji	Mochi	IT_HEALING	itemheal rand(105,145),0;   sc_start SC_STUN,3000,0;   sc_start SC_BLIND,2000,0,1500,SCFLAG_NONE;			
+555	Rice_Cake	Traditional Rice Cake	IT_HEALING	itemheal rand(105,145),0;			
+556	Long_Rice_Cake	Rice Cake Stick	IT_HEALING	itemheal rand(20,25),0;			
+557	Hash_Rice_Cake	Neatly Sliced Rice Cake	IT_HEALING	itemheal rand(25,30),0;			
+558	Chocolate	Chocolate	IT_HEALING	itemheal 1,1;			
+559	HandMade_Chocolate	Hand-made Chocolate	IT_HEALING	itemheal 50,50;			
+560	HandMade_Chocolate_	Handmade White Chocolate	IT_HEALING	itemheal 50,50;			
+561	White_Chocolate	White Chocolate	IT_HEALING	itemheal 50,50;			
+562	Pizza	Doublecrust Swiss Fondue	IT_HEALING	itemheal rand(70,100),0;			
+563	Pizza_01	Doublecrust Swiss Fondue	IT_HEALING	itemheal rand(375,445),0;			
+564	Rice_Ball	Rice Ball	IT_HEALING	itemheal 200,0;			
+565	Vita500_Bottle	Vita500	IT_HEALING	itemheal rand(142,274),0;			
+566	Tomyumkung	Tom Yum Goong	IT_HEALING	itemheal rand(244,350),rand(10,30);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+567	Prawn	Shrimp	IT_HEALING	itemheal rand(117,192),0;			
+568	Lemon	Lemon	IT_HEALING	itemheal 0,rand(10,20);			
+569	Novice_Potion	Novice Potion	IT_HEALING	itemheal rand(22,33),0;			
+570	Lucky_Candy	Lucky Candy	IT_HEALING	itemheal rand(45,65),0;			
+571	Lucky_Candy_Cane	Lucky Candy Cane	IT_HEALING	itemheal rand(105,145),0;			
+572	Lucky_Cookie	Lucky Cookie	IT_HEALING	itemheal rand(160,200),0;			
+573	Chocolate_Drink	Chocolate Drink	IT_HEALING	itemheal rand(330,410),rand(45,65);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+574	Egg	Egg	IT_HEALING	itemheal rand(33,42),0;			
+575	Piece_Of_Cake_	2nd Anniversary Cake	IT_HEALING	itemheal rand(270,330),0;			
+576	Prickly_Fruit	Prickly Fruit	IT_HEALING	itemheal rand(150,300),rand(20,30);			
+577	Grain	Bag of Grain	IT_HEALING	itemheal rand(60,70),0;			
+578	Strawberry	Strawberry	IT_HEALING	itemheal 0,rand(16,28);			
+579	Delicious_Fish	Fresh Fish	IT_HEALING	itemheal rand(100,150),0;			
+580	Bread	Bread	IT_HEALING	itemheal rand(50,90),0;			
+581	Mushroom	Edible Mushroom	IT_HEALING	itemheal rand(20,30),0;			
+582	Orange	Orange	IT_HEALING	itemheal rand(10,20),rand(10,20);			
+583	KETUPAT_	Ketupat Sayur	IT_HEALING	itemheal rand(325,405),rand(40,60);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+584	Fish_Ball_Soup	Fish Cake Soup	IT_HEALING	itemheal rand(40,70),0;			
+585	Wurst	Wurst	IT_HEALING	itemheal rand(15,20),0;			
+586	Mothers_Cake	Mother's Cake	IT_HEALING	itemheal rand(325,405),0;			
+587	Prickly_Fruit_	Red Prickly Fruit	IT_HEALING	itemheal rand(270,330),rand(20,30);			
+588	Spaghetti	Spaghetti	IT_HEALING	itemheal rand(40,70),0;			
+589	Pizza_02	Pizza	IT_HEALING	itemheal rand(375,445),0;			
+590	Brezel_	Pretzel	IT_HEALING	itemheal rand(50,90),0;			
+591	Caviar_Pancake	Caviar Pancake	IT_HEALING	itemheal rand(325,405),rand(40,60);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+592	Jam_Pancake	Jam Pancake	IT_HEALING	itemheal rand(325,405),rand(40,60);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+593	Honey_Pancake	Honey Pancake	IT_HEALING	itemheal rand(325,405),rand(40,60);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+594	Sour_Cream_Pancake	Sour-Cream Pancake	IT_HEALING	itemheal rand(325,405),rand(40,60);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+595	Mushroom_Pancake	Mushroom Pancake	IT_HEALING	itemheal rand(325,405),rand(40,60);   sc_end SC_POISON;   sc_end SC_SILENCE;   sc_end SC_BLIND;   sc_end SC_CONFUSION;   sc_end SC_CURSE;   sc_end SC_ILLUSION;			
+596	Cute_Strawberry_Choco	Cute Strawberry-Choco	IT_HEALING	itemheal 0,rand(1,100);			
+597	Lovely_Choco_Tart	Lovely Choco-Tart	IT_HEALING	itemheal rand(10,400),0;			
+598	Light_Red_Pot	Light Red Potion	IT_HEALING	itemheal rand(45,65),0;			
+599	Light_Orange_Pot	Light Orange Potion	IT_HEALING	itemheal rand(105,145),0;			
+601	Wing_Of_Fly	Fly Wing	IT_USABLE	itemskill AL_TELEPORT,1;			
+602	Wing_Of_Butterfly	Butterfly Wing	IT_USABLE	itemskill AL_TELEPORT,3;			
+603	Old_Blue_Box	Old Blue Box	IT_USABLE	getrandgroupitem 603,1;			
+604	Branch_Of_Dead_Tree	Dead Branch	IT_USABLE	monster "this",-1,-1,"--ja--",-1,1,"";			
+605	Anodyne	Anodyne	IT_USABLE	itemskill SM_ENDURE,1;			
+606	Aloebera	Aloevera	IT_USABLE	itemskill SM_SELFPROVOKE,1;			
+607	Yggdrasilberry	Yggdrasil Berry	IT_HEALING	percentheal 100,100;			
+608	Seed_Of_Yggdrasil	Yggdrasil Seed	IT_HEALING	percentheal 50,50;			
+609	Amulet	Amulet	IT_USABLE				
+610	Leaf_Of_Yggdrasil	Yggdrasil Leaf	IT_USABLE	itemskill ALL_RESURRECTION,1;			
+611	Spectacles	Magnifier	IT_USABLE	itemskill MC_IDENTIFY,1;			
+612	Portable_Furnace	Mini Furnace	IT_USABLE	produce 21;			
+613	Iron_Hammer	Iron Hammer	IT_USABLE	produce 1;			
+614	Golden_Hammer	Golden Hammer	IT_USABLE	produce 2;			
+615	Oridecon_Hammer	Oridecon Hammer	IT_USABLE	produce 3;			
+616	Old_Card_Album	Old Card Album	IT_USABLE	getrandgroupitem 616,1;			
+617	Old_Violet_Box	Old Purple Box	IT_USABLE	getrandgroupitem 617,1;			
+618	Worn_Out_Scroll	Worn Out Scroll	IT_USABLE				
+619	Unripe_Apple	Unripe Apple	IT_USABLE	pet PORING;			
+620	Orange_Juice	Orange Juice	IT_USABLE	pet DROPS;			
+621	Bitter_Herb	Bitter Herb	IT_USABLE	pet POPORING;			
+622	Rainbow_Carrot	Rainbow Carrot	IT_USABLE	pet LUNATIC;			
+623	Earthworm_The_Dude	Earthworm the Dude	IT_USABLE	pet PICKY;			
+624	Rotten_Fish	Rotten Fish	IT_USABLE	pet CHONCHON;			
+625	Lusty_Iron	Rusty Iron	IT_USABLE	pet STEEL_CHONCHON;			
+626	Monster_Juice	Monster Juice	IT_USABLE	pet HUNTER_FLY;			
+627	Sweet_Milk	Sweet Milk	IT_USABLE	pet SAVAGE_BABE;			
+628	Well_Dried_Bone	Well-Dried Bone	IT_USABLE	pet DESERT_WOLF_B;			
+629	Singing_Flower	Singing Flower	IT_USABLE	pet ROCKER;			
+630	Dew_Laden_Moss	Dew Laden Moss	IT_USABLE	pet SPORE;			
+631	Deadly_Noxious_Herb	Deadly Noxious Herb	IT_USABLE	pet POISON_SPORE;			
+632	Fatty_Chubby_Earthworm	Fatty Chubby Earthworm	IT_USABLE	pet PECOPECO;			
+633	Baked_Yam	Sweet Potato	IT_USABLE	pet SMOKIE;			
+634	Tropical_Banana	Tropical Banana	IT_USABLE	pet YOYO;			
+635	Horror_Of_Tribe	Orc Trophy	IT_USABLE	pet ORK_WARRIOR;			
+636	No_Recipient	No Recipient	IT_USABLE	pet MUNAK;			
+637	Old_Broom	Old Broom	IT_USABLE	pet DOKEBI;			
+638	Silver_Knife_Of_Chaste	Silver Knife of Chastity	IT_USABLE	pet SOHEE;			
+639	Armlet_Of_Obedience	Armlet of Obedience	IT_USABLE	pet ISIS;			
+640	Shining_Stone	Shining Stone	IT_USABLE	pet PETIT;			
+641	Contracts_In_Shadow	Contract in Shadow	IT_USABLE	pet DEVIRUCHI;			
+642	Book_Of_Devil	Book of the Devil	IT_USABLE	pet BAPHOMET_;			
+643	Pet_Incubator	Pet Incubator	IT_USABLE	bpet;			
+644	Gift_Box	Gift Box	IT_USABLE	getrandgroupitem 644,1;			
+645	Center_Potion	Concentration Potion	IT_USABLE	sc_start SC_ATTHASTE_POTION1, 1800000, 0;			
+656	Awakening_Potion	Awakening Potion	IT_USABLE	sc_start SC_ATTHASTE_POTION2, 1800000, 0;			
+657	Berserk_Potion	Berserk Potion	IT_USABLE	sc_start SC_ATTHASTE_POTION3, 1800000, 0;			
+658	Union_Of_Tribe	Union of Tribe	IT_USABLE	guildgetexp rand(600000,1200000);			
+659	Heart_Of_Her	Her Heart	IT_USABLE	pet BON_GUN;			
+660	Prohibition_Red_Candle	Forbidden Red Candle	IT_USABLE	pet ZHERLTHSH;			
+661	Sway_Apron	Soft Apron	IT_USABLE	pet ALICE;			
+662	Inspector_Certificate	Authoritative Badge	IT_USABLE	sc_start SC_MOVHASTE_HORSE, 180000, 25;			
+663	Korea_Rice_Cake	Korean Rice Cake	IT_HEALING	percentheal 10,0;			
+664	Gift_Box_1	Gift Box	IT_USABLE	getrandgroupitem 664,1;			
+665	Gift_Box_2	Gift Box	IT_USABLE	getrandgroupitem 665,1;			
+666	Gift_Box_3	Gift Box	IT_USABLE	getrandgroupitem 666,1;			
+667	Gift_Box_4	Gift Box	IT_USABLE	getrandgroupitem 667,1;			
+668	Handsei	Red Envelope	IT_USABLE	Zeny += rand(1000,10000);			
+669	Rice_Cake_Soup	Tempting Rice-Cake Soup	IT_HEALING	percentheal -100,-100;			
+671	Gold_Coin	Gold Roulette Coin	IT_USABLE	TmpRouletteGold += 1;			
+675	Silver_Coin	Silver Roulette Coin	IT_USABLE	TmpRouletteSilver += 1;			
+678	Poison_Bottle	Poison Bottle	IT_USABLE	if (Class == Job_Assassin_Cross || Class == Job_Guillotine_Cross || Class == Job_Guillotine_Cross_T) {    sc_start SC_DPOISON, 60000, 0;    sc_start SC_ATTHASTE_INFINITY, 60000, 0;   } else {    percentheal -100, -100;   }			
+679	Gold_Pill	Pilule	IT_USABLE	percentheal 50, 50;			
+680	Magical_Carnation	Magic Carnation	IT_HEALING	percentheal 0,20;			
+681	Memory_Of_Wedding	Sweet Memory of Marriage	IT_USABLE	if(getpartnerid()) sc_start SC_WEDDING,600000,0;			
+682	Realgar_Wine	Distilled Fighting Spirit	IT_USABLE	sc_start SC_PLUSATTACKPOWER, 60000, 30;			
+683	Exorcize_Herb	Herb of Incantation	IT_USABLE	sc_start SC_PLUSMAGICPOWER, 60000, 30;			
+684	Durian	Durian	IT_USABLE	sc_start SC_PLUSATTACKPOWER, 60000, 10;   sc_start SC_PLUSMAGICPOWER, 60000, 10;			
+685	RAMADAN	Ramadan	IT_HEALING	percentheal 100,50;			
+686	Earth_Scroll_1_3	Level 3 Earth Spike	IT_USABLE	itemskill WZ_EARTHSPIKE,3;			
+687	Earth_Scroll_1_5	Level 5 Earth Spike	IT_USABLE	itemskill WZ_EARTHSPIKE,5;			
+688	Cold_Scroll_1_3	Level 3 Cold Bolt	IT_USABLE	itemskill MG_COLDBOLT,3;			
+689	Cold_Scroll_1_5	Level 5 Cold Bolt	IT_USABLE	itemskill MG_COLDBOLT,5;			
+690	Fire_Scroll_1_3	Level 3 Fire Bolt	IT_USABLE	itemskill MG_FIREBOLT,3;			
+691	Fire_Scroll_1_5	Level 5 Fire Bolt	IT_USABLE	itemskill MG_FIREBOLT,5;			
+692	Wind_Scroll_1_3	Level 3 Lightening Bolt	IT_USABLE	itemskill MG_LIGHTNINGBOLT,3;			
+693	Wind_Scroll_1_5	Level 5 Lightening Bolt	IT_USABLE	itemskill MG_LIGHTNINGBOLT,5;			
+694	Ghost_Scroll_1_3	Level 3 Soul Strike	IT_USABLE	itemskill MG_SOULSTRIKE,3;			
+695	Ghost_Scroll_1_5	Level 5 Soul Strike	IT_USABLE	itemskill MG_SOULSTRIKE,5;			
+696	Fire_Scroll_2_1	Level 1 Fire Ball	IT_USABLE	itemskill MG_FIREBALL,1;			
+697	Fire_Scroll_2_5	Level 5 Fire Ball	IT_USABLE	itemskill MG_FIREBALL,5;			
+698	Fire_Scroll_3_1	Level 1 Fire Wall	IT_USABLE	itemskill MG_FIREWALL,1;			
+699	Fire_Scroll_3_5	Level 5 Fire Wall	IT_USABLE	itemskill MG_FIREWALL,5;			
+700	Cold_Scroll_2_1	Level 1 Frost Diver	IT_USABLE	itemskill MG_FROSTDIVER,1;			
 1101	Sword	Sword	IT_WEAPON				
 1102	Sword_	Sword	IT_WEAPON				
 1103	Sword__	Sword	IT_WEAPON				
@@ -2542,9 +2723,721 @@
 5857	Cool_FB_Hat	Cool FB Hat	IT_ARMOR	bonus bInt,2;   bonus bVit,2;			
 5858	Victory_FB_Hat	Victory FB Hat	IT_ARMOR	bonus bInt,2;   bonus bDex,2;			
 5859	Glory_FB_Hat	Glory FB Hat	IT_ARMOR	bonus bAllStats,1;			
+6046	Clothing_Dye_Coupon	Clothing Dye Coupon	IT_USABLE	callfunc "SetPalete",1;			
+6047	Clothing_Dye_Coupon2	Clothing Dye Coupon II	IT_USABLE	callfunc "SetPalete",2;			
 7663	Fullmetal_Jacket_Bullet	Full Metal Jacket	IT_AMMO				
 7664	Mine_Projectile	Projection Landmines	IT_AMMO				
 7665	Dragon_Tail_Missile	Dragon Tail Missile	IT_AMMO				
+11500	Light_Yellow_Pot	Light Yellow Potion	IT_HEALING	itemheal rand(175,235),0;			
+11501	Light_White_Pot	Light White Potion	IT_HEALING	itemheal rand(325,405),0;			
+11502	Light_Blue_Pot	Light Blue Potion	IT_HEALING	itemheal 0,rand(40,60);			
+11503	Siege_White_Potion	WoE White Potion	IT_HEALING	itemheal rand(400,500),0;			
+11504	Siege_Blue_Potion	WoE Blue Potion	IT_HEALING	itemheal 0,rand(50,70);			
+11505	Iris	Iris	IT_HEALING	itemheal 0,150;			
+11506	Fanta_Orange	Fanta Orange	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11507	Fanta_Grape	Fanta Grape	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11508	Karada_Meguri_Tea	Karada Meguricha	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11509	Royal_Milk_Tea	Black Tea Kochakaden	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11510	Coke_Zero	Coca Cola Zero	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11511	Coke_No_Cal	Diet Coca Cola	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11512	Coca_Cola	Coca Cola	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11513	Protect_Neck_Candy	Protect Neck Candy	IT_HEALING	itemheal rand(5,25),0;			
+11514	Enriched_Slim_Pot	Enriched Slim Pot	IT_HEALING	itemheal rand(335,415),0;			
+11515	Coconut	Coconut	IT_HEALING	itemheal rand(300,400),0;			
+11516	Asai_Fruit	Asai Fruit	IT_HEALING	itemheal rand(16,22),0;			
+11517	Puri_Potion	Puri Potion	IT_HEALING	itemheal rand(400,600),0;			
+11518	N_Blue_Potion	Blue Potion	IT_HEALING	itemheal 0,5;			
+11519	Beef_Toast	Beef Toast	IT_HEALING	itemheal rand(170,250),0;			
+11520	Mora_Mandarin	Mora Mandar	IT_HEALING	itemheal 0,rand(50,80);			
+11521	Pingui_Berry_Juice	Pingui Berry Juice	IT_HEALING	itemheal rand(400,800),rand(50,80);			
+11522	Red_Raffle_Sap	Red Raffle Sap	IT_HEALING	itemheal rand(400,800),0;			
+11523	Yellow_Raffle_Sap	Yellow Raffle Sap	IT_HEALING	itemheal rand(600,1000),0;			
+11524	White_Raffle_Sap	White Raffle Sap	IT_HEALING	itemheal rand(800,1200),0;			
+11525	Mora_Hip_Tea	Mora HIp Tea	IT_HEALING	itemheal rand(1500,2000),0;			
+11526	Rafflecino	Rafflecino	IT_HEALING	itemheal 0,rand(120,160);			
+11527	Baklava	Baklava	IT_HEALING	itemheal 1200,440;			
+11528	Kanafeh	Kanafeh	IT_HEALING	itemheal 300,240;			
+11529	MAAMOUL_	Maamoul	IT_HEALING	itemheal 120,60;			
+11530	Jujube	Jujube	IT_HEALING	itemheal 30,0;			
+11531	Coffee	Coffee	IT_HEALING	itemheal 0,10;			
+11602	Catnip_Fruit	Catnip Fruit	IT_HEALING	itemheal rand(10, 40), 0;			
+11701	Girl_Bunch_Of_Flower	Girl's Bouquet	IT_HEALING	itemheal rand(105,145),0;			
+11702	Moon_Cookie	Moon Cookie	IT_HEALING				
+11703	Mysterious_Blood	Mystery Blood	IT_HEALING	itemheal 0,rand(25,35);			
+11704	KETUPAT_F	Ketupat	IT_HEALING	itemheal rand(70,90),0;			
+11705	Special_White_Potion	Children's Potion	IT_HEALING	itemheal rand(425,425),0;			
+11706	Steak	Steak	IT_HEALING	itemheal rand(700,1000),0;			
+11707	Roasted_Beef	Roast Beef	IT_HEALING	itemheal 0,rand(100,200);			
+11708	Fore_Flank_Sirloin	Fore Flank Sirloin	IT_HEALING	itemheal rand(30,50),rand(1,5);			
+11709	Fanta_Zero_Lemon	Fanta Zero Lemon	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11710	Sakura_Mist	Sakura Mist	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11711	Sakura_Milk_Tea	Sakura Milk Tea	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+11712	First_Leaf_Tea	Flower	IT_HEALING	itemheal rand(50,70),rand(10,12);			
+12000	Cold_Scroll_2_5	Level 5 Frost Diver	IT_USABLE	itemskill MG_FROSTDIVER,5;			
+12001	Holy_Scroll_1_3	Level 3 Heal	IT_USABLE	itemskill AL_HEAL,3;			
+12002	Holy_Scroll_1_5	Level 5 Heal	IT_USABLE	itemskill AL_HEAL,5;			
+12003	Holy_Scroll_2_1	Level 1 Teleport	IT_USABLE	itemskill AL_TELEPORT,1;			
+12004	Arrow_Container	Quiver	IT_USABLE	getitem 1750,500;			
+12005	Iron_Arrow_Container	Iron Arrow Quiver	IT_USABLE	getitem 1770,500;			
+12006	Steel_Arrow_Container	Steel Arrow Quiver	IT_USABLE	getitem 1753,500;			
+12007	Ori_Arrow_Container	Oridecon Arrow Quiver	IT_USABLE	getitem 1765,500;			
+12008	Fire_Arrow_Container	Fire Arrow Quiver	IT_USABLE	getitem 1752,500;			
+12009	Silver_Arrow_Container	Silver Arrow Quiver	IT_USABLE	getitem 1751,500;			
+12010	Wind_Arrow_Container	Wind Arrow Quiver	IT_USABLE	getitem 1755,500;			
+12011	Stone_Arrow_Container	Stone Arrow Quiver	IT_USABLE	getitem 1756,500;			
+12012	Crystal_Arrow_Container	Crystal Arrow Quiver	IT_USABLE	getitem 1754,500;			
+12013	Shadow_Arrow_Container	Shadow Arrow Quiver	IT_USABLE	getitem 1767,500;			
+12014	Imma_Arrow_Container	Immaterial Arrow Quiver	IT_USABLE	getitem 1757,500;			
+12015	Rusty_Arrow_Container	Rusty Arrow Quiver	IT_USABLE	getitem 1762,500;			
+12016	Speed_Up_Potion	Speed Potion	IT_USABLE	sc_start SC_MOVHASTE_POTION, 5000, 100;			
+12017	Slow_Down_Potion	Slow Potion	IT_USABLE	sc_start SC_MOVESLOW_POTION, 5000, 100;			
+12018	Fire_Cracker	Firecracker	IT_USABLE	end;			
+12019	Holy_Egg	Holy Egg	IT_USABLE	itemskill ALL_RESURRECTION,2;			
+12020	Water_Of_Darkness	Cursed Water	IT_USABLE	itemskill ITEM_ENCHANTARMS,8;			
+12021	Pork_Belly	Pork	IT_HEALING	itemheal rand(70,99),0;			
+12022	Spareribs	Galbi	IT_HEALING	itemheal rand(70,99),0;			
+12023	Giftbox_China	Wrapped Box	IT_USABLE	getrandgroupitem 12023,1;			
+12024	Red_Pouch_Of_Surprise	Red Pouch	IT_USABLE	monster "this",-1,-1,"--ja--",-4,1,"";			
+12025	Egg_Boy	Dano Festival Egg	IT_USABLE	getrandgroupitem 12025,1;			
+12026	Egg_Girl	Dano Festival Egg	IT_USABLE	getrandgroupitem 12026,1;			
+12027	Giggling_Box	Giggling Box	IT_USABLE	percentheal 9,0;   sc_start SC_CURSE,30000,0,3000,SCFLAG_NONE;			
+12028	Box_Of_Thunder	Box of Thunder	IT_USABLE	sc_start SC_MOVHASTE_HORSE, 20000, 25;			
+12029	Gloomy_Box	Box of Gloom	IT_USABLE	itemskill AC_CONCENTRATION,1;			
+12030	Box_Of_Grudge	Box of Resentment	IT_USABLE	sc_start SC_PLUSATTACKPOWER, 60000, 20;			
+12031	Sleepy_Box	Box of Drowsiness	IT_USABLE	sc_start SC_PLUSMAGICPOWER, 60000, 20;			
+12032	Box_Of_Storm	Box of Storms	IT_USABLE	itemskill ITEM_ENCHANTARMS,2;			
+12033	Box_Of_Sunlight	Box of Sunlight	IT_USABLE	sc_start SC_CLAIRVOYANCE,30000,0;			
+12034	Painting_Box	Box of Panting	IT_USABLE	percentheal 0,9;   sc_start SC_SILENCE,30000,0,3000,SCFLAG_NONE;			
+12035	Lotto_Box01	Lotto Box 01	IT_USABLE	getrandgroupitem 12035,1;			
+12036	Lotto_Box02	Lotto Box 02	IT_USABLE	getrandgroupitem 12036,1;			
+12037	Lotto_Box03	Lotto Box 03	IT_USABLE	getrandgroupitem 12037,1;			
+12038	Lotto_Box04	Lotto Box 04	IT_USABLE	getrandgroupitem 12038,1;			
+12039	Lotto_Box05	Lotto Box 05	IT_USABLE	getrandgroupitem 12039,1;			
+12040	Stone_Of_Intelligence_	Stone of Sage	IT_USABLE	homevolution;			
+12041	Str_Dish01	Fried Grasshopper Legs	IT_HEALING	sc_start SC_FOOD_STR,1200000,1;   percentheal 5,0;			
+12042	Str_Dish02	Seasoned Sticky Webfoot	IT_HEALING	sc_start SC_FOOD_STR,1200000,2;   percentheal 5,0;			
+12043	Str_Dish03	Bomber Steak	IT_HEALING	sc_start SC_FOOD_STR,1200000,3;   percentheal 5,0;			
+12044	Str_Dish04	Herb Marinade Beef	IT_HEALING	sc_start SC_FOOD_STR,1200000,4;   percentheal 5,0;			
+12045	Str_Dish05	Lutie Lady's Pancake	IT_HEALING	sc_start SC_FOOD_STR,1200000,5;   percentheal 10,0;			
+12046	Int_Dish01	Grape Juice Herbal Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,1;   percentheal 0,5;			
+12047	Int_Dish02	Autumn Red Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,2;   percentheal 0,5;			
+12048	Int_Dish03	Honey Herbal Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,3;   percentheal 0,5;			
+12049	Int_Dish04	Morroc Fruit Wine	IT_HEALING	sc_start SC_FOOD_INT,1200000,4;   percentheal 0,5;			
+12050	Int_Dish05	Mastela Fruit Wine	IT_HEALING	sc_start SC_FOOD_INT,1200000,5;   percentheal 0,10;			
+12051	Vit_Dish01	Steamed Crab Nippers	IT_HEALING	sc_start SC_FOOD_VIT,1200000,1;   percentheal 5,0;			
+12052	Vit_Dish02	Assorted Seafood	IT_HEALING	sc_start SC_FOOD_VIT,1200000,2;   percentheal 5,0;			
+12053	Vit_Dish03	Clam Soup	IT_HEALING	sc_start SC_FOOD_VIT,1200000,3;   percentheal 5,0;			
+12054	Vit_Dish04	Seasoned Jellyfish	IT_HEALING	sc_start SC_FOOD_VIT,1200000,4;   percentheal 5,0;			
+12055	Vit_Dish05	Spicy Fried Bao	IT_HEALING	sc_start SC_FOOD_VIT,1200000,5;   percentheal 10,0;			
+12056	Agi_Dish01	Frog Egg Squid Ink Soup	IT_HEALING	sc_start SC_FOOD_AGI,1200000,1;   percentheal 3,1;			
+12057	Agi_Dish02	Smooth Noodle	IT_HEALING	sc_start SC_FOOD_AGI,1200000,2;   percentheal 3,1;			
+12058	Agi_Dish03	Tentacle Cheese Gratin	IT_HEALING	sc_start SC_FOOD_AGI,1200000,3;   percentheal 3,1;			
+12059	Agi_Dish04	Lutie Cold Noodle	IT_HEALING	sc_start SC_FOOD_AGI,1200000,4;   percentheal 3,1;			
+12060	Agi_Dish05	Steamed Bat Wing in Pumpkin	IT_HEALING	sc_start SC_FOOD_AGI,1200000,5;   percentheal 6,2;			
+12061	Dex_Dish01	Honey Grape Juice	IT_HEALING	sc_start SC_FOOD_DEX,1200000,1;   percentheal 2,2;			
+12062	Dex_Dish02	Chocolate Mousse Cake	IT_HEALING	sc_start SC_FOOD_DEX,1200000,2;   percentheal 2,2;			
+12063	Dex_Dish03	Fruit Mix	IT_HEALING	sc_start SC_FOOD_DEX,1200000,3;   percentheal 2,2;			
+12064	Dex_Dish04	Cream Sandwich	IT_HEALING	sc_start SC_FOOD_DEX,1200000,4;   percentheal 2,2;			
+12065	Dex_Dish05	Green Salad	IT_HEALING	sc_start SC_FOOD_DEX,1200000,5;   percentheal 5,5;			
+12066	Luk_Dish01	Fried Monkey Tails	IT_HEALING	sc_start SC_FOOD_LUK,1200000,1;   percentheal 3,2;			
+12067	Luk_Dish02	Mixed Juice	IT_HEALING	sc_start SC_FOOD_LUK,1200000,2;   percentheal 3,2;			
+12068	Luk_Dish03	Fried Sweet Potato	IT_HEALING	sc_start SC_FOOD_LUK,1200000,3;   percentheal 4,2;			
+12069	Luk_Dish04	Steamed Ancient Lips	IT_HEALING	sc_start SC_FOOD_LUK,1200000,4;   percentheal 4,2;			
+12070	Luk_Dish05	Fried Scorpion Tails	IT_HEALING	sc_start SC_FOOD_LUK,1200000,5;   percentheal 5,2;			
+12071	Str_Dish06	Shiny Marinade Beef	IT_HEALING	sc_start SC_FOOD_STR,1200000,6;   percentheal 10,2;			
+12072	Str_Dish07	Whole Roast	IT_HEALING	sc_start SC_FOOD_STR,1200000,7;   percentheal 10,4;			
+12073	Str_Dish08	Bearfoot Special	IT_HEALING	sc_start SC_FOOD_STR,1200000,8;   percentheal 15,6;			
+12074	Str_Dish09	Tendon Satay	IT_HEALING	sc_start SC_FOOD_STR,1200000,9;   percentheal 15,8;			
+12075	Str_Dish10	Steamed Tongue	IT_HEALING	sc_start SC_FOOD_STR,1200000,10;   percentheal 20,10;			
+12076	Int_Dish06	Red Mushroom Wine	IT_HEALING	sc_start SC_FOOD_INT,1200000,6;   percentheal 2,10;			
+12077	Int_Dish07	Special Royal Jelly Herbal Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,7;   percentheal 4,10;			
+12078	Int_Dish08	Royal Family Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,8;   percentheal 6,10;			
+12079	Int_Dish09	Tristan XII	IT_HEALING	sc_start SC_FOOD_INT,1200000,9;   percentheal 8,15;			
+12080	Int_Dish10	Dragon Breath Cocktail	IT_HEALING	sc_start SC_FOOD_INT,1200000,10;   percentheal 10,20;			
+12081	Vit_Dish06	Awfully Bitter Bracer	IT_HEALING	sc_start SC_FOOD_VIT,1200000,6;   percentheal 13,0;			
+12082	Vit_Dish07	Sumptuous Feast	IT_HEALING	sc_start SC_FOOD_VIT,1200000,7;   percentheal 16,0;			
+12083	Vit_Dish08	Giant Burito	IT_HEALING	sc_start SC_FOOD_VIT,1200000,8;   percentheal 19,0;			
+12084	Vit_Dish09	Ascending Dragon Soup	IT_HEALING	sc_start SC_FOOD_VIT,1200000,9;   percentheal 22,0;			
+12085	Vit_Dish10	Immortal Stew	IT_HEALING	sc_start SC_FOOD_VIT,1200000,10;   percentheal 25,0;			
+12086	Agi_Dish06	Chile Shrimp Gratin	IT_HEALING	sc_start SC_FOOD_AGI,1200000,6;   percentheal 7,2;			
+12087	Agi_Dish07	Steamed Alligator with Vegetable	IT_HEALING	sc_start SC_FOOD_AGI,1200000,7;   percentheal 8,2;			
+12088	Agi_Dish08	Incredibly Spicy Curry	IT_HEALING	sc_start SC_FOOD_AGI,1200000,8;   percentheal 9,2;			
+12089	Agi_Dish09	Special Meat Stew	IT_HEALING	sc_start SC_FOOD_AGI,1200000,9;   percentheal 10,2;			
+12090	Agi_Dish10	Steamed Desert Scorpions	IT_HEALING	sc_start SC_FOOD_AGI,1200000,10;   percentheal 15,5;			
+12091	Dex_Dish06	Peach Cake	IT_HEALING	sc_start SC_FOOD_DEX,1200000,6;   percentheal 5,6;			
+12092	Dex_Dish07	Soul Haunted Bread	IT_HEALING	sc_start SC_FOOD_DEX,1200000,7;   percentheal 5,7;			
+12093	Dex_Dish08	Special Toast	IT_HEALING	sc_start SC_FOOD_DEX,1200000,8;   percentheal 5,8;			
+12094	Dex_Dish09	Heavenly Fruit Juice	IT_HEALING	sc_start SC_FOOD_DEX,1200000,9;   percentheal 5,9;			
+12095	Dex_Dish10	Hwergelmir's Tonic	IT_HEALING	sc_start SC_FOOD_DEX,1200000,10;   percentheal 10,10;			
+12096	Luk_Dish06	Lucky Soup	IT_HEALING	sc_start SC_FOOD_LUK,1200000,6;   percentheal 6,3;			
+12097	Luk_Dish07	Assorted Shish Kebob	IT_HEALING	sc_start SC_FOOD_LUK,1200000,7;   percentheal 7,3;			
+12098	Luk_Dish08	Strawberry Flavored Rice Ball	IT_HEALING	sc_start SC_FOOD_LUK,1200000,8;   percentheal 9,3;			
+12099	Luk_Dish09	Blood Flavored Soda	IT_HEALING	sc_start SC_FOOD_LUK,1200000,9;   percentheal 10,4;			
+12100	Luk_Dish10	Cooked Nine Tail's Tails	IT_HEALING	sc_start SC_FOOD_LUK,1200000,10;   percentheal 14,8;			
+12101	Citron	Citron	IT_HEALING	sc_start SC_FOOD_BASICAVOIDANCE,180000,30;			
+12102	Meat_Skewer	Grilled Skewer	IT_HEALING	sc_start SC_FOOD_BASICHIT,180000,30;			
+12103	Bloody_Dead_Branch	Bloody Branch	IT_USABLE	monster "this",-1,-1,"--ja--",-3,1,"";			
+12104	Random_Quiver	Random Quiver	IT_USABLE	getrandgroupitem 12104,1;			
+12105	Set_Of_Taiming_Item	Taming Gift Set	IT_USABLE	getrandgroupitem 12105,1;   getrandgroupitem 12105,1;   getrandgroupitem 12105,1;			
+12106	Accessory_Box	Jewelry Box	IT_USABLE	getrandgroupitem 12106,1;			
+12107	Wrapped_Mask	Wrapped Mask	IT_USABLE	getrandgroupitem 12107,1;			
+12108	Bundle_Of_Magic_Scroll	Scroll Package	IT_USABLE	getrandgroupitem 12108,1;   getrandgroupitem 12108,1;   getrandgroupitem 12108,1;   getrandgroupitem 12108,1;   getrandgroupitem 12108,1;			
+12109	Poring_Box	Poring Box	IT_USABLE	monster "this",-1,-1,"--ja--",-2,1,"";			
+12110	First_Aid_Kit	First Aid Kit	IT_USABLE	getrandgroupitem 12110,1;   getrandgroupitem 12110,1;   getrandgroupitem 12110,1;   getrandgroupitem 12110,1;   getrandgroupitem 12110,1;			
+12111	Food_Package	Bundle of Food	IT_USABLE	getrandgroupitem 12111,1;   getrandgroupitem 12111,1;   getrandgroupitem 12111,1;			
+12112	Tropical_Sograt	Tropical Sograt	IT_USABLE	sc_start SC_CURSE,10000,1;			
+12113	Vermilion_The_Beach	Vermilion on the Beach	IT_USABLE	sc_start SC_STUN,10000,1;			
+12114	Elemental_Fire	Elemental Converter	IT_USABLE	itemskill ITEM_ENCHANTARMS,4;			
+12115	Elemental_Water	Elemental Converter	IT_USABLE	itemskill ITEM_ENCHANTARMS,2;			
+12116	Elemental_Earth	Elemental Converter	IT_USABLE	itemskill ITEM_ENCHANTARMS,3;			
+12117	Elemental_Wind	Elemental Converter	IT_USABLE	itemskill ITEM_ENCHANTARMS,5;			
+12118	Resist_Fire	Fireproof Potion	IT_USABLE	sc_start2(SC_RESIST_PROPERTY_FIRE, 1200000, 20, -15);			
+12119	Resist_Water	Coldproof Potion	IT_USABLE	sc_start2(SC_RESIST_PROPERTY_WATER, 1200000, 20, -15);			
+12120	Resist_Earth	Earthproof Potion	IT_USABLE	sc_start2(SC_RESIST_PROPERTY_GROUND, 1200000, 20, -15);			
+12121	Resist_Wind	Thunderproof Potion	IT_USABLE	sc_start2(SC_RESIST_PROPERTY_WIND, 1200000, 20, -15);			
+12122	Sesame_Pastry	Sesame Pastry	IT_USABLE	sc_start SC_FOOD_BASICHIT,1200000,30;			
+12123	Honey_Pastry	Honey Pastry	IT_USABLE	sc_start SC_FOOD_BASICAVOIDANCE,1200000,30;			
+12124	Rainbow_Cake	Rainbow Cake	IT_USABLE	sc_start SC_BATKFOOD,1200000,10;   sc_start SC_MATKFOOD,120000,10;			
+12125	Outdoor_Cooking_Kits	Outdoor Cooking Kit	IT_USABLE	cooking 11;			
+12126	Indoor_Cooking_Kits	Home Cooking Kit	IT_USABLE	cooking 12;			
+12127	High_end_Cooking_Kits	Professional Cooking Kit	IT_USABLE	cooking 13;			
+12128	Imperial_Cooking_Kits	Royal Cooking Kit	IT_USABLE	cooking 14;			
+12129	Fantastic_Cooking_Kits	Fantastic Cooking Kit	IT_USABLE	cooking 15;			
+12130	Cookie_Bag	Cookie Bag	IT_USABLE	getrandgroupitem 12130,1;   getrandgroupitem 12130,1;   getrandgroupitem 12130,1;			
+12131	Lucky_Potion	Lucky Potion	IT_HEALING	sc_start SC_FOOD_LUK, 1800000, 15;			
+12132	Red_Bag	Santa's Bag	IT_USABLE	sc_start SC_XMAS, 600000, 0;   sc_start SC_MOVHASTE_HORSE, 600000, 25;			
+12133	Ice_Cream_	McDonald's Ice Cone	IT_HEALING	if (gettime(GETTIME_DAYOFMONTH) != MDiceCone) {    MDiceCone = gettime(GETTIME_DAYOFMONTH);    percentheal 50,50;   }			
+12134	Red_Envelope	Red Envelope	IT_USABLE	Zeny += rand(1000,10000);			
+12135	Green_Ale	Green Ale	IT_USABLE	percentheal 50,50;   sc_start SC_CONFUSION,10000,0,1000,SCFLAG_NONE;			
+12136	Womens_Bundle	Women's Bundle	IT_USABLE	getitem callfunc("F_Rand", 4, 558, 529, 2668, 7518), 1;			
+12137	1st_Stage_Prize	First Stage Prize	IT_USABLE				
+12138	2nd_Stage_Prize	Second Stage Prize	IT_USABLE				
+12139	3rd_Stage_Prize	Third Stage Prize	IT_USABLE				
+12140	4th_Stage_Prize	Fourth Stage Prize	IT_USABLE				
+12141	5th_Stage_Prize	Fifth Stage Prize	IT_USABLE				
+12142	Magic_Book	Book of Magic	IT_USABLE	sc_start SC_FOOD_AGI,1800000,10;			
+12143	Red_Can	Red Can	IT_USABLE				
+12144	Sphere_Case_Wind	Lightning Sphere Pack	IT_USABLE	getitem Lightning_Sphere, 500;			
+12145	Sphere_Case_Darkness	Blind Sphere Pack	IT_USABLE	getitem Blind_Sphere, 500;			
+12146	Sphere_Case_Poison	Poison Sphere Pack	IT_USABLE	getitem Poison_Sphere, 500;			
+12147	Sphere_Case_Water	Freezing Sphere Pack	IT_USABLE	getitem Freezing_Sphere, 500;			
+12148	Sphere_Case_Fire	Flare Sphere Pack	IT_USABLE	getitem Flare_Sphere, 500;			
+12149	Bullet_Case	Cartridge	IT_USABLE	getitem Bullet, 500;			
+12150	Bullet_Case_Blood	Blood Cartridge	IT_USABLE	getitem Shell_Of_Blood, 500;			
+12151	Bullet_Case_Silver	Silver Cartridge	IT_USABLE	getitem Silver_Bullet, 500;			
+12152	Special_Box	Special Present	IT_USABLE	packageitem();			
+12153	Bow_Mercenary_Scroll1	Bowman Scroll 1	IT_USABLE	mercenary_create MER_ARCHER01, 1800000;			
+12154	Bow_Mercenary_Scroll2	Bowman Scroll 2	IT_USABLE	mercenary_create MER_ARCHER02, 1800000;			
+12155	Bow_Mercenary_Scroll3	Bowman Scroll 3	IT_USABLE	mercenary_create MER_ARCHER03, 1800000;			
+12156	Bow_Mercenary_Scroll4	Bowman Scroll 4	IT_USABLE	mercenary_create MER_ARCHER04, 1800000;			
+12157	Bow_Mercenary_Scroll5	Bowman Scroll 5	IT_USABLE	mercenary_create MER_ARCHER05, 1800000;			
+12158	Bow_Mercenary_Scroll6	Bowman Scroll 6	IT_USABLE	mercenary_create MER_ARCHER06, 1800000;			
+12159	Bow_Mercenary_Scroll7	Bowman Scroll 7	IT_USABLE	mercenary_create MER_ARCHER07, 1800000;			
+12160	Bow_Mercenary_Scroll8	Bowman Scroll 8	IT_USABLE	mercenary_create MER_ARCHER08, 1800000;			
+12161	Bow_Mercenary_Scroll9	Bowman Scroll 9	IT_USABLE	mercenary_create MER_ARCHER09, 1800000;			
+12162	Bow_Mercenary_Scroll10	Bowman Scroll 10	IT_USABLE	mercenary_create MER_ARCHER10, 1800000;			
+12163	SwordMercenary_Scroll1	Fencer Scroll 1	IT_USABLE	mercenary_create MER_SWORDMAN01, 1800000;			
+12164	SwordMercenary_Scroll2	Fencer Scroll 2	IT_USABLE	mercenary_create MER_SWORDMAN02, 1800000;			
+12165	SwordMercenary_Scroll3	Fencer Scroll 3	IT_USABLE	mercenary_create MER_SWORDMAN03, 1800000;			
+12166	SwordMercenary_Scroll4	Fencer Scroll 4	IT_USABLE	mercenary_create MER_SWORDMAN04, 1800000;			
+12167	SwordMercenary_Scroll5	Fencer Scroll 5	IT_USABLE	mercenary_create MER_SWORDMAN05, 1800000;			
+12168	SwordMercenary_Scroll6	Fencer Scroll 6	IT_USABLE	mercenary_create MER_SWORDMAN06, 1800000;			
+12169	SwordMercenary_Scroll7	Fencer Scroll 7	IT_USABLE	mercenary_create MER_SWORDMAN07, 1800000;			
+12170	SwordMercenary_Scroll8	Fencer Scroll 8	IT_USABLE	mercenary_create MER_SWORDMAN08, 1800000;			
+12171	SwordMercenary_Scroll9	Fencer Scroll 9	IT_USABLE	mercenary_create MER_SWORDMAN09, 1800000;			
+12172	SwordMercenary_Scroll10	Fencer Scroll 10	IT_USABLE	mercenary_create MER_SWORDMAN10, 1800000;			
+12173	SpearMercenary_Scroll1	Spearman Scroll 1	IT_USABLE	mercenary_create MER_LANCER01, 1800000;			
+12174	SpearMercenary_Scroll2	Spearman Scroll 2	IT_USABLE	mercenary_create MER_LANCER02, 1800000;			
+12175	SpearMercenary_Scroll3	Spearman Scroll 3	IT_USABLE	mercenary_create MER_LANCER03, 1800000;			
+12176	SpearMercenary_Scroll4	Spearman Scroll 4	IT_USABLE	mercenary_create MER_LANCER04, 1800000;			
+12177	SpearMercenary_Scroll5	Spearman Scroll 5	IT_USABLE	mercenary_create MER_LANCER05, 1800000;			
+12178	SpearMercenary_Scroll6	Spearman Scroll 6	IT_USABLE	mercenary_create MER_LANCER06, 1800000;			
+12179	SpearMercenary_Scroll7	Spearman Scroll 7	IT_USABLE	mercenary_create MER_LANCER07, 1800000;			
+12180	SpearMercenary_Scroll8	Spearman Scroll 8	IT_USABLE	mercenary_create MER_LANCER08, 1800000;			
+12181	SpearMercenary_Scroll9	Spearman Scroll 9	IT_USABLE	mercenary_create MER_LANCER09, 1800000;			
+12182	SpearMercenary_Scroll10	Spearman Scroll 10	IT_USABLE	mercenary_create MER_LANCER10, 1800000;			
+12183	Holy_Arrow_Quiver	Holy Arrow Quiver	IT_USABLE	getitem Holy_Arrow, 500;			
+12184	Mercenary_Red_Potion	Mercenary Red Potion	IT_USABLE	mercenary_heal 1000,0;			
+12185	Mercenary_Blue_Potion	Mercenary Blue Potion	IT_USABLE	mercenary_heal 0,100;			
+12186	Red_Box	Old Red Box	IT_USABLE	getrandgroupitem 12186,1;			
+12187	Green_Box	Old Green Box	IT_USABLE	getrandgroupitem 12187,1;			
+12188	Magical_Moon_Cake	Grace Moon Cake	IT_HEALING	percentheal 50,50;			
+12189	Red_Box_	Old Red Box	IT_USABLE	getrandgroupitem 12189,1;			
+12190	Moon_Cake	Moon Cake	IT_USABLE				
+12191	Special_Moon_Cake	Special Moon Cake	IT_USABLE				
+12192	Pumpkin_Pie	Pumpkin Pie	IT_HEALING	percentheal 5,5;			
+12193	Brezel	Pretzel	IT_USABLE				
+12194	Hometown_Gift	Hometown Gift	IT_USABLE	getrandgroupitem 12194,1;   getrandgroupitem 12194,1;   getrandgroupitem 12194,1;			
+12195	Plain_Rice_Cake	Plain Rice Cake	IT_HEALING	percentheal 0,20;			
+12196	Hearty_Rice_Cake	Hearty Rice Cake	IT_HEALING	percentheal 50,0;			
+12197	Salty_Rice_Cake	Salty Rice Cake	IT_HEALING	percentheal 10,10;			
+12198	Lucky_Rice_Cake	Lucky Rice Cake	IT_USABLE	sc_start SC_FOOD_LUK,1200000,21;			
+12199	Rice_Scroll	Scroll of Magic	IT_USABLE				
+12200	Event_Cake	X-mas Cake	IT_USABLE	itemskill PR_MAGNIFICAT,3;			
+12201	Red_Box_C	Commonplace Red Box	IT_USABLE				
+12202	Str_Dish10_	Steamed Tongue	IT_HEALING	sc_start(SC_FOOD_STR_CASH, 1800000, 10);   percentheal(20, 10);			
+12203	Agi_Dish10_	Steamed Scorpion	IT_HEALING	sc_start(SC_FOOD_AGI_CASH, 1800000, 10);   percentheal(15, 5);			
+12204	Int_Dish10_	Dragon Breath Cocktail	IT_HEALING	sc_start(SC_FOOD_INT_CASH, 1800000, 10);   percentheal(10, 20);			
+12205	Dex_Dish10_	Hwergelmir's Tonic	IT_HEALING	sc_start(SC_FOOD_DEX_CASH, 1800000, 10);   percentheal(10, 10);			
+12206	Luk_Dish10_	Cooked Nine Tail's Tails	IT_HEALING	sc_start(SC_FOOD_LUK_CASH, 1800000, 10);   percentheal(14, 8);			
+12207	Vit_Dish10_	Stew Of Immortality	IT_HEALING	sc_start(SC_FOOD_VIT_CASH, 1800000, 10);   percentheal(25, 0);			
+12208	Battle_Manual	Battle Manual	IT_USABLE	sc_start SC_CASH_PLUSEXP,1800000,50;			
+12209	Insurance	Life Insurance	IT_USABLE	sc_start SC_CASH_DEATHPENALTY,1800000,0;			
+12210	Bubble_Gum	Bubble Gum	IT_USABLE	sc_start SC_CASH_RECEIVEITEM,1800000,200;			
+12211	Kafra_Card	Kafra Card	IT_USABLE	callfunc "F_CashStore";			
+12212	Giant_Fly_Wing	Giant Fly Wing	IT_USABLE	callfunc "F_CashPartyCall";			
+12214	Convex_Mirror	Convex Mirror	IT_USABLE	sc_start SC_CASH_BOSS_ALARM,600000,0;			
+12215	Blessing_10_Scroll	LV10 Blessing Scroll	IT_USABLE	itemskill(AL_BLESSING, 10, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12216	Inc_Agi_10_Scroll	LV10 Agil Scroll	IT_USABLE	itemskill(AL_INCAGI, 10, ISF_CHECKCONDITIONS | ISF_INSTANTCAST | ISF_CASTONSELF);			
+12217	Aspersio_5_Scroll	LV5 Aspersio Scroll	IT_USABLE	itemskill(PR_ASPERSIO, 5, ISF_CHECKCONDITIONS | ISF_INSTANTCAST | ISF_CASTONSELF);			
+12218	Assumptio_5_Scroll	LV5 Assumptio Scroll	IT_USABLE	itemskill(HP_ASSUMPTIO, 5, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12219	Wind_Walk_10_Scroll	LV10 Wind Walker Scroll	IT_USABLE	itemskill(SN_WINDWALK, 10, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12220	Adrenaline_Scroll	LV5 Adrenaline Scroll	IT_USABLE	itemskill(BS_ADRENALINE, 5, ISF_CHECKCONDITIONS | ISF_INSTANTCAST | ISF_CASTONSELF);			
+12221	Megaphone_	Megaphone	IT_USABLE	input @megaphone$;   loudhailer(@megaphone$);   end;			
+12225	Sweet_Candy_Striper	Sweet Candy Cane	IT_USABLE	pet GOBLIN_XMAS;			
+12226	Examination1	Examination 1	IT_HEALING	sc_start SC_MOVHASTE_INFINITY, 5400000, 100;   percentheal 100, 100;   sc_start SC_FOOD_STR, 5400000, 10;   sc_start SC_FOOD_DEX, 5400000, 5;   sc_start SC_PLUSATTACKPOWER, 5400000, 22;   sc_start SC_PLUSMAGICPOWER, 5400000, 15;			
+12227	Examination2	Examination 2	IT_HEALING	sc_start SC_MOVHASTE_INFINITY, 5400000, 100;   percentheal 100, 100;   sc_start SC_FOOD_INT, 5400000, 8;   sc_start SC_FOOD_VIT, 5400000, 7;   sc_start SC_FOOD_LUK, 5400000, 7;   sc_start SC_PLUSATTACKPOWER, 5400000, 10;			
+12228	Examination3	Examination 3	IT_HEALING	sc_start SC_MOVHASTE_INFINITY, 5400000, 100;   percentheal 100, 100;   sc_start SC_FOOD_AGI, 5400000, 15;   sc_start SC_PLUSATTACKPOWER, 5400000, 52;   sc_start SC_PLUSMAGICPOWER, 5400000, 10;			
+12229	Examination4	Examination 4	IT_HEALING	sc_start SC_MOVHASTE_INFINITY, 5400000, 100;   percentheal 100, 100;   sc_start SC_FOOD_STR, 5400000, 3;   sc_start SC_FOOD_AGI, 5400000, 5;   sc_start SC_FOOD_VIT, 5400000, 10;   sc_start SC_PLUSMAGICPOWER, 5400000, 52;			
+12230	Examination5	Examination 5	IT_HEALING	sc_start SC_MOVHASTE_INFINITY, 5400000, 100;   percentheal 100, 100;   sc_start SC_FOOD_INT, 5400000, 3;   sc_start SC_FOOD_DEX, 5400000, 12;   sc_start SC_PLUSATTACKPOWER, 5400000, 20;   sc_start SC_PLUSMAGICPOWER, 5400000, 20;			
+12231	Examination6	Examination 6	IT_HEALING	percentheal 100,100;   sc_start SC_FOOD_STR, 5400000, 6;   sc_start SC_FOOD_DEX, 5400000, 6;   sc_start SC_FOOD_AGI, 5400000, 6;   sc_start SC_FOOD_INT, 5400000, 6;   sc_start SC_FOOD_VIT, 5400000, 6;   sc_start SC_FOOD_LUK, 5400000, 6;   sc_start SC_PLUSATTACKPOWER, 5400000, 24;   sc_start SC_PLUSMAGICPOWER, 5400000, 24;			
+12232	Gingerbread	Ginger Bread	IT_USABLE	sc_start SC_ATTHASTE_POTION2, 900000, 0;   sc_start SC_MOVHASTE_INFINITY, 900000, 100;			
+12233	Kvass	Kvass	IT_HEALING	percentheal 100,100;			
+12234	Cacao99	Fierce Cacao 99%	IT_HEALING	percentheal 25,0;			
+12235	Strawberry_Choco	Chocolate Strawberry	IT_USABLE	percentheal(0, 5);   itemskill(AL_BLESSING, 5, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12236	Choco_Tart	Chocolate Tart	IT_USABLE	percentheal 5,0;   itemskill AL_ANGELUS,5;			
+12237	Choco_Lump	Junky Chocolate	IT_USABLE	percentheal 0,5;   sc_start SC_POISON,18000,0;   sc_start SC_BLOODING,18000,0;			
+12238	New_Year_Rice_Cake_1	New Year Rice Cake	IT_USABLE	sc_start SC_DPOISON,10000,0,1000,SCFLAG_NONE;   sc_start SC_POISON,50000,0;			
+12239	New_Year_Rice_Cake_2	New Year Rice Cake	IT_USABLE	sc_start SC_DPOISON,10000,0,1000,SCFLAG_NONE;   sc_start SC_POISON,50000,0;			
+12240	Old_Yellow_Box	Old Yellow Box	IT_USABLE	getrandgroupitem 12240,1;			
+12241	M_Center_Potion	Mercenary Concentration Potion	IT_USABLE	mercenary_sc_start SC_ATTHASTE_POTION1, 1800000, 0;			
+12242	M_Awakening_Potion	Mercenary Awakening Potion	IT_USABLE	mercenary_sc_start SC_ATTHASTE_POTION2, 1800000, 0;			
+12243	M_Berserk_Potion	Mercenary Berserk Potion	IT_USABLE	mercenary_sc_start SC_ATTHASTE_POTION3, 1800000, 0;			
+12244	Old_Gift_Box	Old Gift Box	IT_USABLE	getrandgroupitem 12244,1;			
+12245	Green_Ale_US	Green Ale	IT_HEALING	percentheal 100,0;			
+12246	Magic_Card_Album	Mystical Card Album	IT_USABLE	getrandgroupitem 12246,1;			
+12247	Halohalo	Halo-Halo	IT_USABLE	sc_start SC_FOOD_STR,600000,3;   sc_start SC_FOOD_DEX,600000,3;   sc_start SC_FOOD_AGI,600000,3;   sc_start SC_FOOD_INT,600000,3;   sc_start SC_FOOD_VIT,600000,3;   sc_start SC_FOOD_LUK,600000,3;			
+12248	Masquerade_Ball_Box	Fancy Ball Box	IT_USABLE	getrandgroupitem 12248,1;			
+12249	Payroll_Of_Kafra_	Payment Statement for Kafra Employee	IT_USABLE				
+12250	Str_Dish10_M	Steamed Tongue	IT_USABLE	sc_start SC_FOOD_STR,3600000,10;   percentheal 20,10;			
+12251	Agi_Dish10_M	Steamed Desert Scorpions	IT_USABLE	sc_start SC_FOOD_AGI,3600000,10;   percentheal 15,5;			
+12252	Int_Dish10_M	Dragon Breath Cocktail	IT_USABLE	sc_start SC_FOOD_INT,3600000,10;   percentheal 10,20;			
+12253	Dex_Dish10_M	Hwergelmir's Tonic	IT_USABLE	sc_start SC_FOOD_DEX,3600000,10;   percentheal 10,10;			
+12254	Luk_Dish10_M	Cooked Nine Tail	IT_USABLE	sc_start SC_FOOD_LUK,3600000,10;   percentheal 14,8;			
+12255	Vit_Dish10_M	Immortal Stew	IT_USABLE	sc_start SC_FOOD_VIT,3600000,10;   percentheal 25,0;			
+12256	PRO_Gift_Box	PRO Gift Box	IT_USABLE				
+12257	Cold_Medicine	Cold Medicine	IT_HEALING	percentheal 25,25;			
+12258	Bombring_Box	Bomb Poring Box	IT_USABLE	if(strcharinfo(PC_MAP)=="job3_rang02") {    monster "this",-1,-1,"--ja--",1904,1,"";   }			
+12259	Miracle_Medicine	Miracle Tonic	IT_USABLE	getexp 3000000,1500000;			
+12260	Cool_Summer_Outfit	Cool Summer Outfit	IT_USABLE	sc_start SC_SUMMER,600000,0;			
+12261	Secret_Medicine	Leap of Fantasy	IT_USABLE	getexp 2000000,1000000;			
+12262	Inspector_Certificate_	Authoritative Badge	IT_USABLE	sc_start SC_MOVHASTE_HORSE, 180000, 25;			
+12263	Comp_Battle_Manual	Field Manual	IT_USABLE	sc_start SC_CASH_PLUSEXP,1800000,50;			
+12264	Comp_Bubble_Gum	Bubble Gum	IT_USABLE	sc_start SC_CASH_RECEIVEITEM,1800000,200;			
+12265	Comp_Insurance	Life Insurrance	IT_USABLE	sc_start SC_CASH_DEATHPENALTY,1800000,0;			
+12266	Sesame_Pastry_	Sesame Pastry	IT_USABLE	sc_start SC_FOOD_BASICHIT,1200000,30;			
+12267	Honey_Pastry_	Honey Pastry	IT_USABLE	sc_start SC_FOOD_BASICAVOIDANCE,1200000,30;			
+12268	Rainbow_Cake_	Rainbow Cake	IT_USABLE	sc_start SC_PLUSATTACKPOWER, 60000, 10;   sc_start SC_PLUSMAGICPOWER, 60000, 10;			
+12269	Tasty_Colonel	Tasty Pink Ration	IT_USABLE	sc_start SC_PLUSATTACKPOWER, 600000, 15;			
+12270	Tasty_Major	Tasty White Ration	IT_USABLE	sc_start SC_PLUSMAGICPOWER, 600000, 15;			
+12271	Mre_A	Military Ration A	IT_HEALING	percentheal 5,0;			
+12272	Mre_B	Military Ration B	IT_USABLE	sc_start SC_FOOD_BASICHIT,600000,33;			
+12273	Mre_C	Military Ration C	IT_USABLE	sc_start SC_FOOD_BASICAVOIDANCE,600000,33;			
+12274	Gold_Pill_1	Daehwandan	IT_HEALING	sc_start2 SC_ATKER_ASPD,3600000,5,10;			
+12275	Gold_Pill_2	Taecheongdan	IT_HEALING	sc_start2 SC_ATKER_MOVESPEED,3600000,5,10;			
+12276	Mimic_Scroll	Mimic Scroll	IT_USABLE	mercenary_create M_MIMIC, 1800000;			
+12277	Disguise_Scroll	Disguise Scroll	IT_USABLE	mercenary_create M_DISGUISE, 1800000;			
+12278	Alice_Scroll	Alice Scroll	IT_USABLE	mercenary_create M_ALICE, 1800000;			
+12279	Undead_Element_Scroll	Undead Elemental Scroll	IT_USABLE	sc_start4(SC_ARMOR_RESIST, 300000, 20, 20, 20, 20);			
+12280	Holy_Element_Scroll	Holy Elemental Scroll	IT_USABLE	specialeffect(EF_BENEDICTIO, AREA, playerattached());   sc_start SC_BENEDICTIO,300000,1;			
+12281	Tresure_Box_WoE	Event Treasure Box	IT_USABLE	getrandgroupitem 12281,1;			
+12282	Internet_Cafe1	Internet Cafe1	IT_USABLE	sc_start SC_FOOD_STR, 5400000, 3;   sc_start SC_FOOD_DEX, 5400000, 3;   sc_start SC_FOOD_AGI, 5400000, 3;   sc_start SC_FOOD_INT, 5400000, 3;   sc_start SC_FOOD_VIT, 5400000, 3;   sc_start SC_FOOD_LUK, 5400000, 3;   sc_start SC_PLUSATTACKPOWER, 5400000, 15;   sc_start SC_PLUSMAGICPOWER, 5400000, 15;			
+12283	Internet_Cafe2	Internet Cafe2	IT_USABLE	sc_start SC_FOOD_STR, 5400000, 8;   sc_start SC_FOOD_DEX, 5400000, 4;   sc_start SC_FOOD_AGI, 5400000, 6;   sc_start SC_PLUSATTACKPOWER, 5400000, 32;   sc_start SC_FOOD_BASICAVOIDANCE, 5400000, 5;			
+12284	Internet_Cafe3	Internet Cafe3	IT_USABLE	sc_start SC_FOOD_INT, 5400000, 8;   sc_start SC_FOOD_VIT, 5400000, 4;   sc_start SC_FOOD_DEX, 5400000, 6;   sc_start SC_PLUSMAGICPOWER, 5400000, 40;			
+12285	Internet_Cafe4	Internet Cafe4	IT_USABLE	sc_start SC_FOOD_DEX, 5400000, 8;   sc_start SC_FOOD_LUK, 5400000, 4;   sc_start SC_FOOD_AGI, 5400000, 6;   sc_start SC_PLUSATTACKPOWER, 5400000, 24;   sc_start SC_PLUSMAGICPOWER, 5400000, 24;			
+12286	Masquerade_Ball_Box2	Masquerade Ball Box2	IT_USABLE	getrandgroupitem 12286,1;			
+12290	Mysterious_Can	Mysterious Can Magic Powder	IT_USABLE	percentheal(5, 0);   itemskill(AL_BLESSING, 5, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12291	Mysterious_PET_Bottle	Mysterious PET Bottle	IT_USABLE	percentheal(0, 5);   itemskill(AL_INCAGI, 5, ISF_CHECKCONDITIONS | ISF_INSTANTCAST | ISF_CASTONSELF);			
+12292	Unripe_Fruit	Unripe Fruit	IT_HEALING	percentheal 20,0;			
+12293	Dried_Yggdrasilberry	Dried Yggdrasilberry	IT_HEALING	percentheal 0,20;			
+12294	PC_Bang_Coin_Box1	PC-Room Coin Box	IT_USABLE	getitem 2740,1;			
+12295	PC_Bang_Coin_Box2	PC-Room Coin Box	IT_USABLE	getitem 2739,1;			
+12296	PC_Bang_Coin_Box3	PC-Room Coin Box	IT_USABLE	getitem 2738,1;			
+12297	PC_Bang_Coin_Box4	PC-Room Coin Box	IT_USABLE	getitem 2738,2;			
+12298	SP_Potion	SP Consumption Reduction Potion	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start SC_ATKER_BLOOD,3600000,15;			
+12299	Mega_Resist_Potion	Mega Resist Potion	IT_USABLE	specialeffect(EF_GUARD, AREA, playerattached());   sc_start SC_TARGET_BLOOD,3600000,10;			
+12300	Wild_Rose_Scroll	Wild Rose Contract	IT_USABLE	mercenary_create M_WILD_ROSE, 1800000;			
+12301	Doppelganger_Scroll	Doppelganger Contract	IT_USABLE	mercenary_create M_DOPPELGANGER, 1800000;			
+12302	Ygnizem_Scroll	Egnigem Cenia Contract	IT_USABLE	mercenary_create M_YGNIZEM, 1800000;			
+12303	Water_Of_Blessing	Blessing Of Water	IT_USABLE				
+12310	Spray_Of_Flowers	Spray Of Flowers	IT_USABLE	sc_start SC_FOOD_BASICAVOIDANCE,600000,10;			
+12311	Large_Spray_Of_Flowers	Huge Spray Of Flowers	IT_USABLE	itemskill ALL_PARTYFLEE,1;			
+12312	Thick_Manual50	Thick Battle Manual	IT_USABLE	sc_start SC_CASH_PLUSEXP,3600000,50;			
+12313	Protection_Of_Angel	Guardian Angel	IT_USABLE	itemskill ALL_ANGEL_PROTECT,1;			
+12314	Noive_Box	Noive Box	IT_USABLE				
+12315	Goddess_Bless	Goddess Of Blessing	IT_USABLE				
+12316	Angel_Bless	Angel Of Blessing	IT_USABLE				
+12317	Powder_Snow	Snow Powder	IT_USABLE	end;			
+12318	Little_Heart	Small Hearts	IT_USABLE				
+12319	Strawberry_Cake	Rune Strawberry Cake	IT_USABLE	sc_start SC_PLUSATTACKPOWER, 600000, 5;   sc_start SC_PLUSMAGICPOWER, 600000, 5;			
+12320	Pineapple_Juice	Schwartzwald Pine Jubilee	IT_USABLE	sc_start SC_FOOD_BASICHIT,600000,10;   sc_start SC_FOOD_BASICAVOIDANCE,600000,20;			
+12321	Spicy_Sandwich	Arunafeltz Desert Sandwich	IT_USABLE	sc_start SC_FOOD_CRITICALSUCCESSVALUE,600000,7;			
+12322	Chocolate_Pie	Chocolate Pie	IT_HEALING	percentheal 5,5;			
+12323	N_Fly_Wing	Novice Fly Wing	IT_USABLE	itemskill AL_TELEPORT,1;			
+12324	N_Butterfly_Wing	Novice Butterfly Wing	IT_USABLE	itemskill AL_TELEPORT,3;			
+12325	N_Magnifier	Novice Magnifier	IT_USABLE	itemskill MC_IDENTIFY,1;			
+12326	J_Firecracker	Large Firecracker	IT_USABLE				
+12327	Charm_Of_Luck	Charm Of Luck	IT_USABLE	sc_start SC_FOOD_LUK,3600000,20;			
+12328	Charm_Of_Happiness	Charm Of Happiness	IT_USABLE	sc_start SC_FOOD_STR,20000,10;   sc_start SC_FOOD_DEX,20000,10;   sc_start SC_FOOD_AGI,20000,10;   sc_start SC_FOOD_INT,20000,10;   sc_start SC_FOOD_VIT,20000,10;   sc_start SC_FOOD_LUK,20000,10;			
+12329	Recall_MaleGM	Summon Male GameMaster Scroll	IT_USABLE	mercenary_create M_GAMEMASTER, 1800000;			
+12330	Recall_FemaleGM	Summon Female GameMaster Scroll	IT_USABLE	mercenary_create F_GAMEMASTER, 1800000;			
+12331	Ginseng	Ginseng	IT_HEALING	percentheal 6,0;			
+12332	Fruit_Juice	Fruit Juice	IT_HEALING	percentheal 0,6;			
+12333	Ansila	Ancilla	IT_USABLE	percentheal 0,15;			
+12334	Cherish_Box	Treasure Edition Helm Box	IT_USABLE	getrandgroupitem 12334,1;			
+12335	Yummy_Skewered_Dish	Grilled Delicious Skewer	IT_HEALING	percentheal 60,60;			
+12336	Baked_Mushroom	Grilled Mushroom	IT_HEALING	percentheal 30,30;			
+12337	Grilled_Sausage	Grilled Sausages	IT_HEALING	percentheal 20,20;			
+12338	Grilled_Corn	Grilled Corn	IT_USABLE	sc_start SC_FOOD_STR,180000,2;   sc_start SC_FOOD_INT,180000,2;   sc_start SC_FOOD_AGI,180000,2;			
+12339	Cherish_Box_Ori	Treasure Edition Box	IT_USABLE	getrandgroupitem 12339,1;			
+12340	Mysterious_Rice_Powder	Chewy Rice Powder	IT_USABLE	pet EVENT_RICECAKE;			
+12341	Special_Alloy_Trap_Box	Special Alloy Trap Box	IT_USABLE	getitem Special_Alloy_Trap, 100;			
+12342	Manuks_Opportunity	Manuk's Opportunity	IT_USABLE	specialeffect(EF_POTION_BERSERK, AREA, playerattached());   sc_start SC_MANU_ATK,600000,10;			
+12343	Manuks_Courage	Manuk's Courage	IT_USABLE	specialeffect(EF_GUARD, AREA, playerattached());   sc_start SC_MANU_DEF,600000,10;			
+12344	Pinguiculas_fruit_Jam	Pinguicula's Fruit Jam	IT_USABLE	specialeffect(EF_POTION_BERSERK, AREA, playerattached());   sc_start SC_SPL_ATK,600000,10;			
+12345	Luciolas_Honey_Jam	Luciola's Honey Jam	IT_USABLE	specialeffect(EF_GUARD, AREA, playerattached());   sc_start SC_SPL_DEF,600000,10;			
+12346	Unripe_Acorn	Unripe Acorn	IT_USABLE	heal -100,0;			
+12347	Acorn_Jelly	Acorn Jelly	IT_USABLE	itemskill ALL_REVERSEORCISH,1;			
+12348	Manuks_Faith	Manuk's Faith	IT_USABLE	specialeffect(EF_POTION_BERSERK, AREA, playerattached());   sc_start SC_MANU_MATK,600000,10;			
+12349	Cornus_Tears	Cornus' Tears	IT_USABLE	specialeffect(EF_POTION_BERSERK, AREA, playerattached());   sc_start SC_SPL_MATK,600000,10;			
+12350	Angeling_Potion	Angeling Potion	IT_USABLE	itemskill(AL_BLESSING, 5, ISF_INSTANTCAST | ISF_CASTONSELF);   itemskill(AL_ANGELUS, 5);			
+12351	Shout_Megaphone	Scream Megaphone	IT_USABLE	itemskill MC_LOUD,1;			
+12352	Dun_Tele_Scroll3	Dungeon Teleport Scroll 3	IT_USABLE	callfunc "F_CashDungeon",3;			
+12353	Tiny_Waterbottle	Small Bottle	IT_USABLE	sc_start SC_PROPERTYWATER,90000,1;			
+12354	Buche_De_Noel	Buche De Noel	IT_USABLE	specialeffect(EF_ANGELUS, AREA, playerattached());   sc_start4 SC_BUCHEDENOEL, 600000, 3, 3, 3, 7;			
+12355	Xmas_Gift	Xmas Gift	IT_USABLE	getrandgroupitem 12355,1;			
+12356	Louise_Costume_Box	Louise Costume Box	IT_USABLE	getrandgroupitem 12356,1;			
+12357	Shiny_Wing_Gown	Shiny Wing Gown	IT_USABLE	pet BACSOJIN_;			
+12358	Fan_Of_Wind	Fan Of Wind	IT_USABLE	pet CIVIL_SERVANT;			
+12359	Very_Soft_Plant	Very Soft Plant	IT_USABLE	pet LEAF_CAT;			
+12360	Very_Red_Juice	Very Red Juice	IT_USABLE	pet LOLI_RURI;			
+12361	Delicious_Shaved_Ice	Delicious Shaved Ice	IT_USABLE	pet MARIONETTE;			
+12362	Kuloren	Kuloren	IT_USABLE	pet SHINOBI;			
+12363	Fit_Pipe	Fit Pipe	IT_USABLE	pet WHISPER;			
+12364	Staff_Of_Leader	Staff Of Leader	IT_USABLE	pet GOBLIN_LEADER;			
+12365	Charming_Lotus	Charming Lotus	IT_USABLE	pet WICKED_NYMPH;			
+12366	Gril_Doll	Girl's Doll	IT_USABLE	pet MIYABI_NINGYO;			
+12367	Luxury_Whisky_Bottle	Luxury Whisky Bottle	IT_USABLE	pet DULLAHAN;			
+12368	Splendid_Mirror	Splendid Mirror	IT_USABLE	pet MEDUSA;			
+12369	Oilpalm_Coconut	Oilpalm Coconut	IT_USABLE	pet STONE_SHOOTER;			
+12370	Grils_Naivety	Girl's Naivety	IT_USABLE	pet INCUBUS;			
+12371	Magical_Lithography	Magical Lithography	IT_USABLE	pet GOLEM;			
+12372	Hell_Contract	Hell Contract	IT_USABLE	pet NIGHTMARE_TERROR;			
+12373	Boys_Naivety	Boy's Pure Heart	IT_USABLE	pet SUCCUBUS;			
+12374	Flaming_Ice	Ice Fireworks	IT_USABLE	pet IMP;			
+12375	Acaraje	Akaraje	IT_USABLE	specialeffect(EF_STEAL, AREA, playerattached());   sc_start2 SC_ACARAJE,120000,5,10;			
+12376	Mysterious_Can2	Mysterious Can2	IT_USABLE	percentheal(3, 0);   itemskill(PR_GLORIA, 2, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12377	Mysterious_PET_Bottle2	Mysterious PET Bottle2	IT_USABLE	percentheal(0, 3);   itemskill(PR_MAGNIFICAT, 1, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12378	2009_Rice_Cake_Soup	Rice Cake Soup	IT_USABLE	percentheal 50, 50;			
+12379	Popes_Cookie	Pope Cookie	IT_USABLE	specialeffect(EF_STEAL, AREA, playerattached());   sc_start4(SC_POPECOOKIE, 1200000, 3, 3, 3, 0);			
+12380	Desert_Wolf_Babe_Scroll	Job Change Flute	IT_USABLE	mercenary_create M_DESERT_WOLF_B, 1800000;			
+12381	ValkyrieA_Scroll	Ancient Languages Scroll	IT_USABLE	if (strcharinfo(PC_MAP) == "job3_arch02") {    mercenary_create VALKYRIE_A, 1800000;   }			
+12382	ValkyrieB_Scroll	Ancient Languages Scroll	IT_USABLE	if (strcharinfo(PC_MAP) == "job3_arch02") {    mercenary_create VALKYRIE_B, 1800000;   }			
+12383	Vulcan_Bullet_Magazine	Vulcan Bullet Magazine	IT_USABLE	getitem Vulcan_Bullet, 1000;			
+12384	Rainbow_Ruby_Water	Rainbow Ruby	IT_USABLE	//if(strcharinfo(PC_MAP)=="job3_war02") {   // itemskill WL_FROSTMISTY,5;   //}			
+12385	Rainbow_Ruby_Fire	Rainbow Ruby	IT_USABLE	//if(strcharinfo(PC_MAP)=="job3_war02") {   // itemskill WL_CRIMSONROCK,5;   //}			
+12386	Rainbow_Ruby_Wind	Rainbow Ruby	IT_USABLE	//if(strcharinfo(PC_MAP)=="job3_war02") {   // itemskill WL_CHAINLIGHTNING,5;   //}			
+12387	Rainbow_Ruby_Earth	Rainbow Ruby	IT_USABLE	//if(strcharinfo(PC_MAP)=="job3_war02") {   // itemskill WL_EARTHSTRAIN,5;   //}			
+12388	Runstone_Crush	Rhydo Runestone For Apprentice	IT_USABLE	//if(strcharinfo(PC_MAP)=="job3_rune02") {   // itemskill(RK_CRUSHSTRIKE, 1, ISF_CHECKCONDITIONS);   //}			
+12389	Runstone_Storm	Pertz Runestone For Apprentice	IT_USABLE	//if (strcharinfo(PC_MAP) == "job3_rune02")   // itemskill(RK_STORMBLAST, 1, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12390	Runstone_Millennium	Verkana Runestone For Apprentice	IT_USABLE	//if (strcharinfo(PC_MAP) == "job3_rune02")   // itemskill(RK_MILLENNIUMSHIELD, 1, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12391	Lucky_Egg_C	Lucky Egg	IT_USABLE	packageitem();			
+12392	RepairA	Repair A	IT_HEALING	if(checkmount() == MOUNT_MADO) itemheal rand(200,300), 0;			
+12393	RepairB	Repair B	IT_HEALING	if(checkmount() == MOUNT_MADO) itemheal rand(300,400), 0;			
+12394	RepairC	Repair C	IT_HEALING	if(checkmount() == MOUNT_MADO) itemheal rand(400,500), 0;			
+12395	Tantanmen	Tantan Noodle	IT_USABLE	pet CHUNG_E;			
+12396	Fools_Day_Box	Gift Box?	IT_USABLE	.@temp = rand(1,10);   if (.@temp == 1) itemskill AL_TELEPORT,1;   else if (.@temp == 2) itemskill AL_TELEPORT,3;   else if (.@temp == 3) percentheal 50,0;   else if (.@temp == 4) percentheal 0,50;   else if (.@temp == 5) percentheal 50,50;   else if (.@temp == 6) getitem Apple,1;   else if (.@temp == 7) itemskill ALL_REVERSEORCISH,1;   else if (.@temp == 8) specialeffect(EF_MAPPILLAR2, AREA, playerattached());   else if (.@temp == 9) specialeffect(EF_ANGEL2, AREA, playerattached());   else specialeffect(EF_COIN, AREA, playerattached());			
+12397	Fools_Day_Box2	Gift Box?	IT_USABLE	.@temp = rand(1, 10);   if (.@temp == 1)    itemskill(TF_DETOXIFY, 1, ISF_INSTANTCAST | ISF_CASTONSELF);   else if (.@temp == 2)    itemskill(TF_PICKSTONE, 1);   else if (.@temp == 3)    itemskill(BA_FROSTJOKE, 1);   else if (.@temp == 4)    itemskill(DC_SCREAM, 1);   else if (.@temp == 5)    announce(strcharinfo(PC_NAME) + " shouts : I am a fool!!!", bc_all, C_WHITE);   else if (.@temp == 6)    getitem(Jellopy, 1);   else if (.@temp == 7)    itemskill(AL_RUWACH, 1);   else if (.@temp == 8)    specialeffect(EF_BEGINASURA, AREA, playerattached());   else if (.@temp == 9)    specialeffect(EF_MVP, AREA, playerattached());   else    specialeffect(EF_CURSEATTACK, AREA, playerattached());			
+12398	PCBang_Gift_Box	PCBang Gift Box	IT_USABLE				
+12399	Castle_Treasure_Box	Castle Treasure Box	IT_USABLE				
+12400	Water_Of_Blessing_	Water Of Blessing 	IT_USABLE				
+12401	Rune_Kn_Test_Int	Rune Kn Test Int	IT_USABLE	sc_start SC_FOOD_INT,300000,40;			
+12402	29Fruit	29Fruit	IT_USABLE				
+12403	Lucky_Egg_C2	Lucky Egg2	IT_USABLE				
+12404	Acti_Potion	Activation Potion	IT_USABLE	specialeffect(EF_STEAL, AREA, playerattached());   sc_start4(SC_VITALIZE_POTION, 120000, 2, 2, 10, 0);			
+12405	Underripe_Yggseed	Underripe Yggseed	IT_USABLE	percentheal(30, 30);   itemskill(AL_BLESSING, 5, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12406	Psychic_ArmorS	Psychic ArmorS	IT_USABLE	specialeffect(EF_ENERGYCOAT, AREA, playerattached());   sc_start4 SC_ARMOR_PROPERTY, 10000, 1, Ele_Neutral, 1, 0;			
+12407	PCBang_Coupon_Box	PCBang Coupon Box	IT_USABLE				
+12408	Leaf_Cat_Ball	Leaf Cat Ball	IT_USABLE	pet E_HYDRA;			
+12409	Pork_Belly_H	Pork Belly H	IT_USABLE				
+12410	Spareribs_H	Spareribs H	IT_USABLE				
+12411	HE_Battle_Manual	HE Battle Manual	IT_USABLE	sc_start SC_CASH_PLUSEXP,900000,200;			
+12412	HE_Bubble_Gum	HE Bubble Gum	IT_USABLE	sc_start SC_CASH_RECEIVEITEM,900000,300;			
+12413	PCBang_Coupon_Box2	PCBang Coupon Box2	IT_USABLE				
+12414	Guarana_Candy	Guarana Candy	IT_USABLE	sc_start(SC_ATTHASTE_POTION1, 1800000, 0);   itemskill(AL_INCAGI, 5, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12415	Siege_Teleport_Scroll2	Siege Teleport Scroll2	IT_USABLE				
+12416	Lucky_Egg_C3	Lucky Egg C3	IT_USABLE				
+12417	Boost500	Boost500	IT_USABLE	sc_start SC_BOOST500, 500000, 10;			
+12418	Full_SwingK	Full SwingK	IT_USABLE	sc_start SC_FULL_SWING_K, 500000, 50;			
+12419	Mana_Plus	Mana +	IT_USABLE	sc_start SC_MANA_PLUS, 500000, 50;			
+12420	Stamina_Up_M	Muramura(M)	IT_USABLE	sc_start SC_MUSTLE_M, 500000, 5;			
+12421	Digestive_F	Falmons(F)	IT_USABLE	sc_start SC_LIFE_FORCE_F, 500000, 5;			
+12422	HP_Increase_PotionS	HP Increase Potion(Small)	IT_USABLE	sc_start4 SC_PROMOTE_HEALTH_RESERCH, 500000, 1, 1, 500, 2;			
+12423	HP_Increase_PotionM	HP Increase Potion(Mid)	IT_USABLE	sc_start4 SC_PROMOTE_HEALTH_RESERCH, 500000, 1, 2, 1500, 3;			
+12424	HP_Increase_PotionL	HP Increase Potion(Large)	IT_USABLE	sc_start4 SC_PROMOTE_HEALTH_RESERCH, 500000, 1, 3, 2500, 5;			
+12425	SP_Increase_PotionS	SP Increase Potion(Small)	IT_USABLE	sc_start4 SC_ENERGY_DRINK_RESERCH, 500000, 1, 1, 0, 2;			
+12426	SP_Increase_PotionM	SP Increase Potion(Mid)	IT_USABLE	sc_start4 SC_ENERGY_DRINK_RESERCH, 500000, 1, 2, 0, 4;			
+12427	SP_Increase_PotionL	SP Increase Potion(Large)	IT_USABLE	sc_start4 SC_ENERGY_DRINK_RESERCH, 500000, 1, 3, 0, 8;			
+12428	Enrich_White_PotionZ	Enriched White PotionZ	IT_USABLE	sc_start SC_EXTRACT_WHITE_POTION_Z, 500000, 20;   heal 1000, 0;			
+12429	Savage_BBQ	Savage BBQ	IT_USABLE	sc_start SC_SAVAGE_STEAK, 300000, 20;			
+12430	Wug_Blood_Cocktail	Warg Blood Cocktail	IT_USABLE	sc_start SC_COCKTAIL_WARG_BLOOD, 300000, 20;			
+12431	Minor_Brisket	Minor Brisket	IT_USABLE	sc_start SC_MINOR_BBQ, 300000, 20;			
+12432	Siroma_Icetea	Siroma Icetea	IT_USABLE	sc_start SC_SIROMA_ICE_TEA, 300000, 20;			
+12433	Drocera_Herb_Stew	Drosera Herb Stew	IT_USABLE	sc_start SC_DROCERA_HERB_STEAMED, 300000, 20;			
+12434	Petti_Tail_Noodle	Petite Tail Noodles	IT_USABLE	sc_start SC_PUTTI_TAILS_NOODLES, 300000, 20;			
+12435	Black_Thing	Black Thing	IT_USABLE	sc_start2 SC_STOMACHACHE, 60000, rand(5,10), 75;			
+12436	Vitata500	Vitata500	IT_USABLE	sc_start2 SC_VITATA_500,500000, 20, 5;   heal 0, 200;			
+12437	Enrich_Celermine_Juice	Enrich Celermine Juice	IT_USABLE	sc_start SC_EXTRACT_SALAMINE_JUICE, 500000, 10;			
+12438	F_Giant_Fly_Wing	F Giant Fly Wing	IT_USABLE				
+12439	F_Battle_Manual	F Battle Manual	IT_USABLE				
+12440	F_Insurance	F Insurance	IT_USABLE				
+12441	F_Bubble_Gum	F Bubble Gum	IT_USABLE				
+12442	F_Kafra_Card	F Kafra Card	IT_USABLE				
+12443	F_Neuralizer	F Neuralizer	IT_USABLE				
+12444	F_Dun_Tele_Scroll1	WoE Teleport Scroll1	IT_USABLE	callfunc "F_CashSiegeTele";			
+12445	F_Str_Dish10_	F Str Dish10 	IT_USABLE				
+12446	F_Agi_Dish10_	F Agi Dish10 	IT_USABLE				
+12447	F_Int_Dish10_	F Int Dish10 	IT_USABLE				
+12448	F_Dex_Dish10_	F Dex Dish10 	IT_USABLE				
+12449	F_Luk_Dish10_	F Luk Dish10 	IT_USABLE				
+12450	F_Vit_Dish10_	F Vit Dish10 	IT_USABLE				
+12451	F_WOB_Rune	F WOB Rune	IT_USABLE				
+12452	F_WOB_Schwaltz	F WOB Schwaltz	IT_USABLE				
+12453	F_WOB_Rachel	F WOB Rachel	IT_USABLE				
+12454	F_WOB_Local	F WOB Local	IT_USABLE				
+12456	F_Greed_Scroll	F Greed Scroll	IT_USABLE				
+12457	F_Glass_Of_Illusion	F Glass Of Illusion	IT_USABLE				
+12458	F_Abrasive	F Abrasive	IT_USABLE				
+12459	F_Med_Life_Potion	Medium Life Potion	IT_USABLE	specialeffect(EF_HEAL3, AREA, playerattached());   sc_start2(SC_M_LIFEPOTION, 600000, -7, 4);			
+12460	F_Small_Life_Potion	Small Life Potion	IT_USABLE	specialeffect(EF_HEAL3, AREA, playerattached());   /* Probably it should be 5% instead of 7%, but we'll follow the client side description... */   sc_start2(SC_S_LIFEPOTION, 600000, -7, 4);			
+12461	F_Regeneration_Potion	Regeneration Potion	IT_USABLE	specialeffect(EF_LIGHTSPHERE, AREA, playerattached());   sc_start(SC_HEALPLUS, 1800000, 20);			
+12462	F_B_Mdef_Potion	Big Magic Defense Potion	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start(SC_PROTECT_MDEF, 180000, 3);			
+12463	F_S_Mdef_Potion	Small Magic Defense Potion	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start(SC_PROTECT_MDEF, 60000, 3);			
+12464	F_B_Def_Potion	Big Defense Potion	IT_USABLE	specialeffect(EF_GUARD, AREA, playerattached());   sc_start(SC_PROTECT_DEF, 180000, 3);			
+12465	F_S_Def_Potion	Small Defense Potion	IT_USABLE	specialeffect(EF_GUARD, AREA, playerattached());   sc_start(SC_PROTECT_DEF, 60000, 3);			
+12466	F_Blessing_10_Scroll	F Blessing 10 Scroll	IT_USABLE				
+12467	F_Inc_Agi_10_Scroll	F Inc Agi 10 Scroll	IT_USABLE				
+12468	F_Aspersio_5_Scroll	F Aspersio 5 Scroll	IT_USABLE				
+12470	F_Wind_Walk_10_Scroll	F Wind Walk 10 Scroll	IT_USABLE				
+12471	F_Adrenaline_Scroll	F Adrenaline Scroll	IT_USABLE				
+12472	F_Convex_Mirror	F Convex Mirror	IT_USABLE				
+12473	RWC_Parti_Box	RWC Parti Box	IT_USABLE	packageitem();			
+12474	RWC_Final_Comp_Box	RWC Final Comp Box	IT_USABLE				
+12475	Cure_Free	Cure Free	IT_USABLE	sc_end SC_SILENCE;   sc_end SC_BLOODING;   sc_end SC_POISON;   sc_end SC_CURSE;   sc_end SC_ORCISH;   sc_end SC_PROPERTYUNDEAD;   itemheal 500,0;			
+12476	PCBang_Coupon_Box3	PCBang Coupon Box3	IT_USABLE				
+12477	Gift_Bundle	Gift Bundle	IT_USABLE	packageitem();			
+12478	Chance_Box	Chance Box	IT_USABLE				
+12479	Caracas_Ring_Box	Caracas Ring Box	IT_USABLE	packageitem();			
+12480	Attend_3Day_Box	Attend 3Day Box	IT_USABLE				
+12481	Attend_7Day_Box	Attend 7Day Box	IT_USABLE				
+12482	Attend_10Day_Box	Attend 10Day Box	IT_USABLE				
+12483	Attend_15Day_Box	Attend 15Day Box	IT_USABLE				
+12484	Attend_20Day_Box	Attend 20Day Box	IT_USABLE				
+12485	Attend_25Day_Box	Attend 25Day Box	IT_USABLE				
+12486	GoldPC_First_Box	GoldPC First Box	IT_USABLE				
+12487	PC_4Leaf_Clover_Box	PC 4Leaf Clover Box	IT_USABLE				
+12488	Ticket_Gift_Box	Ticket Gift Box	IT_USABLE				
+12489	Ticket_Gift_Box2	Ticket Gift Box2	IT_USABLE				
+12490	Vivid_Notation	Vivid Notation	IT_USABLE				
+12491	Curious_Snowball	Curious Snowball	IT_USABLE				
+12492	Crumpled_Paper	Crumpled Paper	IT_USABLE	packageitem();			
+12493	Lucky_Egg_C4	Lucky Egg C4	IT_USABLE	packageitem();			
+12494	E_Giant_Fly_Wing	E Giant Fly Wing	IT_USABLE				
+12495	E_Battle_Manual	E Battle Manual	IT_USABLE				
+12496	E_Insurance	E Insurance	IT_USABLE				
+12497	E_Bubble_Gum	E Bubble Gum	IT_USABLE				
+12498	E_Kafra_Card	E Kafra Card	IT_USABLE				
+12499	E_Neuralizer	E Neuralizer	IT_USABLE				
+12500	E_Dun_Tele_Scroll1	E Dun Tele Scroll1	IT_USABLE				
+12501	E_Str_Dish10_	E Str Dish10 	IT_USABLE				
+12502	E_Agi_Dish10_	E Agi Dish10 	IT_USABLE				
+12503	E_Int_Dish10_	E Int Dish10 	IT_USABLE				
+12504	E_Dex_Dish10_	E Dex Dish10 	IT_USABLE				
+12505	E_Luk_Dish10_	E Luk Dish10 	IT_USABLE				
+12506	E_Vit_Dish10_	E Vit Dish10 	IT_USABLE				
+12507	E_WOB_Rune	E WOB Rune	IT_USABLE				
+12508	E_WOB_Schwaltz	E WOB Schwaltz	IT_USABLE				
+12509	E_WOB_Rachel	E WOB Rachel	IT_USABLE				
+12510	E_WOB_Local	E WOB Local	IT_USABLE				
+12511	E_Siege_Teleport_Scroll	E Siege Teleport Scroll	IT_USABLE				
+12512	E_Greed_Scroll	E Greed Scroll	IT_USABLE				
+12513	E_Glass_Of_Illusion	E Glass Of Illusion	IT_USABLE				
+12514	E_Abrasive	E Abrasive	IT_USABLE				
+12515	E_Med_Life_Potion	E Med Life Potion	IT_USABLE				
+12516	E_Small_Life_Potion	E Small Life Potion	IT_USABLE				
+12517	E_Regeneration_Potion	E Regeneration Potion	IT_USABLE				
+12518	E_B_Mdef_Potion	E B Mdef Potion	IT_USABLE				
+12519	E_S_Mdef_Potion	E S Mdef Potion	IT_USABLE				
+12520	E_B_Def_Potion	E B Def Potion	IT_USABLE				
+12521	E_S_Def_Potion	E S Def Potion	IT_USABLE				
+12522	E_Blessing_10_Scroll	E Blessing 10 Scroll	IT_USABLE				
+12523	E_Inc_Agi_10_Scroll	E Inc Agi 10 Scroll	IT_USABLE				
+12524	E_Aspersio_5_Scroll	E Aspersio 5 Scroll	IT_USABLE				
+12525	E_Assumptio_5_Scroll	E Assumptio 5 Scroll	IT_USABLE				
+12526	E_Wind_Walk_10_Scroll	E Wind Walk 10 Scroll	IT_USABLE				
+12527	E_Adrenaline_Scroll	E Adrenaline Scroll	IT_USABLE				
+12528	E_Convex_Mirror	E Convex Mirror	IT_USABLE				
+12529	White_Slim_Potion_Box	White Slim Potion Box	IT_USABLE	getitem White_Slim_Potion, 200;			
+12530	Mastela_Fruit_Box	Mastela Fruit Box	IT_USABLE	getitem Fruit_Of_Mastela, 200;			
+12531	White_Potion_Box	White Potion Box	IT_USABLE	getitem White_Potion, 100;			
+12532	Royal_Jelly_Box2	Royal Jelly Box	IT_USABLE	getitem Royal_Jelly, 100;			
+12533	Blue_Herb_Box2	Blue Herb Box	IT_USABLE	getitem Blue_Herb, 100;			
+12534	Yggdrasil_Seed_Box	Yggdrasil Seed Box	IT_USABLE	getitem Seed_Of_Yggdrasil, 30;			
+12535	Iggdrasilberry_Box	Yggdrasil Berry Box	IT_USABLE	getitem Yggdrasilberry, 15;			
+12536	NY_Rice_Cake_Soup	NY Rice Cake Soup	IT_USABLE	percentheal 20,20;			
+12537	Solo_Gift_Basket	Solo Gift Basket	IT_USABLE	packageitem();			
+12538	Couple_Event_Basket	Couple Event Basket	IT_USABLE	packageitem();			
+12539	Splendid_Box	Splendid Box	IT_USABLE				
+12540	GM_Warp_Box	GM Warp Box	IT_USABLE	packageitem();			
+12541	Fortune_Cookie1	Fortune Cookie1	IT_USABLE	packageitem();			
+12542	Fortune_Cookie2	Fortune Cookie2	IT_USABLE				
+12543	Fortune_Cookie3	Fortune Cookie3	IT_USABLE	packageitem();			
+12544	Mystic_Tree_Branch	Mystic Tree Branch	IT_USABLE				
+12545	Lucky_Egg_C5	Lucky Egg C5	IT_USABLE	packageitem();			
+12546	Suspicious_Dish	Suspicious Dish	IT_USABLE	sc_start SC_POISON,12000,0;			
+12547	Chalcenodny_Box	Chalcenodny Box	IT_USABLE				
+12548	Buy_Market_Permit2	Shabby Purchase Street Stall License	IT_USABLE	buyingstore 2;			
+12549	White_Slim_Pot_Box2	White Slim Potion Box	IT_USABLE	getitem White_Slim_Potion, 100;			
+12550	Poison_Bottle_Box2	Poison Bottle Box	IT_USABLE	getitem Poison_Bottle, 30;			
+12551	MVP_Tele_Scroll	MVP Tele Scroll	IT_USABLE				
+12552	Quest_Tele_Scroll	Quest Tele Scroll	IT_USABLE				
+12553	Brysinggamen_Piece_Box	Brysinggamen Piece Box	IT_USABLE				
+12554	Asprika_Piece_Box	Asprika Piece Box	IT_USABLE				
+12555	Brynhild_Piece_Box	Brynhild Piece Box	IT_USABLE				
+12556	Sleipnir_Piece_Box	Sleipnir Piece Box	IT_USABLE				
+12557	Mjolnir_Piece_Box	Mjolnir Piece Box	IT_USABLE				
+12558	Magingiorde_Piece_Box	Magingiorde Piece Box	IT_USABLE				
+12559	Tenkaippin_Strong	Tenkaippin Strong	IT_USABLE				
+12560	Tenkaippin_Clean	Tenkaippin Clean	IT_USABLE				
+12561	Mysterious_Seed	Mysterious Seed	IT_USABLE				
+12562	Bubble_Gum_Plus	Bubble Gum Plus	IT_USABLE				
+12563	BM75	BM75	IT_USABLE				
+12564	3D_Glasses_Box	3D Glasses Box	IT_USABLE				
+12565	Cheer_Scarf_Box	Cheer Scarf Box	IT_USABLE				
+12566	Cheer_Scarf2_Box	Cheer Scarf2 Box	IT_USABLE				
+12567	Cheer_Scarf3_Box	Cheer Scarf3 Box	IT_USABLE				
+12568	Cheer_Scarf4_Box	Cheer Scarf4 Box	IT_USABLE				
+12569	Cheer_Scarf6_Box	Cheer Scarf6 Box	IT_USABLE				
+12570	Cheer_Scarf8_Box	Cheer Scarf8 Box	IT_USABLE				
+12571	Cheer_Scarf10_Box	Cheer Scarf10 Box	IT_USABLE				
+12572	Cheer_Scarf10_Box2	Cheer Scarf10 Box2	IT_USABLE				
+12573	Fruit_Basket	Fruit Basket	IT_USABLE				
+12574	Mora_Berry	Mora Berry	IT_USABLE				
+12575	Arrow_Of_Elf_Cntr	Arrow Of Elf Cntr	IT_USABLE	getitem Arrow_Of_Elf,500;			
+12576	Hunting_Arrow_Cntr	Hunting Arrow Cntr	IT_USABLE	getitem Hunting_Arrow,500;			
+12577	Lucky_Egg_C6	Lucky Egg C6	IT_USABLE	packageitem();			
+12578	Rapid_Life_Water	Rapid Life Water	IT_USABLE				
+12579	Ring_Of_Valkyrie_Box	Ring Of Valkyrie Box	IT_USABLE				
+12580	Vending_Search_Scroll	Universal Catalog Silver	IT_USABLE	searchstores 10,0;			
+12581	Vending_Search_Scroll2	Universal Catalog Gold	IT_USABLE	searchstores 10,1;			
+12591	Uni_Catalog_Bz	Universal Catalog Bronze	IT_USABLE	searchstores 10,1;			
+12609	Old_Ore_Box	Old Ore Box	IT_USABLE	packageitem();			
+12666	Thai_Perfume_MATK	Thai Perfume(MATK)	IT_USABLE	specialeffect(EF_MAGICALATTHIT, AREA, playerattached());   sc_start(SC_SKF_MATK, 600000, 24);			
+12667	Thai_Perfume_ATK	Thai Perfume(ATK)	IT_USABLE	specialeffect(EF_MAGICALATTHIT, AREA, playerattached());   sc_start(SC_SKF_ATK, 600000, 24);			
+12668	Thai_Perfume_ASPD	Thai Perfume(ASPD)	IT_USABLE	specialeffect(EF_MAGICALATTHIT, AREA, playerattached());   sc_start(SC_SKF_ASPD, 600000, 3);			
+12669	Thai_Perfume_CAST	Thai Perfume(CAST)	IT_USABLE	specialeffect(EF_MAGICALATTHIT, AREA, playerattached());   sc_start(SC_SKF_CAST, 600000, 5);			
+12701	Old_Blue_Box_F	Old Blue Box	IT_USABLE				
+12702	Old_Bleu_Box	Old Navy Box	IT_USABLE	getrandgroupitem Old_Bleu_Box,1;   getrandgroupitem Old_Bleu_Box,1;			
+12704	Elixir_Of_Life	Elixir of Life	IT_HEALING	percentheal 100,0;			
+12705	Noble_Nameplate	Noble Nameplate	IT_USABLE	sc_start SC_CASH_PLUSEXP,1800000,100;			
+12706	Lucky_Cookie01	Lucky Cookie	IT_USABLE	itemskill(PR_GLORIA, 5, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12707	Lucky_Cookie02	Lucky Cookie	IT_USABLE	itemskill(PR_MAGNIFICAT, 1, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12708	Lucky_Cookie03	Lucky Cookie	IT_USABLE	itemskill(PR_IMPOSITIO, 3, ISF_INSTANTCAST | ISF_CASTONSELF);			
+12709	Guyak_Candy	Guyak Candy	IT_HEALING	percentheal 30,30;			
+12710	Guyak_Pudding	Guyak Pudding	IT_USABLE	sc_start SC_MOVHASTE_POTION, 300000, 100;			
+12711	Pretzel	Pretzel	IT_HEALING	itemheal rand(50,90),0;			
+12712	Green_Beer	Green Beer	IT_USABLE	percentheal 0,50;			
+12713	Monster_Extract	Monster Extract	IT_USABLE				
+12714	Easter_Scroll	Easter Scroll	IT_USABLE	getrandgroupitem 12714,1;			
+12715	Black_Treasure_Box	Black Treasure Box	IT_USABLE				
+12716	Indian_Rice_Cake	Indian Rice Cake	IT_USABLE				
+12717	Poison_Paralysis	Paralyze	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_PARALYSE, 300000, 0, 10, SCFLAG_FIXEDTICK;			
+12718	Poison_Leech	Leech End	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_LEECHESEND, 300000, 0, 10, SCFLAG_FIXEDTICK;			
+12719	Poison_Oblivion	Oblivion Curse	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_OBLIVIONCURSE, 300000, 0, 10, SCFLAG_FIXEDTICK;			
+12720	Poison_Contamination	Disheart	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_DEATHHURT, 300000, 0, 10, SCFLAG_FIXEDTICK;			
+12721	Poison_Numb	Toxin	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_TOXIN, 300000, 0, 10, SCFLAG_FIXEDTICK;			
+12722	Poison_Fever	Pyrexia	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_PYREXIA, 300000, 0, 10, SCFLAG_FIXEDTICK;			
+12723	Poison_Laughing	Magic Mushroom	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_MAGICMUSHROOM, 300000, 0, 10, SCFLAG_FIXEDTICK;			
+12724	Poison_Fatigue	Venom Bleed	IT_HEALING	specialeffect(EF_ENCHANTPOISON, AREA, playerattached());   sc_start SC_VENOMBLEED, 15000, 0, 10, SCFLAG_FIXEDTICK;			
+12725	Runstone_Nosiege	Nauthiz Rune	IT_USABLE	itemskill RK_REFRESH, 1;			
+12726	Runstone_Rhydo	Raido Rune	IT_USABLE	itemskill(RK_CRUSHSTRIKE, 1, ISF_CHECKCONDITIONS);			
+12727	Runstone_Verkana	Berkana Rune	IT_USABLE	itemskill RK_MILLENNIUMSHIELD, 1;			
+12728	Runstone_Isia	Isa Rune	IT_USABLE	itemskill RK_VITALITYACTIVATION, 1;			
+12729	Runstone_Asir	Othila Rune	IT_USABLE	itemskill RK_FIGHTINGSPIRIT, 1;			
+12730	Runstone_Urj	Uruz Rune	IT_USABLE	itemskill RK_ABUNDANCE, 1;			
+12731	Runstone_Turisus	Thurisaz Rune	IT_USABLE	itemskill RK_GIANTGROWTH, 1;			
+12732	Runstone_Pertz	Wyrd Rune	IT_USABLE	itemskill RK_STORMBLAST, 1;			
+12733	Runstone_Hagalas	Hagalaz Rune	IT_USABLE	itemskill RK_STONEHARDSKIN, 1;			
+12734	Runstone_Quality	Luxurious Rune	IT_HEALING	makerune 5;			
+12735	Runstone_Ancient	Ancient Rune	IT_HEALING	makerune 11;			
+12736	Runstone_Mystic	Mystic Rune	IT_HEALING	makerune 14;			
+12737	Runstone_Ordinary	General Rune	IT_HEALING	makerune 2;			
+12738	Runstone_Rare	Rare Rune	IT_HEALING	makerune 8;			
+12739	Snow_Flower	Snow Flowers	IT_USABLE	percentheal 10,10;			
+12740	Inc_Str_Scroll	Amplification Scroll	IT_USABLE	specialeffect(EF_POTION_BERSERK, AREA, playerattached());   sc_start SC_STR_SCROLL, 60000, 20;			
+12741	Inc_Int_Scroll	Intellect Amplification Scroll	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start SC_INT_SCROLL, 60000, 20;			
+12742	Valentine_Gift_Box1	Valentine Gift Box	IT_USABLE	getitem Valentine_Gold_Ring, 1;			
+12743	Valentine_Gift_Box2	Valentine Gift Box	IT_USABLE	getitem Valentine_Silver_Ring, 1;			
+12744	Chocotate_Box	Chocolate Box	IT_USABLE	getitem Chocolate, 1;			
+12745	Skull_Scroll	Skull Scroll	IT_USABLE	sc_start SC_SKELSCROLL,1800000,5;			
+12746	Destruction_Scroll	Destruction Scroll	IT_USABLE	sc_start SC_DISTRUCTIONSCROLL,1800000,5;			
+12747	Royal_Scroll	Royal Scroll	IT_USABLE	sc_start SC_ROYALSCROLL,1800000,5;			
+12748	Immune_Scroll	Immune Scroll	IT_USABLE	sc_start SC_IMMUNITYSCROLL,1800000,5;			
+12749	Mystic_Scroll	Mystic Scroll	IT_USABLE	sc_start SC_MYSTICSCROLL,1800000,5;			
+12750	Battle_Scroll	Battle Scroll	IT_USABLE	sc_start SC_BATTLESCROLL,1800000,5;			
+12751	Armor_Scroll	Armor Scroll	IT_USABLE	sc_start2 SC_ARMORSCROLL,1800000,5,10;			
+12752	Prayer_Scroll	Prayer Scroll	IT_USABLE	sc_start2 SC_FREYJASCROLL,1800000,5,10;			
+12753	Soul_Scroll	Soul Scroll	IT_USABLE	sc_start SC_SOULSCROLL,1800000,5;			
+12754	New_Year_Bun	New Year Bun	IT_USABLE	percentheal 50,50;			
+12755	Traditional_Firecrack	Traditional Firecrack	IT_USABLE	specialeffect(EF_POK_JAP, AREA, playerattached());   itemskill MO_CALLSPIRITS,3;   itemskill MO_FINGEROFFENSIVE,5;			
+12756	New_Gift_Envelope	New Gift Envelope	IT_USABLE	packageitem();			
+12757	Loyal_Ring1_Box	Loyal Ring1 Box	IT_USABLE				
+12758	Loyal_Ring2_Box	Loyal Ring2 Box	IT_USABLE				
+12759	Loyal_Ring3_Box	Loyal Ring3 Box	IT_USABLE				
+12760	Bubble_Gum_Green	Bubble Gum Green	IT_USABLE				
+12761	Bubble_Gum_Yellow	Bubble Gum Yellow	IT_USABLE				
+12762	Bubble_Gum_Orange	Bubble Gum Orange	IT_USABLE				
+12763	Bubble_Gum_Red	Bubble Gum Red	IT_USABLE				
+12764	Fools_Day_Box_Tw	Fools Day Box Tw	IT_USABLE				
+12765	Summer_Knight_Box	Summer Knight Box	IT_USABLE				
+12766	Reward_Job_BM25	Reward Job BM25	IT_USABLE	sc_start SC_CASH_PLUSONLYJOBEXP,1800000,25;			
+12767	Passion_FB_Hat_Box	Passion FB Hat Box	IT_USABLE	packageitem();			
+12768	Cool_FB_Hat_Box	Cool FB Hat Box	IT_USABLE	packageitem();			
+12769	Victory_FB_Hat_Box	Victory FB Hat Box	IT_USABLE	packageitem();			
+12770	Glory_FB_Hat_Box	Glory FB Hat Box	IT_USABLE	packageitem();			
+12771	Passion_Hat_Box2	Passion Hat Box2	IT_USABLE	packageitem();			
+12772	Cool_Hat_Box2	Cool Hat Box2	IT_USABLE	packageitem();			
+12773	Victory_Hat_Box2	Victory Hat Box2	IT_USABLE	packageitem();			
+12786	Change_Slot_Card	Character Position Change Coupon	IT_USABLE	SlotChange += 1;			
+12790	Change_Name_Card	Name Change Coupon	IT_USABLE	CharRename += 1;			
+12831	Potion_Box	Potion Box	IT_USABLE	getitem Red_Slim_Potion, 100;   getitem Yellow_Slim_Potion, 100;   getitem White_Slim_Potion, 100;   getitem Blue_Potion, 100;			
+12883	Almighty	Almighty	IT_USABLE	specialeffect(EF_BASH3D, AREA, playerattached());   sc_start(SC_FOOD_STR_CASH, 1800000, 10);   sc_start(SC_FOOD_VIT_CASH, 1800000, 10);   sc_start(SC_FOOD_AGI_CASH, 1800000, 10);   sc_start(SC_FOOD_INT_CASH, 1800000, 10);   sc_start(SC_FOOD_DEX_CASH, 1800000, 10);   sc_start(SC_FOOD_LUK_CASH, 1800000, 10);   sc_start2(SC_ALMIGHTY, 1800000, 30, 30);			
+12928	J_Aspersio_5_Scroll	Sacred Scroll	IT_USABLE	itemskill PR_ASPERSIO,5;			
+12968	Emergency_Scroll1	Emergency Level 1 Scroll	IT_USABLE	itemskill GD_EMERGENCYCALL,1;			
+12969	Emergency_Scroll2	Emergency Level 2 Scroll	IT_USABLE	itemskill GD_EMERGENCYCALL,1;			
+12970	Emergency_Scroll3	Emergency Level 3 Scroll	IT_USABLE	itemskill GD_EMERGENCYCALL,1;			
+12977	Teleport_Scroll1	Teleport Scroll 1	IT_USABLE	callfunc "F_CashTele",1;			
+12978	Teleport_Scroll2	Teleport Scroll 2	IT_USABLE	callfunc "F_CashTele",2;			
+12979	Teleport_Scroll3	Teleport Scroll 3	IT_USABLE	callfunc "F_CashTele",3;			
+12980	Teleport_Scroll4	Teleport Scroll 4	IT_USABLE	callfunc "F_CashTele",4;			
+12981	Teleport_Scroll5	Teleport Scroll 5	IT_USABLE	callfunc "F_CashTele",5;			
+12982	Teleport_Scroll6	Teleport Scroll 6	IT_USABLE	callfunc "F_CashTele",6;			
+12989	Pet_Egg_Scroll6	Pet Egg Scroll 6	IT_USABLE	packageitem();			
+12990	Pet_Egg_Scroll7	Pet Egg Scroll 7	IT_USABLE	packageitem();			
+12991	Pet_Egg_Scroll8	Party Hard Pack	IT_USABLE	packageitem();			
+12992	Pet_Egg_Scroll9	Adventurer Pack	IT_USABLE	packageitem();			
+12993	Pet_Egg_Scroll10	Pet Egg Scroll 10	IT_USABLE	packageitem();			
+12994	Pet_Egg_Scroll11	Pet Egg Scroll 11	IT_USABLE	packageitem();			
 13000	Jujube_Dagger	Jujube Dagger	IT_WEAPON	bonus bAtkEle,Ele_Wind;			
 13001	Dragon_Killer	Dragon Killer	IT_WEAPON	bonus bIgnoreDefRace,RC_Dragon;   bonus2 bExpAddRace,RC_Dragon,10;			
 13002	Ginnungagap	Ginnungagap	IT_WEAPON	bonus bAtkEle,Ele_Dark;   bonus2 bAddEff,Eff_Blind,500;   bonus2 bAddEff2,Eff_Blind,50;			
@@ -2722,6 +3615,170 @@
 13420	Honglyuns_Sword	Honglyun's Sword	IT_WEAPON	bonus bAtkEle,Ele_Fire;   bonus bStr,2;   bonus bInt,2;			
 13421	Ruber	Ruber	IT_WEAPON	autobonus "{ bonus2 bSkillAtk,KN_BOWLINGBASH,20; bonus2 bSkillAtk,SM_BASH,20; }",5,15000,BF_WEAPON,"{ specialeffect(EF_ENHANCE, AREA, playerattached()); }";			
 13422	Flamberge_C	Flamberge	IT_WEAPON	bonus bUnbreakableWeapon,0;			
+13558	Weapon_Card_Scroll	Weapon Card Pet Egg Scroll	IT_USABLE				
+13559	Armor_Card_Scroll	Armor Card Pet Egg Scroll	IT_USABLE				
+13560	Helmet_Card_Scroll	Helmet Card Pet Egg Scroll	IT_USABLE				
+13561	Hood_Card_Scroll	Garment Card Pet Egg Scroll	IT_USABLE				
+13562	Hood_Card_Scroll2	Shield Card Pet Egg Scroll	IT_USABLE				
+13563	Shoes_Card_Scroll	Shoes Card Pet Egg Scroll	IT_USABLE				
+13564	Accy_Card_Scroll	Accessory Card Pet Egg Scroll	IT_USABLE				
+13565	Weapon_Card_Scroll2	Weapon Card Pet Egg Scroll	IT_USABLE				
+13566	Weapon_Card_Scroll3	Weapon Card Pet Egg Scroll	IT_USABLE				
+13567	Armor_Card_Scroll2	Armor Card Pet Egg Scroll	IT_USABLE				
+13568	Accy_Card_Scroll2	Accessory Card Pet Egg Scroll	IT_USABLE				
+13617	Super_Pet_Egg1	Super Pet Egg 1	IT_USABLE	packageitem();			
+13618	Super_Pet_Egg2	Super Pet Egg 2	IT_USABLE	packageitem();			
+13619	Super_Pet_Egg3	Super Pet Egg 3	IT_USABLE	packageitem();			
+13620	Super_Pet_Egg4	Super Pet Egg 4	IT_USABLE	packageitem();			
+13630	Super_Card_Pet_Egg1	Super Card Pet Egg 1	IT_USABLE	packageitem();			
+13631	Super_Card_Pet_Egg2	Super Card Pet Egg 2	IT_USABLE	packageitem();			
+13632	Super_Card_Pet_Egg3	Super Card Pet Egg 3	IT_USABLE	packageitem();			
+13633	Super_Card_Pet_Egg4	Super Card Pet Egg 4	IT_USABLE	packageitem();			
+13701	Pet_Egg_Scroll12	Pet Egg Scroll 12	IT_USABLE	packageitem();			
+13702	Pet_Egg_Scroll13	Pet Egg Scroll 13	IT_USABLE	packageitem();			
+13703	Pet_Egg_Scroll14	Pet Egg Scroll 14	IT_USABLE	packageitem();			
+13704	Super_Pet_Egg5	Super Pet Egg 5	IT_USABLE	packageitem();			
+13705	Super_Pet_Egg6	Super Pet Egg 6	IT_USABLE	packageitem();			
+13706	Super_Pet_Egg7	Super Pet Egg 7	IT_USABLE	packageitem();			
+13707	Super_Pet_Egg8	Super Pet Egg 8	IT_USABLE	packageitem();			
+13708	Pet_Egg_Scroll_E	Pet Egg Scroll E	IT_USABLE	packageitem();			
+13709	BRO_Package_1	BRO Package Box	IT_USABLE				
+13825	Green_Box_	Old Green Box	IT_USABLE				
+13826	Power_Box1	Power Box 1	IT_USABLE	getitem 682,1;   getitem 12123,1;   getitem 12122,1;			
+13827	Power_Box2	Power Box 2	IT_USABLE	getitem 683,1;   getitem 12123,1;   getitem 12122,1;			
+13828	Resist_Box1	Resist Box 1	IT_USABLE	getitem 12118,1;   getitem 12119,1;			
+13829	Resist_Box2	Resist Box 2	IT_USABLE	getitem 12120,1;   getitem 12121,1;			
+13830	Stat_Boost1	Stat Boost 1	IT_USABLE	sc_start SC_CHASEWALK2,60000,5;   sc_start SC_INCAGI,60000,5;   sc_start SC_INCVIT,60000,5;			
+13831	Stat_Boost2	Stat Boost 2	IT_USABLE	sc_start SC_INCINT,60000,5;   sc_start SC_INCLUK,60000,5;   sc_start SC_INCDEX,60000,5;			
+13832	Stat_Boost3	Stat Boost 3	IT_USABLE	sc_start SC_INCAGI,60000,5;   sc_start SC_INCVIT,60000,5;   sc_start SC_INCDEX,60000,5;			
+13833	Stat_Boost4	Stat Boost 4	IT_USABLE	sc_start SC_INCINT,60000,5;   sc_start SC_INCVIT,60000,5;   sc_start SC_INCDEX,60000,5;			
+13911	Xmas_Pet_Scroll	Christmas Pet Scroll	IT_USABLE				
+13925	Lucky_Scroll08	... GoodLuck Scroll	IT_USABLE				
+13974	TW_Scroll01	Fisherman Scroll	IT_USABLE				
+14098	F_Pecopeco_Hairband_Box	Peco Peco Hairband Box	IT_USABLE	rentitem 5286,1209600;			
+14099	F_Red_Glasses_Box	Red Glasses Box	IT_USABLE	rentitem 5288,1209600;			
+14100	F_Whisper_Mask_Box	Whisper Mask Box	IT_USABLE	rentitem 5294,1209600;			
+14101	F_Ramen_Hat_Box	Ramen Hat Box	IT_USABLE	rentitem 5293,1209600;			
+14229	Sakura_Scroll	Cherry Blossom Scroll	IT_USABLE				
+14291	Cloth_Dye_Coupon3_Box	Clothing Dye Coupon Box	IT_USABLE	getitem 6046,1;			
+14292	Cloth_Dye_Coupon4_Box	Clothing Dye Coupon Box II	IT_USABLE	getitem 6047,1;			
+14293	Mercenary_Contract_Box	Mercenary Contract Box	IT_USABLE	getitem 6050,1;			
+14294	Mercenary_Contract_5Box	Mercenary Contract Box 5ea	IT_USABLE	getitem 6050,5;			
+14295	Mercenary_Contract_10Bo	Mercenary Contract Box 10ea	IT_USABLE	getitem 6050,10;			
+14296	Angel_Scroll	Angel Scroll	IT_USABLE	packageitem();			
+14297	Devil_Scroll	Devil Scroll	IT_USABLE	packageitem();			
+14314	Phreeoni_Scroll_Box	Phreeoni Scroll Box	IT_USABLE	getitem PhreeoniS, 10;			
+14315	GhostringS_Box	Ghostring Scroll Box	IT_USABLE	getitem GhostringS, 10;			
+14316	July7_Scroll	July7 Scroll	IT_USABLE	packageitem();			
+14317	Bacsojin_Scroll	Bacsojin Scroll	IT_USABLE	packageitem();			
+14345	Animal_Scroll	Animal Scroll	IT_USABLE	packageitem();			
+14363	Heart_Scroll	Heart Scroll	IT_USABLE	packageitem();			
+14408	New_Year_Scroll	New Year Scroll	IT_USABLE	packageitem();			
+14466	Valentine_Pledge_Box	Valentine's Emblem Box	IT_USABLE	packageitem();			
+14469	Ox_Tail_Scroll	Ox Tail Egg	IT_USABLE	packageitem();			
+14500	Insurance60	Life Insurrance Certificate	IT_USABLE	sc_start SC_CASH_DEATHPENALTY,3600000,0;			
+14508	Zeny_Scroll	Zeny Pet Egg Scroll	IT_USABLE				
+14509	Light_Center_Pot	Light Concentration Potion	IT_USABLE	sc_start SC_ATTHASTE_POTION1, 1800000, 0;			
+14510	Light_Awakening_Pot	Light Awakening Potion	IT_USABLE	sc_start SC_ATTHASTE_POTION2, 1800000, 0;			
+14511	Light_Berserk_Pot	Light Berserk Potion	IT_USABLE	sc_start SC_ATTHASTE_POTION3, 1800000, 0;			
+14512	Meteor_10_Scroll	Meteor Storm Scroll	IT_USABLE	itemskill WZ_METEOR,10;			
+14513	Storm_10_Scroll	Storm Gust Scroll	IT_USABLE	itemskill WZ_STORMGUST,10;			
+14514	Vermilion_10_Scroll	Lord of Vermilion Scroll	IT_USABLE	itemskill WZ_VERMILION,10;			
+14515	Lex_Aeterna_Scroll	Lex Aeterna Scroll	IT_USABLE	itemskill PR_LEXAETERNA,1;			
+14516	Magnificat_5_Scroll	Magnificat Scroll	IT_USABLE	itemskill PR_MAGNIFICAT,5;			
+14517	CP_Helm_Scroll	Chemical Protection Helm Scroll	IT_USABLE	itemskill(AM_CP_HELM, 5, ISF_CHECKCONDITIONS);			
+14518	CP_Shield_Scroll	Chemical Protection Shield Scrol	IT_USABLE	itemskill(AM_CP_SHIELD, 5, ISF_CHECKCONDITIONS);			
+14519	CP_Armor_Scroll	Chemical Protection Armor Scroll	IT_USABLE	itemskill(AM_CP_ARMOR, 5, ISF_CHECKCONDITIONS);			
+14520	CP_Weapon_Scroll	Chemical Protection Weapon Scroll	IT_USABLE	itemskill(AM_CP_WEAPON, 5, ISF_CHECKCONDITIONS);			
+14521	Repair_Scroll	Repair Weapon Scroll	IT_USABLE	itemskill(BS_REPAIRWEAPON, 1);			
+14522	Big_Bun	Big Bun	IT_HEALING	percentheal 100,0;			
+14523	Pill_	Pill	IT_HEALING	percentheal 0,100;			
+14524	Superb_Fish_Slice	Superb Fish Slice	IT_HEALING	percentheal 100,100;			
+14525	Chewy_Ricecake	Chewy Ricecake	IT_USABLE	sc_start SC_PLUSATTACKPOWER, 1800000, 10;			
+14526	Oriental_Pastry	Oriental Pastry	IT_USABLE	sc_start SC_PLUSMAGICPOWER, 1800000, 10;			
+14527	Dun_Tele_Scroll1	Dungeon Teleport Scroll	IT_USABLE	callfunc "F_CashDungeon",1;			
+14528	PVP_Tele_Scroll	PVP Teleport Scroll	IT_USABLE				
+14529	Greed_Scroll	Greed Scroll	IT_USABLE	itemskill(BS_GREED, 1, ISF_INSTANTCAST | ISF_CASTONSELF);			
+14530	Flee_30_Scroll	Evasion Scroll	IT_USABLE	sc_start SC_FOOD_BASICAVOIDANCE,1800000,30;			
+14531	Accuracy_30_Scroll	Concentration Scroll	IT_USABLE	sc_start SC_FOOD_BASICHIT,1800000,30;			
+14532	Battle_Manual25	Field Manual 25%	IT_USABLE	sc_start SC_CASH_PLUSEXP,1800000,25;			
+14533	Battle_Manual100	Field Manual 100%	IT_USABLE	sc_start SC_CASH_PLUSEXP,1800000,100;			
+14534	Small_Life_Potion	Small Life Potion	IT_USABLE	specialeffect(EF_HEAL3, AREA, playerattached());   sc_start2 SC_S_LIFEPOTION, 600000, -5, 5;			
+14535	Med_Life_Potion	Medium Life Potion	IT_USABLE	specialeffect(EF_HEAL3, AREA, playerattached());   sc_start2 SC_L_LIFEPOTION, 600000, -7, 4;			
+14536	Abrasive	Abrasive	IT_USABLE	specialeffect(EF_MAGICALATTHIT, AREA, playerattached());   sc_start SC_CRITICALPERCENT, 300000, 30;			
+14537	Regeneration_Potion	Regeneration Potion	IT_USABLE	specialeffect(EF_LIGHTSPHERE, AREA, playerattached());   sc_start SC_HEALPLUS, 1800000, 20;			
+14538	Glass_Of_Illusion	Glass of Illusion	IT_USABLE	specialeffect(EF_STEAL, AREA, playerattached());   sc_start SC_PLUSAVOIDVALUE, 60000, 20;			
+14539	Shadow_Armor_S	Shadow Armor Scroll	IT_USABLE	specialeffect(EF_CLOAKING, AREA, playerattached());   sc_start4 SC_ARMOR_PROPERTY, 1800000, 1, Ele_Dark, 1, 0;			
+14540	Holy_Armor_S	Holy Armor Scroll	IT_USABLE	specialeffect(EF_BENEDICTIO, AREA, playerattached());   sc_start4 SC_ARMOR_PROPERTY, 1800000, 1, Ele_Holy, 1, 0;			
+14541	S_Def_Potion	Small Defense Potion	IT_USABLE	specialeffect(EF_GUARD, AREA, playerattached());   sc_start SC_PROTECT_DEF, 60000, 3;			
+14542	B_Def_Potion	Big Defense Potion	IT_USABLE	specialeffect(EF_GUARD, AREA, playerattached());   sc_start SC_PROTECT_DEF, 180000, 3;			
+14543	S_Mdef_Potion	Small Magic Defense Potion	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start SC_PROTECT_MDEF, 60000, 3;			
+14544	B_Mdef_Potion	Big Magic Defense Potion	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start SC_PROTECT_MDEF, 180000, 3;			
+14545	Battle_Manual_X3	Field Manual 300%	IT_USABLE	sc_start SC_CASH_PLUSEXP,1800000,300;			
+14546	Fire_Cracker_Love	I Love You Firecracker	IT_USABLE	end;			
+14547	Fire_Cracker_Wday	Whiteday Firecracker	IT_USABLE	end;			
+14548	Fire_Cracker_Vday	Valentine's Day Firecracker	IT_USABLE	end;			
+14549	Fire_Cracker_Bday	Birthday Firecracker	IT_USABLE	end;			
+14550	Fire_Cracker_Xmas	Xmas Firecracker	IT_USABLE	end;			
+14551	Str_Dish01_	Fried Grasshopper Legs	IT_HEALING	sc_start SC_FOOD_STR,1200000,1;   percentheal 5,0;			
+14552	Str_Dish02_	Seasoned Sticky Webfoot	IT_HEALING	sc_start SC_FOOD_STR,1200000,2;   percentheal 5,0;			
+14553	Str_Dish03_	Bomber Steak	IT_HEALING	sc_start SC_FOOD_STR,1200000,3;   percentheal 5,0;			
+14554	Int_Dish01_	Grape Juice Herbal Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,1;   percentheal 0,5;			
+14555	Int_Dish02_	Autumn Red Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,2;   percentheal 0,5;			
+14556	Int_Dish03_	Honey Herbal Tea	IT_HEALING	sc_start SC_FOOD_INT,1200000,3;   percentheal 0,5;			
+14557	Vit_Dish01_	Steamed Crab Nippers	IT_HEALING	sc_start SC_FOOD_VIT,1200000,1;   percentheal 5,0;			
+14558	Vit_Dish02_	Assorted Seafood	IT_HEALING	sc_start SC_FOOD_VIT,1200000,2;   percentheal 5,0;			
+14559	Vit_Dish03_	Clam Soup	IT_HEALING	sc_start SC_FOOD_VIT,1200000,3;   percentheal 5,0;			
+14560	Agi_Dish01_	Frog Egg Squid Ink Soup	IT_HEALING	sc_start SC_FOOD_AGI,1200000,1;   percentheal 3,1;			
+14561	Agi_Dish02_	Smooth Noodle	IT_HEALING	sc_start SC_FOOD_AGI,1200000,2;   percentheal 3,1;			
+14562	Agi_Dish03_	Tentacle Cheese Gratin	IT_HEALING	sc_start SC_FOOD_AGI,1200000,3;   percentheal 3,1;			
+14563	Dex_Dish01_	Honey Grape Juice	IT_HEALING	sc_start SC_FOOD_DEX,1200000,1;   percentheal 2,2;			
+14564	Dex_Dish02_	Chocolate Mousse Cake	IT_HEALING	sc_start SC_FOOD_DEX,1200000,2;   percentheal 2,2;			
+14565	Dex_Dish03_	Fruit Mix	IT_HEALING	sc_start SC_FOOD_DEX,1200000,3;   percentheal 2,2;			
+14566	Luk_Dish01_	Fried Monkey Tails	IT_HEALING	sc_start SC_FOOD_LUK,1200000,1;   percentheal 3,2;			
+14567	Luk_Dish02_	Mixed Juice	IT_HEALING	sc_start SC_FOOD_LUK,1200000,2;   percentheal 3,2;			
+14568	Luk_Dish03_	Fried Sweet Potato	IT_HEALING	sc_start SC_FOOD_LUK,1200000,3;   percentheal 4,2;			
+14569	Knife_Goblin_Ring	Knife Goblin Ring	IT_USABLE	pet GOBLIN_1;			
+14570	Flail_Goblin_Ring	Flail Goblin Ring	IT_USABLE	pet GOBLIN_2;			
+14571	Hammer_Goblin_Ring	Hammer Goblin Ring	IT_USABLE	pet GOBLIN_4;			
+14572	Holy_Marble	Holy Marble	IT_USABLE	pet DELETER_;			
+14573	Red_Burning_Stone	Red Burning Stone	IT_USABLE	pet DIABOLIC;			
+14574	Skull_Of_Vagabond	Vagabond's Skull	IT_USABLE	pet WANDER_MAN;			
+14575	Str_Dish05_	Lutie Lady's Pancake	IT_HEALING	sc_start SC_FOOD_STR,1200000,5;   percentheal 10,0;			
+14576	Int_Dish05_	Mastela Fruit Wine	IT_HEALING	sc_start SC_FOOD_INT,1200000,5;   percentheal 0,10;			
+14577	Vit_Dish05_	Spicy Fried Bao	IT_HEALING	sc_start SC_FOOD_VIT,1200000,5;   percentheal 10,0;			
+14578	Agi_Dish05_	Steamed Bat Wing in Pumpkin	IT_HEALING	sc_start SC_FOOD_AGI,1200000,5;   percentheal 6,2;			
+14579	Dex_Dish05_	Green Salad	IT_HEALING	sc_start SC_FOOD_DEX,1200000,5;   percentheal 5,5;			
+14580	Luk_Dish05_	Fried Scorpion Tails	IT_HEALING	sc_start SC_FOOD_LUK,1200000,5;   percentheal 5,2;			
+14581	Dun_Tele_Scroll2	Dungeon Teleport Scroll II	IT_USABLE	callfunc "F_CashDungeon",2;			
+14582	WOB_Rune	Yellow Butterfly Wing	IT_USABLE	callfunc "F_CashCity",1;			
+14583	WOB_Schwaltz	Green Butterfly Wing	IT_USABLE	callfunc "F_CashCity",2;			
+14584	WOB_Rachel	Red Butterfly Wing	IT_USABLE	callfunc "F_CashCity",3;			
+14585	WOB_Local	Blue Butterfly Wing	IT_USABLE	callfunc "F_CashCity",4;			
+14586	Spark_Candy	Jumping Candy	IT_USABLE	specialeffect(EF_HASTEUP, AREA, playerattached());   sc_start2 SC_STEAMPACK, 60000, 20, 25;			
+14587	Repair_Scroll_	Equipment Repair Spell Book	IT_USABLE	itemskill BS_REPAIRWEAPON,1;			
+14588	Pty_Blessing_Scroll	Party Blessing 10 Scroll	IT_USABLE	itemskill(CASH_BLESSING, 10, ISF_INSTANTCAST | ISF_CASTONSELF);			
+14589	Pty_Inc_Agi_Scroll	Party Increase Agi 10 Scroll	IT_USABLE	itemskill(CASH_INCAGI, 10, ISF_CHECKCONDITIONS | ISF_INSTANTCAST | ISF_CASTONSELF);			
+14590	Pty_Assumptio_Scroll	Party Assumptio 5 Scroll	IT_USABLE	itemskill(CASH_ASSUMPTIO, 5, ISF_INSTANTCAST | ISF_CASTONSELF);			
+14591	Siege_Teleport_Scroll	WoE Teleport Scroll	IT_USABLE	callfunc "F_CashSiegeTele";			
+14592	Job_Manual50	JOB Battle Manual	IT_USABLE	sc_start SC_CASH_PLUSONLYJOBEXP,1800000,50;			
+14593	Magic_Power_Scroll	Mystical Amplification Scroll	IT_USABLE	itemskill(HW_MAGICPOWER, 10, ISF_INSTANTCAST | ISF_CASTONSELF);			
+14594	Quagmire_Scroll	Quagmire Scroll	IT_USABLE	itemskill WZ_QUAGMIRE,5;			
+14595	Unsealed_Magic_Spell	Unsealed Magic Spell	IT_USABLE	warp "yuno_fild09",255,127;			
+14596	Pierre_Treasurebox	Pierre's Treasure Box	IT_USABLE	getrandgroupitem 14596,1;   getrandgroupitem 14596,1;   getrandgroupitem 14596,1;   getrandgroupitem 14596,1;   getrandgroupitem 14596,1;   getrandgroupitem 14596,1;			
+14597	PhreeoniS	Phreeoni Scroll	IT_USABLE	sc_start SC_FOOD_BASICHIT, 180000, 100;			
+14598	GhostringS	Ghostring Scroll	IT_USABLE	specialeffect(EF_LIGHTSPHERE, AREA, playerattached());   sc_start4 SC_ARMOR_PROPERTY, 60000, 1, Ele_Neutral, 1, 0;			
+14599	Greed_Scroll_C	Greed Scroll	IT_USABLE	itemskill(BS_GREED, 1, ISF_INSTANTCAST | ISF_CASTONSELF);			
+14600	Mental_Potion	Mental Potion	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start SC_TARGET_ASPD,1800000,10;			
+14601	Tyrs_Blessing	Tyr's Blessing	IT_USABLE	sc_start SC_FOOD_BASICAVOIDANCE, 300000, 30;   sc_start SC_FOOD_BASICHIT, 300000, 30;   sc_start SC_PLUSATTACKPOWER, 300000, 20;   sc_start SC_PLUSMAGICPOWER, 300000, 20;			
+14602	TaogunkaS	Tao Gunka Scroll	IT_USABLE	specialeffect(EF_LIGHTSPHERE, AREA, playerattached());   sc_start4 SC_MVPCARD_TAOGUNKA, 180000, 100, 50, 50, 0;			
+14603	MistressS	Mistress Scroll	IT_USABLE	specialeffect(EF_SPELLBREAKER, AREA, playerattached());   sc_start SC_MVPCARD_MISTRESS, 180000, 25;			
+14604	Orc_HeroS	Orc Hero Scroll	IT_USABLE	sc_start SC_MVPCARD_ORCHERO, 180000, 100;			
+14605	Orc_LoadS	Orc Lord Scroll	IT_USABLE	specialeffect(EF_LIGHTSPHERE, AREA, playerattached());   sc_start SC_MVPCARD_ORCLORD, 180000, 30;			
+14606	Job_Manual25	JOB Battle Manual	IT_USABLE	sc_start SC_CASH_PLUSONLYJOBEXP, 1800000, 25;			
+14607	Luxurious_Dinner_W	Luxurious Western Food	IT_USABLE	sc_start SC_FOOD_STR,3600000,3;   sc_start SC_FOOD_DEX,3600000,3;   sc_start SC_FOOD_AGI,3600000,3;   sc_start SC_FOOD_INT,3600000,3;   sc_start SC_FOOD_VIT,3600000,3;   sc_start SC_FOOD_LUK,3600000,3;			
+14608	Luxurious_Dinner_E	Manchu-Han Imperial Feast	IT_USABLE	sc_start SC_FOOD_STR,3600000,6;   sc_start SC_FOOD_DEX,3600000,6;   sc_start SC_FOOD_AGI,3600000,6;   sc_start SC_FOOD_INT,3600000,6;   sc_start SC_FOOD_VIT,3600000,6;   sc_start SC_FOOD_LUK,3600000,6;			
+14609	Spoiled_Cuisine	Spoiled Cuisine	IT_USABLE	percentheal 10,10;			
 15000	Bone_Plate	Bone Plate	IT_ARMOR	bonus bStr,1;   bonus bMdef,3;   bonus2 bIgnoreDefRate,RC_DemiPlayer,10;   bonus2 bIgnoreDefRate,RC_Brute,10;   bonus3 bAutoSpellWhenHit,NPC_WIDEBLEEDING,1,10;			
 15001	Odins_Blessing_I	Odin's Blessing	IT_ARMOR				
 16000	Erde	Erde	IT_WEAPON	bonus2 bSkillAtk,AM_ACIDTERROR,20;   bonus2 bSkillAtk,AM_DEMONSTRATION,20;   bonus bMaxSP,50;   bonus bHealPower,10;			
@@ -2730,6 +3787,21 @@
 16030	Pilebuncker_S	Pile Bunker S	IT_WEAPON	bonus bAspdRate, (getrefine() / 2);			
 16031	Pilebuncker_P	Pile Bunker P	IT_WEAPON	bonus bBaseAtk, (getrefine() * 5);			
 16032	Pilebuncker_T	Pile Bunker T	IT_WEAPON	bonus bUseSPrate, - getrefine();			
+16257	Buddah_Scroll	Buddah Scroll	IT_USABLE	packageitem();			
+16304	Evil_Incarnation_Disable	Evil Incarnation	IT_USABLE	packageitem();			
+16371	Tw_Aug_Scroll	Tw Aug Scroll	IT_USABLE	packageitem();			
+16483	Abrasive_Box_10	Abrasive Box (10)	IT_USABLE	getitem(E_Abrasive, 10);			
+16555	Pr_Reset_Stone_Box	Pr Reset Stone Box	IT_USABLE	packageitem();			
+16677	Universal_Catalog_Gold_Box10	Universal Catalog Gold 10 Box	IT_USABLE	getitem 12581,10;			
+16678	Universal_Catalog_Gold_Box50	Universal Catalog Gold 50 Box	IT_USABLE	getitem 12581,50;			
+16679	Universal_Catalog_Gold_Box10	Universal Catalog Gold 10 Box	IT_USABLE	getitem 12581,10;			
+16680	Universal_Catalog_Gold_Box50	Universal Catalog Gold 50 Box	IT_USABLE	getitem 12581,50;			
+16776	Universal_Catalog_Gold_Box10_	Universal Catalog Gold 10 Box	IT_USABLE	getitem 12581,10;			
+16777	Universal_Catalog_Gold_Box50	Universal Catalog Gold 50 Box	IT_USABLE	getitem 12581,50;			
+16843	Beauty_Gift_Box	Beauty Gift Box	IT_USABLE	getitem(New_Style_Coupon, 1);			
+16854	Clothing_Dye_Box	Clothing Dye Box	IT_USABLE	getitem(Clothing_Dye_Coupon, 1);			
+16855	Clothing_Dye_Orig_Box	Clothing Dye Orig Box	IT_USABLE	getitem(Clothing_Dye_Coupon2, 1);			
+17336	Jeremy_Beauty_Coupon_Box	Jeremy's Beauty Coupon Box	IT_USABLE	getitem(Cash_Hair_Coupon, 1);			
 18000	Cannon_Ball	Cannon Ball	IT_AMMO				
 18001	Holy_Cannon_Ball	Holy Cannon Ball	IT_AMMO	bonus bAtkEle,Ele_Holy;			
 18002	Dark_Cannon_Ball	Dark Cannon Ball	IT_AMMO	bonus bAtkEle,Ele_Dark;			
@@ -2760,3 +3832,8 @@
 19505	T_Cigarette	T Cigarette	IT_ARMOR				
 19506	T_Valkyrie_Feather_Band	T Valkyrie Feather Band	IT_ARMOR				
 19507	Fine_Sun	Clear Sun	IT_ARMOR				
+22540	Runstone_Lux	Lux Anima Rune	IT_USABLE	itemskill RK_LUXANIMA,1;			
+22777	Buff_Gift_Set	Buff Gift Set	IT_USABLE	getitem 14534,5;   getitem 12215,5;   getitem 12216,5;			
+22808	Special_Gift_Box	Special Gift Box	IT_USABLE				
+22837	Integer_Time	Integer Time	IT_USABLE	TmpRouletteBronze += 1;			
+22876	Old_Money_Pocket	Old Money Pocket	IT_USABLE	Zeny += rand(500, 550);			

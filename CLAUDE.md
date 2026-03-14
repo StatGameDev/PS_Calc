@@ -207,6 +207,7 @@ Always grep first. Never load entire files.
     damage.py            — DamageRange, DamageStep, DamageResult, BattleResult
     skill.py             — SkillInstance
     attack_definition.py — AttackDefinition dataclass (DPS distribution; Markov seam)
+    sc_effect.py         — SCEffect dataclass (parsed sc_start/2/4 from item scripts; S-4)
 
 ### Tests (`tests/`)
 

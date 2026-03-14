@@ -135,6 +135,8 @@ matk_rate: int = 0           # bMatkRate — % rate bonus to MATK; applied as ma
 maxhp_rate: int = 0          # bMaxHPrate — % rate bonus to MaxHP; applied as maxhp*(100+rate)//100 (status.c:1937)
 script_atk_ele: int | None = None  # bAtkEle — weapon element from script (S-3: wired via mode="assign")
 script_def_ele: int | None = None  # bDefEle — armor element from script (S-3: wired via mode="assign")
+# Added Session S-4:
+sc_effects: List[SCEffect] = []     # all sc_start/sc_start2/sc_start4 effects across all items; routed in S-5
 ```
 
 ### Fields to add [NEW]:

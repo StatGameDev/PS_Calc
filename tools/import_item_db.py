@@ -6,13 +6,15 @@ One-shot scraper: reads Hercules/db/pre-re/item_db.conf and writes
 core/data/pre-re/db/item_db.json.
 
 Types scraped:
-  IT_WEAPON (708)  — weapons (Subtype W_*); all fields
-  IT_ARMOR  (1431) — armor, shields, headgear, garment, shoes, accessories
-  IT_CARD   (538)  — cards; loc identifies which slot accepts the card
-  IT_AMMO   (83)   — arrows, bolts, bullets, cannon balls (Subtype A_*)
+  IT_WEAPON  (708)  — weapons (Subtype W_*); all fields
+  IT_ARMOR   (1431) — armor, shields, headgear, garment, shoes, accessories
+  IT_CARD    (538)  — cards; loc identifies which slot accepts the card
+  IT_AMMO    (83)   — arrows, bolts, bullets, cannon balls (Subtype A_*)
+  IT_USABLE  (785)  — consumable items; id/aegis_name/name/type/buy/sell/weight/script only
+  IT_HEALING (292)  — healing items; same minimal schema as IT_USABLE
 
-Types skipped (not equippable player gear):
-  IT_CASH, IT_USABLE, IT_HEALING, IT_PETEGG, IT_PETARMOR, IT_DELAYCONSUME
+Types skipped:
+  IT_CASH, IT_PETEGG, IT_PETARMOR, IT_DELAYCONSUME
 
 Usage:
     python tools/import_item_db.py           # write to output path
@@ -28,6 +30,7 @@ Schema notes:
                     on_equip_script, on_unequip_script.
   - IT_AMMO adds:   atk, subtype, element.
   - IT_CARD adds nothing beyond shared fields.
+  - IT_USABLE / IT_HEALING: only id, aegis_name, name, type, buy, sell, weight, script.
   - loc is always a list (single string normalized to one-element list).
   - element derived from 'bonus bAtkEle,Ele_*' in Script (IT_WEAPON, IT_AMMO only).
   - buy null when absent; sell = explicit Sell or buy//2 or null.
@@ -48,9 +51,10 @@ OUT_PATH  = Path("core/data/pre-re/db/item_db.json")
 # ---------------------------------------------------------------------------
 # Types to include vs skip
 # ---------------------------------------------------------------------------
-EQUIP_TYPES = {"IT_WEAPON", "IT_ARMOR", "IT_CARD", "IT_AMMO"}
-SKIP_TYPES  = {
-    "IT_CASH", "IT_USABLE", "IT_HEALING",
+EQUIP_TYPES      = {"IT_WEAPON", "IT_ARMOR", "IT_CARD", "IT_AMMO"}
+CONSUMABLE_TYPES = {"IT_USABLE", "IT_HEALING"}
+SKIP_TYPES       = {
+    "IT_CASH",
     "IT_PETEGG", "IT_PETARMOR", "IT_DELAYCONSUME", "IT_ETC",
 }
 
@@ -381,6 +385,33 @@ def parse_card(entry: str, item_id: int) -> dict:
     return parse_common_fields(entry, item_id, "IT_CARD")
 
 
+def parse_consumable(entry: str, item_id: int, item_type: str) -> dict:
+    """IT_USABLE / IT_HEALING — consumable items; minimal schema (no equip fields)."""
+    aegis_match = re.search(r'AegisName:\s*"([^"]+)"', entry)
+    aegis_name  = aegis_match.group(1) if aegis_match else ""
+
+    name_match = re.search(r'\bName:\s*"([^"]+)"', entry)
+    name       = name_match.group(1) if name_match else ""
+
+    buy, sell = parse_buy_sell(entry)
+
+    weight_match = re.search(r"\bWeight:\s*(\d+)", entry)
+    weight = int(weight_match.group(1)) if weight_match else 0
+
+    script_text = extract_script_text(entry, "Script")
+
+    return {
+        "id":         item_id,
+        "aegis_name": aegis_name,
+        "name":       name,
+        "type":       item_type,
+        "buy":        buy,
+        "sell":       sell,
+        "weight":     weight,
+        "script":     script_text if script_text else None,
+    }
+
+
 def parse_ammo(entry: str, item_id: int) -> dict:
     """IT_AMMO — arrows, bolts, bullets, cannon balls (Subtype A_*)."""
     base = parse_common_fields(entry, item_id, "IT_AMMO")
@@ -410,7 +441,9 @@ def parse_entry(entry: str) -> dict | None:
         return None
     item_type = type_match.group(1)
 
-    if item_type in SKIP_TYPES or item_type not in EQUIP_TYPES:
+    if item_type in SKIP_TYPES:
+        return None
+    if item_type not in EQUIP_TYPES and item_type not in CONSUMABLE_TYPES:
         return None
 
     id_match = re.search(r"\bId:\s*(\d+)", entry)
@@ -426,7 +459,9 @@ def parse_entry(entry: str) -> dict | None:
         return parse_card(entry, item_id)
     if item_type == "IT_AMMO":
         return parse_ammo(entry, item_id)
-    return None  # unreachable given EQUIP_TYPES guard
+    if item_type in CONSUMABLE_TYPES:
+        return parse_consumable(entry, item_id, item_type)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -435,10 +470,12 @@ def parse_entry(entry: str) -> dict | None:
 
 # Expected counts from: grep -c '"IT_<TYPE>"' Hercules/db/pre-re/item_db.conf
 EXPECTED_COUNTS = {
-    "IT_WEAPON": 708,
-    "IT_ARMOR":  1431,
-    "IT_CARD":   538,
-    "IT_AMMO":   83,
+    "IT_WEAPON":  708,
+    "IT_ARMOR":   1431,
+    "IT_CARD":    538,
+    "IT_AMMO":    83,
+    "IT_USABLE":  785,
+    "IT_HEALING": 292,
 }
 
 
@@ -485,8 +522,10 @@ def main(dry_run: bool = False) -> None:
         "_source":    "Scraped from Hercules/db/pre-re/item_db.conf",
         "_scraped_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "_note": (
-            "Types: IT_WEAPON (Subtype W_*), IT_ARMOR, IT_CARD, IT_AMMO (Subtype A_*). "
-            "Skipped: IT_CASH, IT_USABLE, IT_HEALING, IT_PETEGG, IT_PETARMOR, IT_DELAYCONSUME. "
+            "Types: IT_WEAPON (Subtype W_*), IT_ARMOR, IT_CARD, IT_AMMO (Subtype A_*), "
+            "IT_USABLE, IT_HEALING. "
+            "Skipped: IT_CASH, IT_PETEGG, IT_PETARMOR, IT_DELAYCONSUME. "
+            "IT_USABLE/IT_HEALING schema: id, aegis_name, name, type, buy, sell, weight, script only. "
             "loc is always a list (single-string Loc normalized to one-element list). "
             "element derived from 'bonus bAtkEle,Ele_*' in Script (IT_WEAPON, IT_AMMO only). "
             "buy null when absent; sell = explicit Sell field, or buy//2, or null. "

@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 from core.models.item_effect import ItemEffect
+from core.models.sc_effect import SCEffect
 
 
 @dataclass
@@ -49,8 +50,12 @@ class GearBonuses:
     aspd_percent: int = 0   # bAspdRate
     aspd_add: int = 0       # bAspd (flat amotion reduction)
 
-    # All parsed effects across all equipped items (for tooltips)
+    # All parsed bonus effects across all equipped items (for tooltips)
     all_effects: List[ItemEffect] = field(default_factory=list)
+
+    # SC effects from sc_start/sc_start2/sc_start4 calls across all items (S-4)
+    # Routed to StatusCalculator via build_applicator in S-5.
+    sc_effects: List[SCEffect] = field(default_factory=list)
 
     # E2 stubs: race/size/element multipliers (not yet wired into pipeline)
     # Stored raw for future implementation
