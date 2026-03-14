@@ -190,6 +190,13 @@ Always grep first. Never load entire files.
     core/calculators/skill_timing.py           — calculate_skill_timing(): cast+ACD per skill_castfix/skill_delay_fix (Q0)
     core/calculators/target_utils.py           — apply_mob_scs(target): mob-path stat SC mutations after apply_to_target() (Arch)
 
+### Core support (`core/`)
+
+    bonus_definitions.py    — BonusDef dataclass + BONUS1/BONUS2/BONUS3 tables; single source of truth for item script bonus types (S-1)
+    item_script_parser.py   — parse_script(script) → list[ItemEffect]; _make_description() delegates to bonus_definitions
+    gear_bonus_aggregator.py — GearBonusAggregator.compute(equipped) → GearBonuses; table-driven _apply()
+    build_manager.py        — save/load builds; player_build_to_target()
+
 ### Core models (`core/models/`)
 
     build.py             — PlayerBuild dataclass

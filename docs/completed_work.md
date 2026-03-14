@@ -585,3 +585,27 @@ and being read directly from `build.support_buffs` by pipeline modifier files.
   `target_scs` so the incoming pipeline's defense_fix.py sees the flag.
 
 **`docs/debuff_architecture.md`**: fully updated to reflect resolved routing; ⚠️ markers removed.
+
+---
+
+## Session S-1 — 2026-03-14 — Item Script Architecture Refactor (bonus_definitions.py)
+
+**Pure refactor. No behavior change. No gaps closed.**
+
+**New `core/bonus_definitions.py`**:
+- `BonusDef` dataclass: `description: Callable`, `field: str | None`, `mode: str`, `fields: list[str] | None`.
+- `BONUS1` (38 entries), `BONUS2` (20 entries), `BONUS3` (9 entries) — one entry per known bonus type.
+- Name maps (`RACE_NAMES`, `ELEMENT_NAMES`, `SIZE_NAMES`, `STATUS_NAMES`, `CLASS_NAMES`) moved here from parser.
+- Bug fix: `bAgiVit` (`mode="multi"`, fields=["agi","vit"]) and `bAgiDexStr` (`mode="multi"`, fields=["agi","dex","str_"]) added — previously silently dropped.
+- `bMatkRate` and `bMaxHPrate` declared with `field=None` and comments marking them for S-2.
+- `bAtkEle` and `bDefEle` declared with `field=None` and comments marking them for S-3.
+
+**`core/item_script_parser.py`**:
+- Removed `_BONUS1_TEMPLATES`, `_BONUS2_TEMPLATES`, `_BONUS3_TEMPLATES` (~120 lines).
+- Removed `_RACE_NAMES`, `_ELEMENT_NAMES`, `_SIZE_NAMES`, `_STATUS_NAMES`, `_CLASS_NAMES` and shorthand helpers.
+- `_make_description()` collapsed to 5 lines: dict lookup into `{1:BONUS1, 2:BONUS2, 3:BONUS3}`, try/except call.
+
+**`core/gear_bonus_aggregator.py`**:
+- Removed `_BONUS1_ROUTES` dict (27 entries), `_noop`, `_apply_all_stats` (~45 lines).
+- Removed arity-2 if/elif chain (9 branches).
+- `_apply()` rewritten as ~15 lines of table-driven logic: BONUS1 lookup for arity-1 (handles scalar/multi), BONUS2 lookup for arity-2 (handles dict/add modes).

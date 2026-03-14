@@ -4,11 +4,15 @@ Computes GearBonuses from all equipped items in a build.
 
 Usage:
     bonuses = GearBonusAggregator.compute(build.equipped)
+
+S-1: _apply() is now table-driven via BONUS1/BONUS2 from bonus_definitions.py.
+     bAgiVit and bAgiDexStr are now correctly routed (previously silently dropped).
 """
 from __future__ import annotations
 
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
+from core.bonus_definitions import BONUS1, BONUS2
 from core.data_loader import loader
 from core.item_script_parser import parse_script
 from core.models.gear_bonuses import GearBonuses
@@ -96,78 +100,26 @@ class GearBonusAggregator:
         p = eff.params
 
         if eff.arity == 1 and p:
+            defn = BONUS1.get(bt)
+            if defn is None:
+                return
             v = p[0] if isinstance(p[0], int) else 0
-            _BONUS1_ROUTES.get(bt, _noop)(bonuses, v)
+            if defn.mode == "multi" and defn.fields:
+                for f in defn.fields:
+                    setattr(bonuses, f, getattr(bonuses, f) + v)
+            elif defn.field is not None:
+                setattr(bonuses, defn.field, getattr(bonuses, defn.field) + v)
 
         elif eff.arity == 2 and len(p) >= 2:
+            defn = BONUS2.get(bt)
+            if defn is None or defn.field is None:
+                return
             key = str(p[0])
             val = p[1] if isinstance(p[1], int) else 0
+            if defn.mode == "dict":
+                d = getattr(bonuses, defn.field)
+                d[key] = d.get(key, 0) + val
+            elif defn.mode == "add":
+                setattr(bonuses, defn.field, getattr(bonuses, defn.field) + val)
 
-            if bt == "bAddRace":
-                bonuses.add_race[key] = bonuses.add_race.get(key, 0) + val
-            elif bt == "bSubEle":
-                bonuses.sub_ele[key] = bonuses.sub_ele.get(key, 0) + val
-            elif bt == "bSubRace":
-                bonuses.sub_race[key] = bonuses.sub_race.get(key, 0) + val
-            elif bt == "bAddSize":
-                bonuses.add_size[key] = bonuses.add_size.get(key, 0) + val
-            elif bt == "bAddEle":
-                bonuses.add_ele[key] = bonuses.add_ele.get(key, 0) + val
-            elif bt == "bIgnoreDefRate":
-                bonuses.ignore_def_rate[key] = bonuses.ignore_def_rate.get(key, 0) + val
-            elif bt == "bIgnoreMdefRate":
-                bonuses.ignore_mdef_rate[key] = bonuses.ignore_mdef_rate.get(key, 0) + val
-            elif bt == "bSkillAtk":
-                bonuses.skill_atk[key] = bonuses.skill_atk.get(key, 0) + val
-            elif bt == "bCastrate":
-                # bonus2 bCastrate,skill_name,val — per-skill cast reduction (pc.c:3607)
-                bonuses.skill_castrate[key] = bonuses.skill_castrate.get(key, 0) + val
-
-        # bonus3 and the rest — stored in all_effects only (tooltip use)
-
-
-def _noop(_b: GearBonuses, _v: int) -> None:
-    pass
-
-
-# Flat arity-1 routes: bonus_type → (GearBonuses, int) → None
-_BONUS1_ROUTES: dict[str, object] = {
-    "bStr":      lambda b, v: setattr(b, "str_",  b.str_  + v),
-    "bAgi":      lambda b, v: setattr(b, "agi",   b.agi   + v),
-    "bVit":      lambda b, v: setattr(b, "vit",   b.vit   + v),
-    "bInt":      lambda b, v: setattr(b, "int_",  b.int_  + v),
-    "bDex":      lambda b, v: setattr(b, "dex",   b.dex   + v),
-    "bLuk":      lambda b, v: setattr(b, "luk",   b.luk   + v),
-    "bAllStats": lambda b, v: _apply_all_stats(b, v),
-    "bBaseAtk":  lambda b, v: setattr(b, "batk",  b.batk  + v),
-    "bHit":      lambda b, v: setattr(b, "hit",   b.hit   + v),
-    "bFlee":     lambda b, v: setattr(b, "flee",  b.flee  + v),
-    "bFlee2":    lambda b, v: setattr(b, "flee2", b.flee2 + v),
-    "bCritical": lambda b, v: setattr(b, "cri",   b.cri   + v),
-    "bCritAtkRate": lambda b, v: setattr(b, "crit_atk_rate", b.crit_atk_rate + v),
-    "bLongAtkRate": lambda b, v: setattr(b, "long_atk_rate", b.long_atk_rate + v),
-    "bDef":      lambda b, v: setattr(b, "def_",  b.def_  + v),
-    "bMdef":     lambda b, v: setattr(b, "mdef_", b.mdef_ + v),
-    "bMaxHP":    lambda b, v: setattr(b, "maxhp", b.maxhp + v),
-    "bMaxSP":    lambda b, v: setattr(b, "maxsp", b.maxsp + v),
-    "bAspdRate":    lambda b, v: setattr(b, "aspd_percent",     b.aspd_percent     + v),
-    "bAspd":        lambda b, v: setattr(b, "aspd_add",         b.aspd_add         + v),
-    "bNearAtkDef":  lambda b, v: setattr(b, "near_atk_def_rate", b.near_atk_def_rate + v),
-    "bLongAtkDef":  lambda b, v: setattr(b, "long_atk_def_rate", b.long_atk_def_rate + v),
-    "bMagicDefRate": lambda b, v: setattr(b, "magic_def_rate",   b.magic_def_rate   + v),
-    "bAtkRate":     lambda b, v: setattr(b, "atk_rate",          b.atk_rate         + v),
-    # G59: skill timing bonuses
-    "bCastrate":    lambda b, v: setattr(b, "castrate",  b.castrate  + v),
-    # bVarCastrate (SP_VARCASTRATE) → same sd->castrate field in pre-renewal (pc.c:2639 #ifndef RENEWAL_CAST)
-    "bVarCastrate": lambda b, v: setattr(b, "castrate",  b.castrate  + v),
-    "bDelayrate":   lambda b, v: setattr(b, "delayrate", b.delayrate + v),
-}
-
-
-def _apply_all_stats(b: GearBonuses, v: int) -> None:
-    b.str_ += v
-    b.agi  += v
-    b.vit  += v
-    b.int_ += v
-    b.dex  += v
-    b.luk  += v
+        # arity 3: display-only, stored in all_effects only

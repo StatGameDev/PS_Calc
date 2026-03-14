@@ -62,16 +62,92 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | Arch | Debuff routing fix: `collect_target_player_scs()` on TargetStateSection; new `target_utils.apply_mob_scs()`; pvp path feeds stat-cascade SCs into pvp_eff before StatusCalculator. | G78 |
 | SC1 | Target debuffs: SC_BLIND/CURSE/SLEEP/POISON/QUAGMIRE/MINDBREAKER/CRUCIS/BLESSING in apply_mob_scs + StatusCalculator player path. SC_DONTFORGETME with dancer AGI QSpinBox (val2=agi/10+3×lv+5, skill.c:13270; aspd_rate+=10×val2, status.c:5667). Boss protocol: set_is_boss() disables immune widgets; apply_mob_scs guards per-SC. New Target fields: str/dex/hit/def_percent/mdef_percent/matk_percent/aspd_rate. | G79, G81 |
 | SC2 | Player debuffs + G77. Full player_debuffs_section.py UI (14 widgets). StatusCalculator: SC_POISON (def_percent−25), SC_PROVOKE (def_percent−(5+5lv)), SC_ETERNALCHAOS (def2=0), SC_DONTFORGETME (aspd_rate+=10×val2), SC_MINDBREAKER (matk boost). player_build_to_target(): STUN/FREEZE/STONE/SLEEP → target_active_scs + FREEZE→Water/STONE→Earth element. G77: Lex Aeterna ×2 in _run_branch() after FinalRateBonus (all BF_WEAPON). | G77, G80 |
+| S-1 | bonus_definitions.py: BonusDef + BONUS1/2/3 tables. Parser + aggregator refactored to table-driven. bAgiVit + bAgiDexStr fixed (were silently dropped). Pure refactor, no behavior change. | — |
 
 ---
 
 
 ## Session S — Item Scripts Pass
 
-**STUB**: Needs planning sub-session (read `Hercules/doc/item_bonus.md` first).
-Ensure all scripts work correctly and begin implementing consumable effects.
-The `Hercules/doc/` directory has many useful reference documents.
-Scope to be finalised in a dedicated planning step before implementation begins.
+Five parts. Each is a standalone commit. Do S-1 first (pure refactor, no behavior change).
+
+**Background facts confirmed in planning:**
+- `bMatkRate` (131 items) and `bMaxHPrate` (45 items) are parsed but never applied → real calc bugs.
+- `near_atk_def_rate`, `long_atk_def_rate`, `magic_def_rate` accumulated but not wired into incoming pipelines.
+- `bAgiVit`, `bAgiDexStr` not in parser or aggregator at all → silently dropped.
+- IT_USABLE/IT_HEALING items not in item_db (scraper omits them) → stat foods require scraper expansion before auto-parsing.
+- `sc_start` items in current DB: 22 throwable IT_AMMO + 2 cosmetic IT_ARMOR — none are stat foods.
+- `atk_rate` and `crit_atk_rate` already correctly wired. No bug there.
+
+---
+
+### ~~S-1: Architecture Refactor (bonus_definitions.py)~~ ✅ DONE (2026-03-14)
+
+---
+
+### S-2: Missing Fields + Dead Field Wiring
+
+**Goal:** Fix the two real bugs. Move business logic out of GUI. Wire dead incoming-damage fields.
+
+1. `GearBonuses` — add: `matk_rate: int`, `maxhp_rate: int`, `script_atk_ele: int | None`, `script_def_ele: int | None`. Add entries in `bonus_definitions.py`.
+2. `StatusCalculator` — apply `gear_bonuses.matk_rate` to MATK and `gear_bonuses.maxhp_rate` to MaxHP. (Needs 2 source reads in `status.c` before implementing.)
+3. New `core/build_applicator.py`:
+   - `apply_gear_bonuses(build, gear_bonuses) -> PlayerBuild` — extracted from `MainWindow._apply_gear_bonuses`. Also wires `matk_rate`, `maxhp_rate`, `crit_atk_rate` into `PlayerBuild.bonus_*` fields.
+   - `compute_sc_stat_bonuses(support_buffs) -> dict[str, int]` — extracted from `MainWindow._sc_stat_bonuses`.
+4. `main_window.py` — call both from `build_applicator`; remove the two private methods.
+5. Wire dead fields into incoming pipelines: `near_atk_def_rate` + `long_atk_def_rate` → incoming physical pipeline; `magic_def_rate` → incoming magic pipeline.
+
+**Files:** `core/models/gear_bonuses.py`, `core/bonus_definitions.py`, `core/build_applicator.py` (new), `gui/main_window.py`, `core/calculators/status_calculator.py`, incoming pipeline files.
+**Hercules reads:** 2 — `bMatkRate` formula in `status.c`, `bMaxHPrate` formula in `status.c`.
+
+---
+
+### S-3: Element Precedence + DerivedSection Display
+
+**Goal:** `bAtkEle`/`bDefEle` from scripts correctly override item DB element. Effective elements visible in UI.
+
+1. `BuildManager.resolve_weapon()` — add `script_atk_ele: int | None` param. Precedence: `explicit_weapon_element → script_atk_ele → item_db_element`.
+2. `build_applicator.py` — add `resolve_armor_element(equipped, gear_bonuses) -> int`. Same precedence chain for armor. Feeds `Target.armor_element` on the player-as-target path.
+3. `DerivedSection` — two new read-only rows: **ATK Element** and **DEF Element** (shown as element name strings). Fed from resolved values at calc time.
+4. Thread `gear_bonuses.script_atk_ele` through all `resolve_weapon()` call sites in `main_window.py`.
+
+**Files:** `core/build_manager.py`, `core/build_applicator.py`, `gui/sections/derived_section.py`, `gui/main_window.py`.
+**Hercules reads:** None.
+
+---
+
+### S-4: Scraper Expansion + sc_start Parsing
+
+**Goal:** IT_USABLE/IT_HEALING items in item_db. `sc_start` commands parsed. SCEffect model exists.
+
+1. `tools/import_item_db.py` — expand to include IT_USABLE and IT_HEALING types (same schema: id/aegis_name/name/type/script; no atk/def/slots fields).
+2. New `core/models/sc_effect.py` — `SCEffect(sc_name, duration_ms, val1, val2, val3, val4)`.
+3. `item_script_parser.py` — add `parse_sc_start(script) -> list[SCEffect]`. Handles `sc_start`, `sc_start2`, `sc_start4`.
+4. `GearBonuses` — add `sc_effects: list[SCEffect]`.
+5. `GearBonusAggregator.compute()` — call `parse_sc_start()` per item; accumulate into `bonuses.sc_effects`.
+6. Regenerate `docs/lookup/item_ref.tsv` after rescrape.
+
+**Files:** `tools/import_item_db.py`, `core/models/sc_effect.py` (new), `core/item_script_parser.py`, `core/models/gear_bonuses.py`, `core/gear_bonus_aggregator.py`.
+**Hercules reads:** None.
+
+---
+
+### S-5: SC Effects Routing + Consumable UI
+
+**Goal:** Items' SC effects reach StatusCalculator. User can select consumable items from a browsable list.
+
+1. `PlayerBuild` — add `consumable_item_ids: list[int]` (persisted).
+2. `build_applicator.py` — extract SC_FOOD_* and other stat SCs from `GearBonuses.sc_effects`; merge into transient `consumable_scs: dict[str, int]` on the effective build (computed each run, not saved).
+3. `StatusCalculator` — read `consumable_scs` and apply stat effects. Mapping source: `docs/buffs/stat_foods.md`.
+4. New UI subsection in Buffs panel — consumable item browser filtered to IT_USABLE/IT_HEALING; user adds items to `consumable_item_ids`; parsed effects shown as description text.
+5. G46 Active Items spinboxes — kept as manual fallback for unlisted items; labelled "Manual Override".
+
+**Files:** `core/models/build.py`, `core/build_applicator.py`, `core/calculators/status_calculator.py`, new GUI subsection file.
+**Hercules reads:** None — `stat_foods.md` already has confirmed SC→stat mappings.
+
+---
+
+**Token estimates:** S-1: ~20–25k. S-2: ~30–40k. S-3: ~15k (bundle with S-2 if budget allows). S-4: ~20–25k. S-5: ~30–35k.
 
 ---
 

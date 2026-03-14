@@ -1,0 +1,237 @@
+"""
+S-1 — Single source of truth for item script bonus type definitions.
+
+Adding a new bonus type = one entry in BONUS1, BONUS2, or BONUS3.
+Both item_script_parser and gear_bonus_aggregator import from here.
+No imports from either of those modules — zero circular dependency risk.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Callable
+
+# ---------------------------------------------------------------------------
+# Enum string → display name maps
+# ---------------------------------------------------------------------------
+
+RACE_NAMES: dict[str, str] = {
+    "RC_Formless": "Formless", "RC_Undead": "Undead", "RC_Brute": "Brute",
+    "RC_Plant": "Plant", "RC_Insect": "Insect", "RC_Fish": "Fish",
+    "RC_Demon": "Demon", "RC_DemiHuman": "Demi-Human", "RC_Angel": "Angel",
+    "RC_Dragon": "Dragon", "RC_Boss": "Boss monsters",
+    "RC_NonBoss": "Normal monsters", "RC_All": "all races",
+}
+
+ELEMENT_NAMES: dict[str, str] = {
+    "Ele_Neutral": "Neutral", "Ele_Water": "Water", "Ele_Earth": "Earth",
+    "Ele_Fire": "Fire", "Ele_Wind": "Wind", "Ele_Poison": "Poison",
+    "Ele_Holy": "Holy", "Ele_Dark": "Dark", "Ele_Ghost": "Ghost",
+    "Ele_Undead": "Undead", "Ele_All": "all elements",
+}
+
+SIZE_NAMES: dict[str, str] = {
+    "Size_Small": "Small", "Size_Medium": "Medium", "Size_Large": "Large",
+    "Size_All": "all sizes",
+}
+
+STATUS_NAMES: dict[str, str] = {
+    "SC_POISON": "Poison", "SC_SILENCE": "Silence", "SC_BLIND": "Blind",
+    "SC_SLEEP": "Sleep", "SC_STUN": "Stun", "SC_CURSE": "Curse",
+    "SC_FREEZE": "Freeze", "SC_STONE": "Stone", "SC_BLEEDING": "Bleeding",
+    "SC_CONFUSION": "Confusion",
+}
+
+CLASS_NAMES: dict[str, str] = {
+    "Class_Normal": "Normal monsters", "Class_Boss": "Boss monsters",
+    "Class_Guardian": "Guardians", "Class_All": "all monster types",
+}
+
+
+def _race(v: str) -> str:
+    return RACE_NAMES.get(v, v)
+
+
+def _ele(v: str) -> str:
+    return ELEMENT_NAMES.get(v, v)
+
+
+def _size(v: str) -> str:
+    return SIZE_NAMES.get(v, v)
+
+
+def _cls(v: str) -> str:
+    return CLASS_NAMES.get(v, v)
+
+
+def _sc(v: str) -> str:
+    return STATUS_NAMES.get(v, v)
+
+
+# ---------------------------------------------------------------------------
+# BonusDef
+# ---------------------------------------------------------------------------
+
+@dataclass
+class BonusDef:
+    """
+    Definition for one bonus type at a given arity.
+
+    description  Callable producing the human-readable effect string.
+                 Arity-1 signature: (int,)
+                 Arity-2 signature: (str, int)   — key, value
+                 Arity-3 signature: (str, str, int) or similar
+    field        GearBonuses attribute name to accumulate into.
+                 None = display-only (no GearBonuses mutation).
+    mode         "add"   scalar: bonuses.<field> += value
+                 "dict"  keyed dict: bonuses.<field>[key] += value
+                 "multi" multiple scalars: each name in `fields` gets += value
+    fields       For mode="multi": list of GearBonuses attribute names.
+    """
+    description: Callable
+    field: str | None = None
+    mode: str = "add"
+    fields: list[str] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Arity-1 table  (bonus bXxx, val)
+# ---------------------------------------------------------------------------
+#
+# field=None  →  display-only
+# mode="add"  →  bonuses.<field> += v          (default)
+# mode="multi" + fields=[...]  →  each field += v
+
+BONUS1: dict[str, BonusDef] = {
+    # Stats
+    "bStr":    BonusDef(lambda v: f"STR +{v}." if v > 0 else f"STR {v}.", "str_"),
+    "bAgi":    BonusDef(lambda v: f"AGI +{v}." if v > 0 else f"AGI {v}.", "agi"),
+    "bVit":    BonusDef(lambda v: f"VIT +{v}." if v > 0 else f"VIT {v}.", "vit"),
+    "bInt":    BonusDef(lambda v: f"INT +{v}." if v > 0 else f"INT {v}.", "int_"),
+    "bDex":    BonusDef(lambda v: f"DEX +{v}." if v > 0 else f"DEX {v}.", "dex"),
+    "bLuk":    BonusDef(lambda v: f"LUK +{v}." if v > 0 else f"LUK {v}.", "luk"),
+    "bAllStats": BonusDef(
+        lambda v: f"All Stats +{v}." if v > 0 else f"All Stats {v}.",
+        mode="multi", fields=["str_", "agi", "vit", "int_", "dex", "luk"],
+    ),
+    "bAgiVit": BonusDef(
+        lambda v: f"AGI +{v}, VIT +{v}.",
+        mode="multi", fields=["agi", "vit"],
+    ),
+    "bAgiDexStr": BonusDef(
+        lambda v: f"AGI +{v}, DEX +{v}, STR +{v}.",
+        mode="multi", fields=["agi", "dex", "str_"],
+    ),
+
+    # Flat combat
+    "bBaseAtk":  BonusDef(lambda v: f"ATK +{v}." if v > 0 else f"ATK {v}.", "batk"),
+    "bMatk":     BonusDef(lambda v: f"MATK +{v}." if v > 0 else f"MATK {v}."),  # display-only (no GearBonuses field yet)
+    "bHit":      BonusDef(lambda v: f"HIT +{v}." if v > 0 else f"HIT {v}.", "hit"),
+    "bFlee":     BonusDef(lambda v: f"FLEE +{v}." if v > 0 else f"FLEE {v}.", "flee"),
+    "bFlee2":    BonusDef(lambda v: f"Perfect Dodge +{v}." if v > 0 else f"Perfect Dodge {v}.", "flee2"),
+    "bCritical": BonusDef(lambda v: f"CRIT +{v}." if v > 0 else f"CRIT {v}.", "cri"),
+    "bCritAtkRate": BonusDef(lambda v: f"Critical damage +{v}%." if v > 0 else f"Critical damage {v}%.", "crit_atk_rate"),
+    "bLongAtkRate": BonusDef(lambda v: f"Long-range damage +{v}%." if v > 0 else f"Long-range damage {v}%.", "long_atk_rate"),
+    "bAtkRate":     BonusDef(lambda v: f"Physical ATK +{v}%.", "atk_rate"),
+
+    # HP/SP
+    "bMaxHP":     BonusDef(lambda v: f"MaxHP +{v}." if v > 0 else f"MaxHP {v}.", "maxhp"),
+    "bMaxSP":     BonusDef(lambda v: f"MaxSP +{v}." if v > 0 else f"MaxSP {v}.", "maxsp"),
+    "bMaxHPrate": BonusDef(lambda v: f"MaxHP +{v}%." if v > 0 else f"MaxHP {v}%."),  # display-only (field added in S-2)
+    "bMaxSPrate": BonusDef(lambda v: f"MaxSP +{v}%." if v > 0 else f"MaxSP {v}%."),  # display-only
+
+    # Defence
+    "bDef":          BonusDef(lambda v: f"DEF +{v}." if v > 0 else f"DEF {v}.", "def_"),
+    "bMdef":         BonusDef(lambda v: f"MDEF +{v}." if v > 0 else f"MDEF {v}.", "mdef_"),
+    "bNearAtkDef":   BonusDef(lambda v: f"Near-range damage resistance +{v}%.", "near_atk_def_rate"),
+    "bLongAtkDef":   BonusDef(lambda v: f"Long-range damage resistance +{v}%.", "long_atk_def_rate"),
+    "bMagicDefRate": BonusDef(lambda v: f"Magic damage reduction +{v}%.", "magic_def_rate"),
+
+    # ASPD
+    "bAspdRate": BonusDef(lambda v: f"ASPD +{v}%." if v > 0 else f"ASPD {v}%.", "aspd_percent"),
+    "bAspd":     BonusDef(lambda v: f"ASPD +{v} (flat)." if v > 0 else f"ASPD {v} (flat).", "aspd_add"),
+
+    # Skill timing (G59)
+    "bCastrate":    BonusDef(lambda v: f"Casting time {'reduced' if v < 0 else 'increased'} by {abs(v)}%.", "castrate"),
+    # bVarCastrate → same sd->castrate field in pre-renewal (pc.c:2639 #ifndef RENEWAL_CAST)
+    "bVarCastrate": BonusDef(lambda v: f"Casting time {'reduced' if v < 0 else 'increased'} by {abs(v)}%.", "castrate"),
+    "bDelayrate":   BonusDef(lambda v: f"After-cast delay {'reduced' if v < 0 else 'increased'} by {abs(v)}%.", "delayrate"),
+
+    # MATK%  (display-only; field added in S-2)
+    "bMatkRate": BonusDef(lambda v: f"MATK +{v}%." if v > 0 else f"MATK {v}%."),
+
+    # Element overrides (display-only; precedence logic in S-3)
+    "bAtkEle": BonusDef(lambda v: f"Changes weapon element to {ELEMENT_NAMES.get(str(v), str(v))}."),
+    "bDefEle": BonusDef(lambda v: f"Changes armor element to {ELEMENT_NAMES.get(str(v), str(v))}."),
+
+    # Display-only miscellaneous
+    "bIgnoreDefRace": BonusDef(lambda v: f"Ignores DEF of {RACE_NAMES.get(str(v), str(v))}."),
+    "bShortWeaponDamageReturn": BonusDef(lambda v: f"Reflects {v}% melee physical damage back to attacker."),
+    "bHPrecovRate":  BonusDef(lambda v: f"Natural HP recovery +{v}%." if v > 0 else f"Natural HP recovery {v}%."),
+    "bSPrecovRate":  BonusDef(lambda v: f"Natural SP recovery +{v}%." if v > 0 else f"Natural SP recovery {v}%."),
+    "bUseSPrate":    BonusDef(lambda v: f"SP consumption {'reduced' if v < 0 else 'increased'} by {abs(v)}%."),
+    "bHealPower":    BonusDef(lambda v: f"Heal effectiveness +{v}%."),
+    "bSpeedRate":    BonusDef(lambda v: f"Movement speed +{v}%." if v > 0 else f"Movement speed {v}%."),
+    "bSplashRange":  BonusDef(lambda v: f"Attack splash range +{v} cells."),
+    "bSPDrainValue": BonusDef(lambda v: f"Drains {v} SP per physical hit."),
+    "bBreakArmorRate":  BonusDef(lambda v: f"{v/100:.0f}% chance to break the target's armor per hit."),
+    "bBreakWeaponRate": BonusDef(lambda v: f"{v/100:.0f}% chance to break the target's weapon per hit."),
+    "bUnbreakableWeapon": BonusDef(lambda _v: "Weapon cannot be broken."),
+    "bUnbreakableHelm":   BonusDef(lambda _v: "Headgear cannot be broken."),
+}
+
+# ---------------------------------------------------------------------------
+# Arity-2 table  (bonus2 bXxx, key, val)
+# ---------------------------------------------------------------------------
+#
+# mode="dict"  →  bonuses.<field>[key] += val
+# field=None   →  display-only
+
+BONUS2: dict[str, BonusDef] = {
+    # Routed to GearBonuses dicts
+    "bAddRace":      BonusDef(lambda r, v: f"Increases physical damage against {_race(r)} by {v}%.", "add_race", "dict"),
+    "bSubEle":       BonusDef(lambda e, v: f"Reduces damage from {_ele(e)}-element attacks by {v}%." if v > 0 else f"Increases damage from {_ele(e)}-element attacks by {abs(v)}%.", "sub_ele", "dict"),
+    "bSubRace":      BonusDef(lambda r, v: f"Reduces damage from {_race(r)} by {v}%." if v > 0 else f"Increases damage from {_race(r)} by {abs(v)}%.", "sub_race", "dict"),
+    "bAddSize":      BonusDef(lambda s, v: f"Increases physical damage against {_size(s)} monsters by {v}%.", "add_size", "dict"),
+    "bAddEle":       BonusDef(lambda e, v: f"Increases physical damage against {_ele(e)}-element monsters by {v}%.", "add_ele", "dict"),
+    "bIgnoreDefRate":  BonusDef(lambda r, v: f"Ignores {v}% of {_race(r)} DEF.", "ignore_def_rate", "dict"),
+    "bIgnoreMdefRate": BonusDef(lambda r, v: f"Ignores {v}% of {_race(r)} MDEF.", "ignore_mdef_rate", "dict"),
+    "bSkillAtk":     BonusDef(lambda sk, v: f"Increases {sk} damage by {v}%.", "skill_atk", "dict"),
+    "bCastrate":     BonusDef(lambda sk, v: f"{'Reduces' if v < 0 else 'Increases'} {sk} cast time by {abs(v)}%.", "skill_castrate", "dict"),
+
+    # Display-only
+    "bMagicAddRace":    BonusDef(lambda r, v: f"Increases magic damage against {_race(r)} by {v}%."),
+    "bCriticalAddRace": BonusDef(lambda r, v: f"CRIT rate +{v} against {_race(r)}."),
+    "bExpAddRace":      BonusDef(lambda r, v: f"EXP gain +{v}% from {_race(r)}."),
+    "bResEff":          BonusDef(lambda sc, v: f"Increases resistance to {_sc(sc)} by {v//100}%."),
+    "bAddEff":          BonusDef(lambda sc, v: f"{v//10:.0f}% chance to inflict {_sc(sc)} on hit."),
+    "bAddEffWhenHit":   BonusDef(lambda sc, v: f"{v//10:.0f}% chance to inflict {_sc(sc)} when hit."),
+    "bAddEff2":         BonusDef(lambda sc, v: f"{v//10:.0f}% chance to self-inflict {_sc(sc)} on hit."),
+    "bAddDamageClass":  BonusDef(lambda cls_, v: f"Increases damage against {_cls(cls_)} by {v}%."),
+    "bSubSize":         BonusDef(lambda s, v: f"Reduces damage from {_size(s)} monsters by {v}%."),
+    "bSPGainRace":      BonusDef(lambda r, v: f"Gains {v} SP per kill of {_race(r)}."),
+    "bAddItemHealRate": BonusDef(lambda _id, v: f"Increases healing from items by {v}%."),
+    "bWeaponComaRace":  BonusDef(lambda r, v: f"{v//10:.0f}% chance to inflict Coma on {_race(r)} per hit."),
+    "bHPDrainRate":     BonusDef(lambda v1, v2: f"Drains {v2} HP per {v1} physical hits."),
+    "bHPLossRate":      BonusDef(lambda v1, v2: f"Loses {v1} HP every {v2//1000:.0f} seconds."),
+    "bAddMonsterDropItem": BonusDef(lambda _id, v: f"Monsters drop an item at {v/100:.2f}% rate."),
+    "bSPDrainRate":     BonusDef(lambda v1, v2: f"Drains {v2} SP per {v1} physical hits."),
+    "bAddSkillBlow":    BonusDef(lambda sk, v: f"{sk} knocks enemies back {v} cells."),
+}
+
+# ---------------------------------------------------------------------------
+# Arity-3 table  (bonus3 bXxx, a, b, c)
+# ---------------------------------------------------------------------------
+#
+# All display-only for now (field=None is default).
+
+BONUS3: dict[str, BonusDef] = {
+    "bAutoSpell":        BonusDef(lambda sk, lv, v: f"{v//10:.0f}% chance to auto-cast {sk} Lv.{lv} on physical attack."),
+    "bAutoSpellWhenHit": BonusDef(lambda sk, lv, v: f"{v//10:.0f}% chance to auto-cast {sk} Lv.{lv} when hit."),
+    "bAddEffOnSkill":    BonusDef(lambda sk, sc, v: f"{v//10:.0f}% chance to inflict {_sc(sc)} on {sk} hit."),
+    "bAddEff":           BonusDef(lambda sc, v1, v2: f"[Conditional] {v1//10:.0f}% chance to inflict {_sc(sc)}."),
+    "bSubEle":           BonusDef(lambda e, v, _flag: f"Reduces {_ele(e)}-element damage by {v}% (conditional)."),
+    "bAddMonsterDropItem": BonusDef(lambda _id, v, _ty: f"Monsters drop an item at {v/100:.2f}% rate (type-conditional)."),
+    "bAddClassDropItem":   BonusDef(lambda cls_, v, _ty: f"{_cls(cls_)} drop an item at {v/100:.2f}% rate."),
+    "bAddEffWhenHit":    BonusDef(lambda sc, v1, _flag: f"[Conditional] {v1//10:.0f}% chance to inflict {_sc(sc)} when hit."),
+    "bSPDrainRate":      BonusDef(lambda v1, v2, _flag: f"Drains {v2} SP per {v1} hits (conditional)."),
+}
