@@ -68,9 +68,8 @@ class _VerticalBarLabel(QWidget):
         p.save()
         p.translate(_BAR_W // 2, self.height() // 2)
         p.rotate(-90)
-        font = QFont()
-        font.setPointSize(9)
-        p.setFont(font)
+        import gui.app_config as app_config
+        p.setFont(app_config.make_font(12))
         p.setPen(QColor("#6a7383"))
         arrow = "◀" if self._expanded else "▶"
         text = f"Steps  {arrow}"

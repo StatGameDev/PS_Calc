@@ -1,6 +1,6 @@
 import json
-import re
 
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication
 
 # Must be imported AFTER QApplication(sys.argv) is constructed in main.py.
@@ -8,14 +8,51 @@ UI_SCALE: float = QApplication.primaryScreen().logicalDotsPerInch() / 96.0
 THEME_PATH: str = "gui/themes/dark.qss"
 SAVES_DIR: str = "saves"
 
-FONT_SIZE_NORMAL: int = max(1, int(13 * UI_SCALE))
-FONT_SIZE_SMALL: int = max(1, int(11 * UI_SCALE))
-FONT_SIZE_LARGE: int = max(1, int(16 * UI_SCALE))
-
 _SETTINGS_PATH = "settings.json"
 _SCALE_MIN = 0.7
 _SCALE_MAX = 1.5
 _SCALE_STEP = 0.1
+
+# objectName → base pixel size at 1.0 scale.
+# Widgets at 13px (the application font default) are omitted — they inherit.
+_SIZE_MAP: dict[str, int] = {
+    "app_title":              15,
+    "section_arrow":           9,
+    "section_title":          12,
+    "stat_points_label":      11,
+    "stat_col_header":        11,
+    "stat_sub_header":        11,
+    "flat_bonus_label":       11,
+    "compact_stat_label":     11,
+    "derived_stat_label":     11,
+    "derived_stat_value":     12,
+    "equip_slot_label":       11,
+    "equip_inline_combo":     11,
+    "equip_edit_btn":         11,
+    "compact_equip_summary":  11,
+    "active_items_note":      11,
+    "passive_sub_header":     11,
+    "passive_placeholder":    11,
+    "passive_sub_separator":  10,
+    "passive_mastery_label":  11,
+    "passive_compact_summary":11,
+    "combat_field_label":     11,
+    "combat_env_placeholder": 11,
+    "summary_label":          11,
+    "summary_col_header":     10,
+    "summary_crit_pct":       12,
+    "summary_hit_pct":        12,
+    "compact_step_name":      11,
+    "compact_step_val":       11,
+    "target_stat_label":      11,
+    "target_stat_value":      12,
+    "target_section_header":  10,
+    "target_compact_summary": 11,
+    "incoming_value":         12,
+    "subgroup_arrow":          8,
+    "subgroup_title":         11,
+    "scale_toast":            12,
+}
 
 _raw_qss: str = ""
 
@@ -56,6 +93,18 @@ def set_scale_override(value: float) -> None:
         pass
 
 
+def make_font(base_px: int) -> QFont:
+    """Return a QFont at base_px scaled by the current effective scale."""
+    f = QFont()
+    f.setPixelSize(max(8, round(base_px * effective_scale())))
+    return f
+
+
+def app_font() -> QFont:
+    """Application base font (13px scaled). Set on QApplication at startup and on scale change."""
+    return make_font(13)
+
+
 def load_qss() -> None:
     """Read the raw QSS from disk; must be called once after QApplication exists."""
     global _raw_qss
@@ -66,13 +115,23 @@ def load_qss() -> None:
         _raw_qss = ""
 
 
-def apply_qss_scale(raw: str, scale: float) -> str:
-    """Return QSS with all font-size: Npx values multiplied by scale."""
-    def replace(m: re.Match) -> str:
-        return f"font-size: {max(1, round(int(m.group(1)) * scale))}px"
-    return re.sub(r"font-size:\s*(\d+)px", replace, raw)
+def raw_qss() -> str:
+    return _raw_qss
 
 
-def get_scaled_qss() -> str:
-    """Return the loaded QSS scaled to the current effective scale."""
-    return apply_qss_scale(_raw_qss, effective_scale())
+def rescale_all_fonts(root) -> None:
+    """Apply scaled fonts to all named widgets and class-typed widgets under root.
+
+    Called after every scale change instead of re-applying the stylesheet.
+    QApplication.setFont(app_font()) must be called first to update inheriting widgets.
+    """
+    from PySide6.QtWidgets import QHeaderView, QListWidget, QTableWidget, QWidget
+
+    for w in root.findChildren(QWidget):
+        name = w.objectName()
+        if name in _SIZE_MAP:
+            w.setFont(make_font(_SIZE_MAP[name]))
+
+    for cls, px in ((QTableWidget, 12), (QListWidget, 12), (QHeaderView, 11)):
+        for w in root.findChildren(cls):
+            w.setFont(make_font(px))

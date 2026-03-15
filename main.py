@@ -17,11 +17,11 @@ if __name__ == "__main__":
     from gui.main_window import MainWindow
 
     app_config.load_qss()
-    scaled = app_config.get_scaled_qss()
-    if scaled:
-        app.setStyleSheet(scaled)
+    if app_config.raw_qss():
+        app.setStyleSheet(app_config.raw_qss())
     else:
         print(f"WARNING: stylesheet not found at '{app_config.THEME_PATH}' — running unstyled.")
+    app.setFont(app_config.app_font())
 
     window = MainWindow()
     window.show()
