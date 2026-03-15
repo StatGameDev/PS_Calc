@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from collections import defaultdict
 from typing import Optional
 
 from PySide6.QtCore import Signal
@@ -11,6 +13,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -54,6 +57,61 @@ _ELEMENT_NAMES = [
     "Poison", "Holy", "Dark", "Ghost", "Undead",
 ]
 
+# Weapons that can be created by Blacksmith forging (base names, no slot suffix)
+_FORGEABLE_WEAPON_NAMES: frozenset[str] = frozenset({
+    "Knife", "Cutter", "Main Gauche", "Dirk", "Dagger", "Stiletto",
+    "Gladius", "Damascus", "Sword", "Falchion", "Blade", "Rapier",
+    "Scimitar", "Ring Pommel Saber", "Tsurugi", "Haedonggum", "Saber",
+    "Flamberge", "Katana", "Slayer", "Bastard Sword", "Two-Handed Sword",
+    "Broad Sword", "Claymore",
+    "Axe", "Battle Axe", "Hammer", "Buster", "Two-Handed Axe",
+    "Club", "Mace", "Smasher", "Flail", "Chain", "Morning Star",
+    "Sword Mace", "Stunner",
+    "Waghnak", "Knuckle Dusters", "Studded Knuckles", "Fist", "Claw", "Finger",
+    "Javelin", "Spear", "Pike", "Guisarme", "Glaive", "Partizan",
+    "Lance", "Trident", "Halberd",
+})
+
+
+def _strip_slot_suffix(name: str) -> str:
+    """Strip trailing ' [N]' from item name (e.g. 'Buckler [1]' → 'Buckler')."""
+    return re.sub(r'\s*\[\d+\]\s*$', '', name.strip())
+
+
+def _item_stat_key(item: dict) -> tuple:
+    """Hashable key of all gameplay-relevant fields except id, name, aegis_name, slots."""
+    return (
+        item.get("type"),
+        item.get("weight", 0),
+        item.get("equip_level", 0),
+        tuple(sorted(item.get("loc", []))),
+        item.get("upper", 0),
+        tuple(sorted(item.get("job", []))),
+        item.get("gender"),
+        item.get("script", ""),
+        item.get("on_equip", ""),
+        item.get("on_unequip", ""),
+        # IT_WEAPON
+        item.get("atk", 0),
+        item.get("level"),
+        item.get("weapon_type"),
+        item.get("element"),
+        item.get("refineable"),
+        item.get("range"),
+        # IT_ARMOR
+        item.get("def", 0),
+        # IT_AMMO
+        item.get("subtype"),
+    )
+
+
+def _is_forgeable_weapon(item: dict) -> bool:
+    """Return True if the item is a Blacksmith-forgeable weapon."""
+    if item.get("type") != "IT_WEAPON":
+        return False
+    name = item.get("name", item.get("aegis_name", ""))
+    return _strip_slot_suffix(name) in _FORGEABLE_WEAPON_NAMES
+
 # G39: slot → item type + valid EQP locs (mirrors equipment_browser logic)
 _SLOT_TYPE: dict[str, str] = {
     "right_hand": "IT_WEAPON",
@@ -87,7 +145,9 @@ _SLOT_LOC: dict[str, set[str]] = {
 def _load_slot_items(slot_key: str, job_id: Optional[int] = None) -> list[tuple[str, int]]:
     """Return [(display_name, item_id), ...] sorted alphabetically for the inline combo.
     job_id=None disables job filtering (used at widget construction time).
-    For left_hand + Assassin dual-wield jobs, 1H weapons are included alongside shields."""
+    For left_hand + Assassin dual-wield jobs, 1H weapons are included alongside shields.
+    Items that differ only in slot count are merged into one entry labelled 'Name [s1/s2]'
+    (e.g. 'Guard [0/1]'), keeping the highest-slot version as the active item."""
     item_type = _SLOT_TYPE.get(slot_key)
     valid_locs = set(_SLOT_LOC.get(slot_key, set()))
     if item_type is None:
@@ -104,7 +164,28 @@ def _load_slot_items(slot_key: str, job_id: Optional[int] = None) -> list[tuple[
         and (job_id is None or not it.get("job") or job_id in it.get("job", []))
     ]
     filtered.sort(key=lambda it: it.get("name", it.get("aegis_name", "")))
-    return [(it.get("name", it.get("aegis_name", f"ID {it['id']}")), it["id"]) for it in filtered]
+
+    # Group by (stripped base name, stat key) to find slot-count-only duplicates
+    groups: dict[tuple, list] = defaultdict(list)
+    for it in filtered:
+        raw_name = it.get("name", it.get("aegis_name", f"ID {it['id']}"))
+        base = _strip_slot_suffix(raw_name)
+        groups[(base, _item_stat_key(it))].append(it)
+
+    result: list[tuple[str, int]] = []
+    for (base_name, _), group in groups.items():
+        if len(group) == 1:
+            it = group[0]
+            raw_name = it.get("name", it.get("aegis_name", f"ID {it['id']}"))
+            result.append((raw_name, it["id"]))
+        else:
+            best = max(group, key=lambda x: x.get("slots", 0))
+            slot_variants = sorted({x.get("slots", 0) for x in group})
+            slots_str = "/".join(str(s) for s in slot_variants)
+            result.append((f"{base_name} [{slots_str}]", best["id"]))
+
+    result.sort(key=lambda x: x[0])
+    return result
 
 
 def _resolve_item_name(item_id: Optional[int]) -> str:
@@ -125,10 +206,10 @@ def _resolve_card_label(card_id: Optional[int]) -> str:
     if item is None:
         return f"#{card_id}"
     name = item.get("name", item.get("aegis_name", f"#{card_id}"))
-    # Strip trailing " Card" suffix to save button space
+    # Strip trailing " Card" suffix — button width handles the rest
     if name.endswith(" Card"):
         name = name[:-5]
-    return name[:10] if len(name) > 10 else name
+    return name
 
 
 class EquipmentSection(Section):
@@ -169,6 +250,7 @@ class EquipmentSection(Section):
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(6)
         grid.setVerticalSpacing(3)
+        grid.setColumnStretch(1, 1)
 
         for row_i, (slot_key, slot_label, has_refine) in enumerate(_SLOTS):
             slot_lbl = QLabel(slot_label)
@@ -198,6 +280,7 @@ class EquipmentSection(Section):
             if slot_key in ("right_hand", "left_hand"):
                 forge_toggle = QCheckBox("Forged")
                 forge_toggle.setObjectName("forge_toggle_chk")
+                forge_toggle.setVisible(False)  # shown only for forgeable weapons
                 forge_toggle.toggled.connect(
                     lambda checked, k=slot_key: self._on_forge_toggled(k, checked)
                 )
@@ -239,7 +322,6 @@ class EquipmentSection(Section):
             card_row_layout = QHBoxLayout(card_row)
             card_row_layout.setContentsMargins(0, 0, 0, 0)
             card_row_layout.setSpacing(3)
-            card_row_layout.addStretch()
             card_row.setVisible(False)
             self._card_rows[slot_key] = card_row
             self._name_containers[slot_key] = name_container
@@ -271,34 +353,31 @@ class EquipmentSection(Section):
 
         self.add_content_widget(grid_widget)
 
-        # ── Weapon element override ────────────────────────────────────────
-        elem_row = QWidget()
-        elem_layout = QHBoxLayout(elem_row)
-        elem_layout.setContentsMargins(0, 4, 0, 0)
-        elem_layout.setSpacing(6)
-        elem_layout.addWidget(QLabel("Weapon Element:"))
+        # ── Element overrides (weapon + armor, side by side) ──────────────
+        ele_override_row = QWidget()
+        ele_layout = QHBoxLayout(ele_override_row)
+        ele_layout.setContentsMargins(0, 4, 0, 0)
+        ele_layout.setSpacing(6)
+
+        ele_layout.addWidget(QLabel("Weapon Element Override:"))
         self._element_combo = NoScrollCombo()
         self._element_combo.addItem("From Item", None)
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._element_combo.addItem(name, idx)
         self._element_combo.currentIndexChanged.connect(self.equipment_changed)
-        elem_layout.addWidget(self._element_combo)
-        elem_layout.addStretch()
-        self.add_content_widget(elem_row)
+        ele_layout.addWidget(self._element_combo)
 
-        # ── Armor element override ─────────────────────────────────────────
-        armor_elem_row = QWidget()
-        armor_elem_layout = QHBoxLayout(armor_elem_row)
-        armor_elem_layout.setContentsMargins(0, 0, 0, 0)
-        armor_elem_layout.setSpacing(6)
-        armor_elem_layout.addWidget(QLabel("Armor Element:"))
+        ele_layout.addSpacing(12)
+
+        ele_layout.addWidget(QLabel("Armor Element Override:"))
         self._armor_element_combo = NoScrollCombo()
         for idx, name in enumerate(_ELEMENT_NAMES):
             self._armor_element_combo.addItem(name, idx)
         self._armor_element_combo.currentIndexChanged.connect(self.equipment_changed)
-        armor_elem_layout.addWidget(self._armor_element_combo)
-        armor_elem_layout.addStretch()
-        self.add_content_widget(armor_elem_row)
+        ele_layout.addWidget(self._armor_element_combo)
+
+        ele_layout.addStretch()
+        self.add_content_widget(ele_override_row)
 
     # ── Forge helpers ───────────────────────────────────────────────────────
 
@@ -314,6 +393,28 @@ class EquipmentSection(Section):
             else:
                 self._refresh_card_slots(slot_key)
         self.equipment_changed.emit()
+
+    def _update_forge_toggle_visibility(self, slot_key: str) -> None:
+        """Show the forge toggle only when the equipped item is a forgeable weapon."""
+        toggle = self._forge_toggles.get(slot_key)
+        if toggle is None:
+            return
+        item_id = self._item_ids.get(slot_key)
+        forgeable = False
+        if item_id is not None:
+            item = loader.get_item(item_id)
+            if item is not None:
+                forgeable = _is_forgeable_weapon(item)
+        if forgeable:
+            toggle.setVisible(True)
+        else:
+            toggle.blockSignals(True)
+            toggle.setChecked(False)
+            toggle.blockSignals(False)
+            toggle.setVisible(False)
+            ctrl = self._forge_controls_rows.get(slot_key)
+            if ctrl is not None:
+                ctrl.setVisible(False)
 
     # ── Card slot helpers ───────────────────────────────────────────────────
 
@@ -352,18 +453,17 @@ class EquipmentSection(Section):
             card_row.setVisible(False)
             return
 
-        # Rebuild buttons (insert before the trailing stretch)
-        stretch_idx = layout.count() - 1  # stretch is last item
+        # Rebuild buttons — expand to fill the full combo width above them
         for i in range(num_slots):
             card_id = self._card_ids[slot_key][i]
             label = _resolve_card_label(card_id)
             btn = QPushButton(label)
             btn.setObjectName("card_slot_btn")
-            btn.setFixedWidth(72)
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             btn.clicked.connect(
                 lambda checked=False, k=slot_key, idx=i: self._open_card_browser(k, idx)
             )
-            layout.insertWidget(stretch_idx + i, btn)
+            layout.addWidget(btn)
             self._card_btns[slot_key].append(btn)
 
         card_row.setVisible(True)
@@ -397,6 +497,8 @@ class EquipmentSection(Section):
         self._item_ids[slot_key] = new_id
         if new_id is None and slot_key in self._refine_spins:
             self._refine_spins[slot_key].setValue(0)
+        if slot_key in ("right_hand", "left_hand"):
+            self._update_forge_toggle_visibility(slot_key)
         self._refresh_card_slots(slot_key)
         if slot_key == "right_hand":
             self._update_left_hand_state()
@@ -450,6 +552,8 @@ class EquipmentSection(Section):
                 combo.blockSignals(False)
             if new_id is None and slot_key in self._refine_spins:
                 self._refine_spins[slot_key].setValue(0)
+            if slot_key in ("right_hand", "left_hand"):
+                self._update_forge_toggle_visibility(slot_key)
             self._refresh_card_slots(slot_key)
             if slot_key == "right_hand":
                 self._update_left_hand_state()
@@ -626,6 +730,8 @@ class EquipmentSection(Section):
                 build.equipped.get(f"{slot_key}_card_{i}")
                 for i in range(num_slots)
             ]
+            if slot_key in ("right_hand", "left_hand"):
+                self._update_forge_toggle_visibility(slot_key)
             self._refresh_card_slots(slot_key)
 
         # Weapon element combo: None → "From Item" (index 0), else match by data

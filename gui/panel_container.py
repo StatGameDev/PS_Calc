@@ -14,7 +14,6 @@ from gui.section import Section
 
 from gui.sections.build_header import BuildHeaderSection
 from gui.sections.stats_section import StatsSection
-from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
 from gui.sections.active_items_section import ActiveItemsSection
 from gui.sections.buffs_section import BuffsSection
@@ -32,7 +31,6 @@ from gui.sections.target_state_section import TargetStateSection
 _SECTION_FACTORY: dict[str, type[Section]] = {
     "build_header":     BuildHeaderSection,
     "stats_section":    StatsSection,
-    "derived_section":  DerivedSection,
     "equipment_section": EquipmentSection,
     "passive_section":       PassiveSection,
     "buffs_section":         BuffsSection,

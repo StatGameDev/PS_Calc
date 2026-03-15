@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QSpinBox,
+    QVBoxLayout,
     QWidget,
 )
 
 from core.data_loader import loader
 from core.models.build import PlayerBuild
 from core.models.gear_bonuses import GearBonuses
+from core.models.status import StatusData
 from gui.section import Section
 from gui.widgets import NoWheelSpin
 
@@ -40,8 +41,7 @@ _STATS: list[tuple[str, str, str, str | None]] = [
     ("LUK", "luk", "base_luk",  "luk"),
 ]
 
-# (display_label, key, gb_attr, ai_key, ma_key)
-# ai_key / ma_key: matching key in active_items_bonuses / manual_adj_bonuses
+# (display_label, key, gb_attr, ai_key)
 _FLAT_BONUSES: list[tuple[str, str, str | None, str]] = [
     ("BATK+",     "batk",     "batk",         "batk"),
     ("HIT+",      "hit",      "hit",           "hit"),
@@ -50,6 +50,27 @@ _FLAT_BONUSES: list[tuple[str, str, str | None, str]] = [
     ("Hard DEF",  "def",      "def_",          "def"),
     ("Hard MDEF", "mdef",     "mdef_",         "mdef"),
     ("ASPD%",     "aspd_pct", "aspd_percent",  "aspd_pct"),
+]
+
+# (display_label, key, default_text)
+_DERIVED_ROWS = [
+    ("BATK",       "batk",         "—"),
+    ("MATK",       "matk",         "—"),
+    ("DEF",        "def",          "—"),
+    ("MDEF",       "mdef",         "—"),
+    ("FLEE",       "flee",         "—"),
+    ("HIT",        "hit",          "—"),
+    ("CRI",        "cri",          "—"),
+    ("ASPD",       "aspd",         "—"),
+    ("ATK Ele",    "atk_ele",      "—"),
+    ("DEF Ele",    "def_ele",      "—"),
+    ("HP",         "hp",           "—"),
+    ("HP Regen",   "hp_regen",     "—"),
+    ("SP",         "sp",           "—"),
+    ("SP Regen",   "sp_regen",     "—"),
+    ("Cast Red.",  "cast_red",     "—"),
+    ("ACD Red.",   "acd_red",      "—"),
+    ("SP Cost Red.", "sp_cost_red","—"),
 ]
 
 
@@ -73,14 +94,13 @@ def _make_tooltip(gear: int, ai: int, ma: int, sc: int = 0, jb: int = 0) -> str:
 
 
 class StatsSection(Section):
-    """Phase 1.2 — Base stat spinboxes (STR/AGI/VIT/INT/DEX/LUK).
+    """Phase 1.2 — Base stat spinboxes (STR/AGI/VIT/INT/DEX/LUK) + derived stats.
 
-    G15: Bonus column is now a read-only auto-computed label.
-    Value = GearBonuses (gear+card scripts) + Active Items (G46) + Manual Adjustments (G47).
-    Tooltip per stat shows per-source breakdown.
+    Left pane: points label, stat spinboxes with auto-computed bonus column, flat bonuses.
+    Right pane: read-only derived stats grid (BATK, MATK, DEF, MDEF, FLEE, HIT, CRI, ASPD, …).
 
-    SC stat effects (Blessing, IncreaseAgi, etc.) are not yet reflected here;
-    they will be added once StatusCalculator exposes per-SC contributions.
+    Exposes both update_from_bonuses() (called after gear aggregation) and refresh()
+    (called after StatusCalculator) so main_window has a single Stats section to drive.
     """
 
     stats_changed = Signal()
@@ -90,6 +110,10 @@ class StatsSection(Section):
 
         self._compact_widget: QWidget | None = None
         self._compact_labels: dict[str, QLabel] = {}
+        self._derived_compact_values: dict[str, QLabel] = {}
+        self._value_labels: dict[str, QLabel] = {}
+        self._row_name_labels: dict[str, QLabel] = {}
+        self._optional_rows: set[str] = {"cast_red", "acd_red", "sp_cost_red"}
 
         # Tracked numeric bonus values (auto-computed, not user-editable)
         self._bonus_values: dict[str, int] = {k: 0 for _, k, *_ in _STATS}
@@ -99,12 +123,16 @@ class StatsSection(Section):
         self._base_level: int = 1
         self._job_id: int = 0
 
-        # ── Stat point counter ────────────────────────────────────────────
+        # ── Left: base stats ──────────────────────────────────────────────
+        left = QWidget()
+        left_vbox = QVBoxLayout(left)
+        left_vbox.setContentsMargins(0, 0, 4, 0)
+        left_vbox.setSpacing(4)
+
         self._points_label = QLabel("Stat Points: —")
         self._points_label.setObjectName("stat_points_label")
-        self.add_content_widget(self._points_label)
+        left_vbox.addWidget(self._points_label)
 
-        # ── Main stats grid ───────────────────────────────────────────────
         grid_widget = QWidget()
         grid = QGridLayout(grid_widget)
         grid.setContentsMargins(0, 0, 0, 0)
@@ -164,12 +192,11 @@ class StatsSection(Section):
 
             base_spin.valueChanged.connect(self._on_stat_changed)
 
-        self.add_content_widget(grid_widget)
+        left_vbox.addWidget(grid_widget)
 
-        # ── Flat bonuses sub-group (read-only auto-computed) ──────────────
         bonus_header = QLabel("— Flat Bonuses —")
         bonus_header.setObjectName("stat_sub_header")
-        self.add_content_widget(bonus_header)
+        left_vbox.addWidget(bonus_header)
 
         flat_grid_widget = QWidget()
         flat_grid = QGridLayout(flat_grid_widget)
@@ -195,7 +222,48 @@ class StatsSection(Section):
             self._flat_labels[key_s] = val_lbl
             flat_grid.addWidget(val_lbl, row, col_base + 1)
 
-        self.add_content_widget(flat_grid_widget)
+        left_vbox.addWidget(flat_grid_widget)
+        left_vbox.addStretch()
+
+        # ── Right: derived stats ──────────────────────────────────────────
+        right = QWidget()
+        right_vbox = QVBoxLayout(right)
+        right_vbox.setContentsMargins(4, 0, 0, 0)
+        right_vbox.setSpacing(4)
+
+        derived_grid_widget = QWidget()
+        derived_grid = QGridLayout(derived_grid_widget)
+        derived_grid.setContentsMargins(0, 0, 0, 0)
+        derived_grid.setHorizontalSpacing(10)
+        derived_grid.setVerticalSpacing(3)
+
+        for row_i, (display, key_s, default) in enumerate(_DERIVED_ROWS):
+            name_lbl = QLabel(display)
+            name_lbl.setObjectName("derived_stat_label")
+            derived_grid.addWidget(name_lbl, row_i, 0)
+            self._row_name_labels[key_s] = name_lbl
+
+            val_lbl = QLabel(default)
+            val_lbl.setObjectName("derived_stat_value")
+            self._value_labels[key_s] = val_lbl
+            derived_grid.addWidget(val_lbl, row_i, 1)
+
+            if key_s in self._optional_rows:
+                name_lbl.setVisible(False)
+                val_lbl.setVisible(False)
+
+        right_vbox.addWidget(derived_grid_widget)
+        right_vbox.addStretch()
+
+        # ── Horizontal container ──────────────────────────────────────────
+        h_container = QWidget()
+        h_layout = QHBoxLayout(h_container)
+        h_layout.setContentsMargins(0, 0, 0, 0)
+        h_layout.setSpacing(0)
+        h_layout.addWidget(left)
+        h_layout.addWidget(right)
+
+        self.add_content_widget(h_container)
 
     # ── Internal ──────────────────────────────────────────────────────────
 
@@ -229,11 +297,16 @@ class StatsSection(Section):
 
     def _build_compact_widget(self) -> None:
         w = QWidget()
-        grid = QGridLayout(w)
-        grid.setContentsMargins(4, 4, 4, 4)
+        outer = QVBoxLayout(w)
+        outer.setContentsMargins(4, 4, 4, 4)
+        outer.setSpacing(4)
+
+        # Stats mini-grid (2 rows × 3 cols)
+        stats_grid_w = QWidget()
+        grid = QGridLayout(stats_grid_w)
+        grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(12)
         grid.setVerticalSpacing(4)
-
         for i, (display, key_s, *_) in enumerate(_STATS):
             row = i // 3
             col = i % 3
@@ -241,6 +314,24 @@ class StatsSection(Section):
             lbl.setObjectName("compact_stat_label")
             self._compact_labels[key_s] = lbl
             grid.addWidget(lbl, row, col)
+        outer.addWidget(stats_grid_w)
+
+        # Derived mini-row (BATK / DEF / FLEE / HIT / CRI)
+        derived_w = QWidget()
+        d_layout = QHBoxLayout(derived_w)
+        d_layout.setContentsMargins(0, 0, 0, 0)
+        d_layout.setSpacing(8)
+        for key_s, display in [("batk", "BATK"), ("def", "DEF"), ("flee", "FLEE"),
+                                ("hit", "HIT"), ("cri", "CRI")]:
+            name_lbl = QLabel(display + ":")
+            name_lbl.setObjectName("derived_stat_label")
+            d_layout.addWidget(name_lbl)
+            val_lbl = QLabel("—")
+            val_lbl.setObjectName("derived_stat_value")
+            self._derived_compact_values[key_s] = val_lbl
+            d_layout.addWidget(val_lbl)
+        d_layout.addStretch()
+        outer.addWidget(derived_w)
 
         w.setVisible(False)
         self._compact_widget = w
@@ -253,6 +344,10 @@ class StatsSection(Section):
         if self._compact_widget is None:
             self._build_compact_widget()
         self._update_compact_labels()
+        for key_s, clbl in self._derived_compact_values.items():
+            full_lbl = self._value_labels.get(key_s)
+            if full_lbl:
+                clbl.setText(full_lbl.text())
         self._compact_widget.setVisible(True)
 
     def _exit_slim(self) -> None:
@@ -260,6 +355,55 @@ class StatsSection(Section):
             self._compact_widget.setVisible(False)
 
     # ── Public API ────────────────────────────────────────────────────────
+
+    def refresh(
+        self,
+        status: StatusData,
+        atk_ele: int | None = None,
+        def_ele: int | None = None,
+    ) -> None:
+        """Push StatusCalculator output to the derived stats pane."""
+        cri_pct = status.cri / 10.0
+        self._value_labels["batk"].setText(str(status.batk))
+        self._value_labels["matk"].setText(f"{status.matk_min}–{status.matk_max}")
+        self._value_labels["def"].setText(f"{status.def_} + {status.def2}")
+        self._value_labels["mdef"].setText(f"{status.mdef} + {status.mdef2}")
+        flee_str = str(status.flee)
+        if status.flee2:
+            flee_str += f" + {status.flee2}"
+        self._value_labels["flee"].setText(flee_str)
+        self._value_labels["hit"].setText(str(status.hit))
+        self._value_labels["cri"].setText(f"{cri_pct:.1f}%")
+        self._value_labels["aspd"].setText(f"{status.aspd:.1f}")
+        self._value_labels["atk_ele"].setText(
+            loader.get_element_name(atk_ele) if atk_ele is not None else "—"
+        )
+        self._value_labels["def_ele"].setText(
+            loader.get_element_name(def_ele) if def_ele is not None else "—"
+        )
+        self._value_labels["hp"].setText(str(status.max_hp))
+        self._value_labels["hp_regen"].setText(f"{status.hp_regen}/tick")
+        self._value_labels["sp"].setText(str(status.max_sp))
+        self._value_labels["sp_regen"].setText(f"{status.sp_regen}/tick")
+        self._set_optional("cast_red", status.cast_time_reduction_pct,
+                           f"{status.cast_time_reduction_pct}%")
+        self._set_optional("acd_red", status.after_cast_delay_reduction_pct,
+                           f"{status.after_cast_delay_reduction_pct}%")
+        self._set_optional("sp_cost_red", status.sp_cost_reduction_pct,
+                           f"{status.sp_cost_reduction_pct}%")
+        # Sync derived compact values if slim widget is live
+        for key_s, clbl in self._derived_compact_values.items():
+            full_lbl = self._value_labels.get(key_s)
+            if full_lbl:
+                clbl.setText(full_lbl.text())
+
+    def _set_optional(self, key_s: str, value: int, text: str) -> None:
+        visible = value != 0
+        self._row_name_labels[key_s].setVisible(visible)
+        lbl = self._value_labels[key_s]
+        lbl.setVisible(visible)
+        if visible:
+            lbl.setText(text)
 
     def update_from_bonuses(
         self,

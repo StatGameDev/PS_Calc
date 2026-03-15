@@ -87,7 +87,7 @@ class Section(QWidget):
         self._header = _ClickableFrame()
         self._header.setObjectName("section_header")
         self._header.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         h_layout = QHBoxLayout(self._header)
         h_layout.setContentsMargins(8, 5, 8, 5)
@@ -106,9 +106,11 @@ class Section(QWidget):
         if self._has_header_summary:
             self._header_summary_lbl = QLabel("")
             self._header_summary_lbl.setObjectName("section_header_summary")
+            self._header_summary_lbl.setWordWrap(True)
+            self._header_summary_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             h_layout.addWidget(self._header_summary_lbl)
-
-        h_layout.addStretch()
+        else:
+            h_layout.addStretch()
 
         self._header.clicked.connect(self.toggle_collapse)
 

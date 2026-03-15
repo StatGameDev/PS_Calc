@@ -16,14 +16,7 @@
     {
       "key": "stats_section",
       "panel": "builder",
-      "display_name": "Base Stats",
-      "default_collapsed": false,
-      "compact_modes": ["slim_content"]
-    },
-    {
-      "key": "derived_section",
-      "panel": "builder",
-      "display_name": "Derived Stats",
+      "display_name": "Stats",
       "default_collapsed": false,
       "compact_modes": ["slim_content"]
     },

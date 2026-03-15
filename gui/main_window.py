@@ -39,7 +39,6 @@ from gui import app_config
 from gui.panel_container import PanelContainer
 from gui.sections.build_header import BuildHeaderSection
 from gui.sections.combat_controls import CombatControlsSection
-from gui.sections.derived_section import DerivedSection
 from gui.sections.equipment_section import EquipmentSection
 from gui.sections.active_items_section import ActiveItemsSection
 from gui.sections.buffs_section import BuffsSection
@@ -98,7 +97,6 @@ class MainWindow(QMainWindow):
         # ── Typed section references — builder ────────────────────────────
         self._build_header:    BuildHeaderSection = self._panel_container.get_section("build_header")       # type: ignore[assignment]
         self._stats_section:   StatsSection       = self._panel_container.get_section("stats_section")     # type: ignore[assignment]
-        self._derived_section: DerivedSection     = self._panel_container.get_section("derived_section")   # type: ignore[assignment]
         self._equip_section:   EquipmentSection   = self._panel_container.get_section("equipment_section") # type: ignore[assignment]
         self._passive_section:   PassiveSection       = self._panel_container.get_section("passive_section")        # type: ignore[assignment]
         self._buffs_section:     BuffsSection         = self._panel_container.get_section("buffs_section")          # type: ignore[assignment]
@@ -488,7 +486,7 @@ class MainWindow(QMainWindow):
         )
         resolved_armor_ele = build_applicator.resolve_armor_element(eff_build.armor_element, gb)
         status = StatusCalculator(self._config).calculate(eff_build, weapon)
-        self._derived_section.refresh(status, atk_ele=weapon.element, def_ele=resolved_armor_ele)
+        self._stats_section.refresh(status, atk_ele=weapon.element, def_ele=resolved_armor_ele)
 
         # ── Stat bonus display ─────────────────────────────────────────────
         # sc_display: everything that isn't gear/job/ai/manual — party buffs,

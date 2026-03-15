@@ -67,6 +67,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | Pre-Alpha-2 | Layout overflow fix: removed `min-width: 180px` from global QComboBox in dark.qss; added `minimumSizeHint()` override to NoWheelCombo returning zero width. Sections with combos can no longer force the panel wider than the viewport. | — |
 | Scale | UI scaling: DPI auto-detect (UI_SCALE=DPI/96), Ctrl+/-/= keybinds ±10%, font-only QSS regex scaling, scale toast (bottom-left, 2s), settings.json persistence. PyInstaller frozen CWD fix in main.py. G83 opened (drag-to-reorder layout). | — |
 | Scale2 | QFont refactor (G84): removed all 43 font-size rules from dark.qss; `app_config.rescale_all_fonts()` via `_SIZE_MAP` + class dispatch replaces runtime `setStyleSheet`. Ctrl+scroll: app-level event filter with 120-unit accumulator. Debounce 50ms. | G84 |
+| GUI-Pass | Stats+Derived merged into single StatsSection (left/right split); DerivedSection removed from layout/panel/main_window. Equipment: card column stretch fix + `_resolve_card_label` truncation removed. Header summary: stretch only added when no header_summary label (fixes premature word-wrap). | — |
 
 ---
 

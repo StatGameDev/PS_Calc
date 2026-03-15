@@ -973,3 +973,24 @@ Debounce interval reduced from 120ms to 50ms (operation is now fast enough to wa
 when `ControlModifier` is held. Accumulates `angleDelta().y()` in `_wheel_accum`; fires one
 `_adjust_scale` step per 120-unit notch so smooth-scroll devices don't jump scale wildly.
 Event consumed (`return True`) so the underlying widget does not also scroll.
+
+---
+
+## GUI-Pass — 2026-03-15
+
+**Files changed**: `gui/section.py`, `gui/sections/equipment_section.py`, `gui/sections/stats_section.py`, `gui/layout_config.json`, `gui/panel_container.py`, `gui/main_window.py`
+
+### Stats + Derived merge
+- `StatsSection` (`stats_section.py`) rewritten: left/right `QHBoxLayout` split inside a single `add_content_widget()`. Left = existing base stats + flat bonuses; right = derived stats grid (all 17 rows from former `DerivedSection`).
+- Added `refresh(status, atk_ele, def_ele)` and `_set_optional()` to `StatsSection`; mirrors former `DerivedSection.refresh()`.
+- `_build_compact_widget()` extended with a derived mini-row (BATK / DEF / FLEE / HIT / CRI) below the 2×3 stats grid. `_enter_slim()` syncs derived compact labels.
+- `layout_config.json`: removed `derived_section` block; `stats_section` display_name → "Stats".
+- `panel_container.py`: removed `DerivedSection` import and factory entry.
+- `main_window.py`: removed `_derived_section` reference; `_run_status_calc()` now calls `self._stats_section.refresh(...)`.
+
+### Equipment section fixes
+- `grid.setColumnStretch(1, 1)` added to equipment slot grid — name/card column now fills all remaining horizontal space.
+- `_resolve_card_label()`: removed `[:10]` hard truncation; now returns full name (with " Card" suffix stripped).
+
+### Section header fix
+- `section.py`: `h_layout.addStretch()` is now only added when `_has_header_summary` is False. Previously the stretch competed with the Expanding summary label, causing premature word-wrap.
