@@ -935,3 +935,41 @@ Affected any narrow window size or any section with combos.
 **Also updated:** `CLAUDE.md` Bug Investigation Protocol — added separate layout/visual bug
 protocol directing Claude to read `dark.qss` and `panel_container.py` first, before any
 section-level code or debug prints.
+
+---
+
+## Session Scale2 — 2026-03-15 — QFont Refactor + Ctrl+Scroll
+
+### Problem
+The Scale session used `setStyleSheet()` at runtime to re-apply font sizes on scale change.
+Qt's CSS engine re-polishes the entire widget tree synchronously on each call — O(n_widgets × n_rules)
+— causing 350–500ms freezes regardless of hardware. The debounce timer masked the stacking
+problem but could not reduce the per-call cost.
+
+### Solution (G84 closed)
+
+**`gui/themes/dark.qss`** — removed all 43 `font-size: Npx` declarations. QSS now owns only
+colors, borders, padding, and font-family. Font sizes are entirely programmatic.
+
+**`gui/app_config.py`** — replaced `apply_qss_scale()` / `get_scaled_qss()` / `_raw_qss` with:
+- `make_font(base_px) -> QFont`: returns a `QFont` with `setPixelSize(max(8, round(base_px * effective_scale())))`. No family set — QSS `font-family` rule merges in via Qt's partial font spec system.
+- `app_font() -> QFont`: `make_font(13)` — the application base font.
+- `_SIZE_MAP: dict[str, int]`: 36 objectName → base-px entries covering every named widget that previously had a non-13px QSS rule. 13px widgets omitted (inherit from application font).
+- `rescale_all_fonts(root)`: iterates `root.findChildren(QWidget)`, applies `make_font(_SIZE_MAP[name])` per objectName. Also dispatches by class for `QTableWidget` (12px), `QListWidget` (12px), `QHeaderView` (11px). O(n) font-metric updates with async repaints — no CSS re-polish.
+- `raw_qss()`: replaces `get_scaled_qss()` in startup path.
+
+**`main.py`** — startup now applies the static QSS once (`app.setStyleSheet(raw_qss())`) then
+sets the base font (`app.setFont(app_config.app_font())`). QSS is never re-applied at runtime.
+
+**`gui/main_window.py`** — `_apply_scaled_qss()` replaced by `_apply_scaled_fonts()`:
+calls `QApplication.setFont(app_config.app_font())` then `app_config.rescale_all_fonts(self)`.
+Debounce interval reduced from 120ms to 50ms (operation is now fast enough to warrant it).
+
+**`gui/panel.py`** — `StepsBar.paintEvent`: replaced `QFont(); font.setPointSize(9)` with
+`app_config.make_font(12)` so the vertical text label scales with the rest of the UI.
+
+### Ctrl+Scroll (added same session)
+`MainWindow.eventFilter()` installed on `QApplication.instance()`. Intercepts `QEvent.Type.Wheel`
+when `ControlModifier` is held. Accumulates `angleDelta().y()` in `_wheel_accum`; fires one
+`_adjust_scale` step per 120-unit notch so smooth-scroll devices don't jump scale wildly.
+Event consumed (`return True`) so the underlying widget does not also scroll.

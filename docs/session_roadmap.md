@@ -66,6 +66,7 @@ Doc maintenance (gaps.md + completed_work.md + context_log.md update): ~3–5k.
 | T | Job Stat Bonuses (G64, G65): job_db2.txt parsed in DataLoader; get_job_bonus_stats() applied in StatusCalculator; StatsSection gains Next+ column, stat points spent/remaining label, job bonus in tooltip; JOBL_UPPER +52 for trans jobs. Stat cost formula: 1+(v+9)//10 (pc.c:7191). | G64, G65 |
 | Pre-Alpha-2 | Layout overflow fix: removed `min-width: 180px` from global QComboBox in dark.qss; added `minimumSizeHint()` override to NoWheelCombo returning zero width. Sections with combos can no longer force the panel wider than the viewport. | — |
 | Scale | UI scaling: DPI auto-detect (UI_SCALE=DPI/96), Ctrl+/-/= keybinds ±10%, font-only QSS regex scaling, scale toast (bottom-left, 2s), settings.json persistence. PyInstaller frozen CWD fix in main.py. G83 opened (drag-to-reorder layout). | — |
+| Scale2 | QFont refactor (G84): removed all 43 font-size rules from dark.qss; `app_config.rescale_all_fonts()` via `_SIZE_MAP` + class dispatch replaces runtime `setStyleSheet`. Ctrl+scroll: app-level event filter with 120-unit accumulator. Debounce 50ms. | G84 |
 
 ---
 

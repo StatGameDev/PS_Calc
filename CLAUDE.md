@@ -257,8 +257,8 @@ Always grep first. Never load entire files.
 
 ### GUI (`gui/`)
 
-    app_config.py           — DPI auto-detect (UI_SCALE), QSS font scaling, settings.json persistence (ui_scale_override)
-    main_window.py          — QMainWindow, signal routing, pipeline triggers; Ctrl+/-/= scale keybinds + scale toast
+    app_config.py           — DPI auto-detect (UI_SCALE), QFont-based scaling (make_font/app_font/rescale_all_fonts/_SIZE_MAP), settings.json persistence (ui_scale_override)
+    main_window.py          — QMainWindow, signal routing, pipeline triggers; Ctrl+/-/=/scroll scale keybinds + scale toast; app-level wheel event filter
     panel_container.py      — PanelContainer(QSplitter), focus states, snap
     panel.py                — Panel(QWidget), StepsBar
     section.py              — Section base class, compact_modes protocol (slim_content/header_summary/hidden flags)
