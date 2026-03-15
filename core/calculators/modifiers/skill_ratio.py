@@ -146,8 +146,7 @@ _BF_WEAPON_RATIOS: dict = {
     "NJ_KIRIKAGE":       lambda lv, tgt: 100 * lv,
     # No case in calc_skillratio → default 100%; mastery +60 in MasteryFix (battle.c:852-855 #ifndef RENEWAL)
     "NJ_KUNAI":          lambda lv, tgt: 100,
-    # No case in calc_skillratio → default 100%; ATK_ADD(4*lv) applied as flat below (battle.c:5506 #ifndef RENEWAL)
-    "NJ_SYURIKEN":       lambda lv, tgt: 100,
+    # NJ_SYURIKEN: ratio=100 but also carries flat_add=4*lv — handled in _PARAM_SKILL_RATIO_FNS below.
 }
 
 # Hit count overrides for BF_WEAPON skills whose div_ is set to target-size+1 in battle.c.
@@ -162,25 +161,58 @@ _BF_WEAPON_HIT_COUNT_FN: dict = {
 }
 
 # Q2-cont: Skills whose ratio depends on build.skill_params (runtime combat context).
-# Cannot be plain lambdas — require 'build' as well as 'lv' and 'tgt'.
-# Handled via special-case blocks in SkillRatio.calculate() before the dict lookup.
+# Each callable: (params, level, target) -> (ratio, ratio_src, flat_add).
+# flat_add is the ATK_ADD bonus applied after ratio scaling (0 for most skills).
+# Adding a new param skill: one entry here + one entry in gui/skill_param_defs.py.
 # Formulas confirmed from Hercules source (no re-read needed — see session_roadmap.md Q2):
-#   KN_CHARGEATK:     ratio = 100 + 100*min((dist-1)//3, 2)  (battle.c:2350-2359)
-#   MC_CARTREVOLUTION: ratio = 150 + cart_pct                 (battle.c:2120-2127; +50+100*w/wmax)
-#   MO_EXTREMITYFIST: ratio = min(100+100*(8+sp//10), 60000)  (battle.c:2197-2206 #ifndef RENEWAL)
-#   TK_JUMPKICK:      ratio = (30+10*lv [+10*lv//3 if combo]) * (2 if running)  (battle.c:2290-2300)
-_BF_WEAPON_PARAM_SKILLS: frozenset[str] = frozenset({
-    "KN_CHARGEATK",
-    "MC_CARTREVOLUTION",
-    "MO_EXTREMITYFIST",
-    "TK_JUMPKICK",
-})
+
+def _ratio_chargeatk(params: dict, lv: int, tgt) -> tuple[int, str, int]:
+    # battle.c:2350-2359: skillratio += 100*(k ? (k-1)/3 : 0); capped at 300.
+    dist = params.get("KN_CHARGEATK_dist", 1)
+    return 100 + 100 * min((dist - 1) // 3, 2), f"KN_CHARGEATK dist={dist} (battle.c:2350-2359)", 0
+
+
+def _ratio_cartrev(params: dict, lv: int, tgt) -> tuple[int, str, int]:
+    # battle.c:2120-2127: skillratio += 50 + 100*cart_weight/cart_weight_max.
+    cart_pct = params.get("MC_CARTREVOLUTION_pct", 0)
+    return 150 + cart_pct, f"MC_CARTREVOLUTION cart={cart_pct}% (battle.c:2120-2127)", 0
+
+
+def _ratio_extremityfist(params: dict, lv: int, tgt) -> tuple[int, str, int]:
+    # battle.c:2197-2206 #ifndef RENEWAL: skillratio = min(100+100*(8+sp/10), 60000).
+    sp = params.get("MO_EXTREMITYFIST_sp", 0)
+    return min(100 + 100 * (8 + sp // 10), 60000), f"MO_EXTREMITYFIST sp={sp} (battle.c:2197-2206 #ifndef RENEWAL)", 0
+
+
+def _ratio_jumpkick(params: dict, lv: int, tgt) -> tuple[int, str, int]:
+    # battle.c:2290-2300: base=30+10*lv; +10*lv/3 if SC_COMBOATTACK; ×2 if SC_STRUP.
+    combo = bool(params.get("TK_JUMPKICK_combo", False))
+    running = bool(params.get("TK_JUMPKICK_running", False))
+    ratio = 30 + 10 * lv + (10 * lv // 3 if combo else 0)
+    if running:
+        ratio *= 2
+    return ratio, f"TK_JUMPKICK lv={lv} combo={combo} running={running} (battle.c:2290-2300)", 0
+
+
+def _ratio_nj_syuriken(params: dict, lv: int, tgt) -> tuple[int, str, int]:
+    # battle.c:5506 #ifndef RENEWAL: ATK_ADD(4*skill_lv) after calc_skillratio; ratio has no case → 100.
+    flat = 4 * lv
+    return 100, f"NJ_SYURIKEN ratio=100 +{flat} flat ATK (battle.c:5506 #ifndef RENEWAL)", flat
+
+
+_PARAM_SKILL_RATIO_FNS: dict = {
+    "KN_CHARGEATK":      _ratio_chargeatk,
+    "MC_CARTREVOLUTION": _ratio_cartrev,
+    "MO_EXTREMITYFIST":  _ratio_extremityfist,
+    "TK_JUMPKICK":       _ratio_jumpkick,
+    "NJ_SYURIKEN":       _ratio_nj_syuriken,
+}
 
 # BF_WEAPON skills with confirmed ratios implemented in this module.
-# Automatically derived from _BF_WEAPON_RATIOS keys + param-skill set.
+# Derived from _BF_WEAPON_RATIOS keys + _PARAM_SKILL_RATIO_FNS keys.
 # BattlePipeline checks this set to set dps_valid=True only when ratio is known.
 IMPLEMENTED_BF_WEAPON_SKILLS: frozenset[str] = (
-    frozenset(_BF_WEAPON_RATIOS.keys()) | _BF_WEAPON_PARAM_SKILLS
+    frozenset(_BF_WEAPON_RATIOS.keys()) | frozenset(_PARAM_SKILL_RATIO_FNS.keys())
 )
 
 # BF_MISC skills (traps, throw, zeny attacks). Populated when BF_MISC is implemented.
@@ -272,41 +304,11 @@ class SkillRatio:
         skill_data = loader.get_skill(skill.id)
         skill_name = skill_data.get("name", "") if skill_data else ""
 
-        # Priority: param skills (read build.skill_params) → _BF_WEAPON_RATIOS dict → JSON → default 100.
+        # Priority: _PARAM_SKILL_RATIO_FNS → _BF_WEAPON_RATIOS dict → JSON → default 100.
         params = getattr(build, 'skill_params', {})
-        flat_add = 0  # ATK_ADD flat bonus applied after ratio scaling (NJ_SYURIKEN)
-        if skill_name == "KN_CHARGEATK":
-            # battle.c:2350-2359: skillratio += 100*(k ? (k-1)/3 : 0); capped at 300.
-            # dist = cell distance (1–3→100%, 4–6→200%, 7+→300%).
-            dist = params.get("KN_CHARGEATK_dist", 1)
-            ratio = 100 + 100 * min((dist - 1) // 3, 2)
-            ratio_src = f"KN_CHARGEATK dist={dist} (battle.c:2350-2359)"
-        elif skill_name == "MC_CARTREVOLUTION":
-            # battle.c:2120-2127: skillratio += 50 + 100*cart_weight/cart_weight_max.
-            # cart_pct is 0–100 (weight %).
-            cart_pct = params.get("MC_CARTREVOLUTION_pct", 0)
-            ratio = 150 + cart_pct
-            ratio_src = f"MC_CARTREVOLUTION cart={cart_pct}% (battle.c:2120-2127)"
-        elif skill_name == "MO_EXTREMITYFIST":
-            # battle.c:2197-2206 #ifndef RENEWAL: skillratio = min(100+100*(8+sp/10), 60000).
-            sp = params.get("MO_EXTREMITYFIST_sp", 0)
-            ratio = min(100 + 100 * (8 + sp // 10), 60000)
-            ratio_src = f"MO_EXTREMITYFIST sp={sp} (battle.c:2197-2206 #ifndef RENEWAL)"
-        elif skill_name == "TK_JUMPKICK":
-            # battle.c:2290-2300: base=30+10*lv; +10*lv/3 if SC_COMBOATTACK; ×2 if SC_STRUP.
-            combo = bool(params.get("TK_JUMPKICK_combo", False))
-            running = bool(params.get("TK_JUMPKICK_running", False))
-            ratio = 30 + 10 * skill.level + (10 * skill.level // 3 if combo else 0)
-            if running:
-                ratio *= 2
-            ratio_src = (f"TK_JUMPKICK lv={skill.level} combo={combo} running={running}"
-                         " (battle.c:2290-2300)")
-        elif skill_name == "NJ_SYURIKEN":
-            # battle.c:5506 #ifndef RENEWAL: ATK_ADD(4*skill_lv) in constant-additions block
-            # after calc_skillratio returns; ratio itself has no case → default 100.
-            ratio = 100
-            flat_add = 4 * skill.level
-            ratio_src = f"NJ_SYURIKEN ratio=100 +{flat_add} flat ATK (battle.c:5506 #ifndef RENEWAL)"
+        flat_add = 0  # ATK_ADD bonus after ratio scaling; set by _PARAM_SKILL_RATIO_FNS entries
+        if fn := _PARAM_SKILL_RATIO_FNS.get(skill_name):
+            ratio, ratio_src, flat_add = fn(params, skill.level, target)
         elif (ratio_fn := _BF_WEAPON_RATIOS.get(skill_name)) is not None:
             ratio = ratio_fn(skill.level, target)
             ratio_src = f"_BF_WEAPON_RATIOS[{skill_name!r}]"
@@ -346,13 +348,8 @@ class SkillRatio:
         hit_count_raw = 1
         if skill_name == "MO_FINGEROFFENSIVE":
             # battle.c:4698-4704: wd.div_ = sd->spiritball_old (spheres held at cast).
-            # Priority: skill_params override → active_status_levels["MO_SPIRITBALL"] (buffs area) → mastery fallback.
-            spheres = params.get("MO_FINGEROFFENSIVE_spheres")
-            if spheres is None:
-                active_sl = getattr(build, 'active_status_levels', {})
-                spheres = active_sl.get("MO_SPIRITBALL",
-                          build.mastery_levels.get("MO_CALLSPIRITS", 1))
-            hit_count_raw = max(1, spheres)
+            # skill_params["MO_FINGEROFFENSIVE_spheres"] is always populated by collect_into().
+            hit_count_raw = max(1, params.get("MO_FINGEROFFENSIVE_spheres", 1))
         else:
             hit_count_fn = _BF_WEAPON_HIT_COUNT_FN.get(skill_name)
             if hit_count_fn is not None:

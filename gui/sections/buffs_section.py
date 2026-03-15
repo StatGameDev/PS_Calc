@@ -154,7 +154,9 @@ class BuffsSection(Section):
     """
 
     changed = Signal()
-    spirit_spheres_changed = Signal(int)
+    # Emitted when a specific SC level changes — used by combat section to sync
+    # mirrored param widgets (e.g. MO_SPIRITBALL → sphere count combo).
+    sc_level_changed = Signal(str, int)  # (sc_key, new_value)
 
     def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_modes, parent)
@@ -215,7 +217,9 @@ class BuffsSection(Section):
                 combo = LevelWidget(max_lv, include_off=True)
                 if sc_key == "MO_SPIRITBALL":
                     combo.setItemText(0, "0")  # "0 spheres" reads more naturally than "Off"
-                    combo.valueChanged.connect(self.spirit_spheres_changed.emit)
+                    combo.valueChanged.connect(
+                        lambda v, k=sc_key: self.sc_level_changed.emit(k, v)
+                    )
                 self._sc_combos[sc_key] = combo
                 buffs_grid.addWidget(combo, row_i, 1)
                 combo.valueChanged.connect(self._on_changed)
@@ -498,14 +502,6 @@ class BuffsSection(Section):
     def _on_changed(self) -> None:
         self.changed.emit()
         self.set_header_summary(self._build_summary())
-
-    def set_spirit_spheres(self, n: int) -> None:
-        """Update the Spirit Spheres dropdown without re-emitting spirit_spheres_changed."""
-        combo = self._sc_combos.get("MO_SPIRITBALL")
-        if combo is not None:
-            combo.blockSignals(True)
-            combo.setValue(n)
-            combo.blockSignals(False)
 
     def _build_summary(self) -> str:
         parts: list[str] = []

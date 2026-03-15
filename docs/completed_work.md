@@ -994,3 +994,58 @@ Event consumed (`return True`) so the underlying widget does not also scroll.
 
 ### Section header fix
 - `section.py`: `h_layout.addStretch()` is now only added when `_has_header_summary` is False. Previously the stretch competed with the Expanding summary label, causing premature word-wrap.
+
+---
+
+## Session SkillParam-Refactor — 2026-03-15 — Skill Param Architecture Refactor
+
+Pure refactor — no new features, no gaps closed. Eliminates the 6-touch-point pattern
+for adding skill runtime params (5 GUI + 1 core if/elif). Adding a new skill with params
+now requires exactly 2 touches: one descriptor entry + one calculation function.
+
+### New file: `gui/skill_param_defs.py`
+
+- `SkillParamSpec` dataclass: `key`, `label`, `widget` ("combo"/"spin"/"check"),
+  `default`, `options`, `mirrors_sc_key` (optional SC key for live sync),
+  `default_from_build` (optional callable for build-aware initialisation).
+- `SKILL_PARAM_REGISTRY: dict[str, list[SkillParamSpec]]` — all 5 current param skills:
+  MO_FINGEROFFENSIVE, KN_CHARGEATK, MC_CARTREVOLUTION, MO_EXTREMITYFIST, TK_JUMPKICK.
+
+### `gui/sections/combat_controls.py` — registry-driven rewrite
+
+- New `_ParamWidget(QWidget)` class: uniform `value()` / `set_value()` API over
+  combo/spin/check; single `changed = Signal()`.
+- `__init__` Row 1: 5 bespoke widget blocks (80+ lines) → registry loop (12 lines).
+  Builds `_skill_param_containers: dict[str, QWidget]` and `_param_rows: dict[str, _ParamWidget]`.
+- `_update_skill_params_ui()`: `sub_map` dict → 3-line container loop.
+- `collect_into()`: 7 hardcoded `skill_params` keys → 3-line dict comprehension over registry.
+- `load_build()`: 6 manual widget-reset lines → registry loop using `default_from_build`
+  (falling back to `build.skill_params.get(key, spec.default)`).
+- Removed: `spirit_spheres_changed` signal, `_on_spheres_changed()`, `set_spirit_spheres()`.
+- Added: `set_param_value(key, value)` — generic setter used for cross-section sync.
+
+### `gui/sections/buffs_section.py` — sync signal generalised
+
+- Removed bespoke `spirit_spheres_changed = Signal(int)` and `set_spirit_spheres()`.
+- Added generic `sc_level_changed = Signal(str, int)` emitted from any SC combo that
+  has a mirrored combat param (currently only MO_SPIRITBALL).
+- `if sc_key == "MO_SPIRITBALL"` guard retained for label text ("0" instead of "Off");
+  signal emit added inside the same guard.
+
+### `gui/main_window.py` — wiring simplified
+
+- Removed both old `spirit_spheres_changed` wires (both directions).
+- `buffs_section.sc_level_changed` → new `_on_sc_level_changed(sc_key, value)`.
+- `_on_sc_level_changed` iterates `SKILL_PARAM_REGISTRY` to find specs with matching
+  `mirrors_sc_key` and calls `set_param_value` — fully generic for future mirrored params.
+
+### `core/calculators/modifiers/skill_ratio.py` — if/elif → dict
+
+- 5 module-level functions: `_ratio_chargeatk`, `_ratio_cartrev`, `_ratio_extremityfist`,
+  `_ratio_jumpkick`, `_ratio_nj_syuriken`. Each returns `(ratio, ratio_src, flat_add)`.
+- `_PARAM_SKILL_RATIO_FNS: dict` replaces `_BF_WEAPON_PARAM_SKILLS` frozenset.
+- if/elif chain (35 lines) → `if fn := _PARAM_SKILL_RATIO_FNS.get(skill_name): ratio, ratio_src, flat_add = fn(...)` (1 line).
+- `IMPLEMENTED_BF_WEAPON_SKILLS` updated: `| _BF_WEAPON_PARAM_SKILLS` → `| frozenset(_PARAM_SKILL_RATIO_FNS.keys())`.
+- NJ_SYURIKEN removed from `_BF_WEAPON_RATIOS` (dead code; now fully handled in `_PARAM_SKILL_RATIO_FNS`).
+- MO_FINGEROFFENSIVE hit-count fallback simplified: 8-line chain → 1 line
+  (`params.get("MO_FINGEROFFENSIVE_spheres", 1)`), valid since `collect_into` always populates the key.

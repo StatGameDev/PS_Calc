@@ -242,7 +242,7 @@ class MainWindow(QMainWindow):
         self._equip_section.equipment_changed.connect(self._on_build_changed)
         self._passive_section.passives_changed.connect(self._on_build_changed)
         self._buffs_section.changed.connect(self._on_build_changed)
-        self._buffs_section.spirit_spheres_changed.connect(self._combat_controls.set_spirit_spheres)
+        self._buffs_section.sc_level_changed.connect(self._on_sc_level_changed)
         self._player_debuffs.changed.connect(self._on_build_changed)
         self._consumables.changed.connect(self._on_build_changed)
         self._active_items.bonuses_changed.connect(self._on_build_changed)
@@ -252,7 +252,18 @@ class MainWindow(QMainWindow):
     def _connect_combat_signals(self) -> None:
         """Wire combat section change signals to _on_build_changed."""
         self._combat_controls.combat_settings_changed.connect(self._on_build_changed)
-        self._combat_controls.spirit_spheres_changed.connect(self._buffs_section.set_spirit_spheres)
+
+    def _on_sc_level_changed(self, sc_key: str, value: int) -> None:
+        """Forward SC level changes to any combat param that mirrors that SC key.
+
+        Runs synchronously before _on_build_changed collects the build, so
+        collect_into reads the already-updated widget value.
+        """
+        from gui.skill_param_defs import SKILL_PARAM_REGISTRY
+        for specs in SKILL_PARAM_REGISTRY.values():
+            for spec in specs:
+                if spec.mirrors_sc_key == sc_key:
+                    self._combat_controls.set_param_value(spec.key, value)
 
     # ── UI scale ───────────────────────────────────────────────────────────
 

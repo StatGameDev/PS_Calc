@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -26,6 +26,7 @@ from core.data_loader import loader
 from core.models.build import PlayerBuild
 from core.models.skill import SkillInstance
 from gui.section import Section
+from gui.skill_param_defs import SKILL_PARAM_REGISTRY, SkillParamSpec
 from gui.widgets import LevelWidget, NoWheelCombo, NoWheelSpin
 
 _IMPLEMENTED_SKILLS: frozenset[str] = (
@@ -36,11 +37,85 @@ _IMPLEMENTED_SKILLS: frozenset[str] = (
 _PLAGIARISM_JOBS: frozenset[int] = frozenset({17, 34})
 
 
+class _ParamWidget(QWidget):
+    """Single skill-param input: label + input widget with uniform value()/set_value() API.
+
+    Handles the three widget types declared in SkillParamSpec:
+      "combo" — NoWheelCombo populated from spec.options [(label, value), ...]
+      "spin"  — NoWheelSpin configured from spec.options (min, max, step, suffix)
+      "check" — QCheckBox; spec.label becomes the checkbox text (no separate label)
+    """
+
+    changed = Signal()
+
+    def __init__(self, spec: SkillParamSpec, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._spec = spec
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+
+        if spec.widget == "combo":
+            lbl = QLabel(spec.label)
+            lbl.setObjectName("combat_field_label")
+            row.addWidget(lbl)
+            self._inner = NoWheelCombo()
+            for text, val in spec.options:
+                self._inner.addItem(text, userData=val)
+            self._inner.currentIndexChanged.connect(self.changed)
+            row.addWidget(self._inner)
+
+        elif spec.widget == "spin":
+            lbl = QLabel(spec.label)
+            lbl.setObjectName("combat_field_label")
+            row.addWidget(lbl)
+            mn, mx, step, suffix = spec.options
+            self._inner = NoWheelSpin()
+            self._inner.setRange(mn, mx)
+            self._inner.setSingleStep(step)
+            if suffix:
+                self._inner.setSuffix(suffix)
+            self._inner.setFixedWidth(72)
+            self._inner.valueChanged.connect(self.changed)
+            row.addWidget(self._inner)
+
+        elif spec.widget == "check":
+            self._inner = QCheckBox(spec.label)
+            self._inner.stateChanged.connect(self.changed)
+            row.addWidget(self._inner)
+
+        else:
+            raise ValueError(f"Unknown SkillParamSpec widget type: {spec.widget!r}")
+
+    def value(self) -> Any:
+        if self._spec.widget == "combo":
+            return self._inner.currentData()
+        if self._spec.widget == "spin":
+            return self._inner.value()
+        if self._spec.widget == "check":
+            return self._inner.isChecked()
+        return None  # unreachable
+
+    def set_value(self, v: Any) -> None:
+        self._inner.blockSignals(True)
+        try:
+            if self._spec.widget == "combo":
+                for i in range(self._inner.count()):
+                    if self._inner.itemData(i) == v:
+                        self._inner.setCurrentIndex(i)
+                        break
+            elif self._spec.widget == "spin":
+                self._inner.setValue(int(v))
+            elif self._spec.widget == "check":
+                self._inner.setChecked(bool(v))
+        finally:
+            self._inner.blockSignals(False)
+
+
 class CombatControlsSection(Section):
     """Phase 2.1 — Skill dropdown, unified target selector (mob or player), environment."""
 
     combat_settings_changed = Signal()
-    spirit_spheres_changed = Signal(int)
 
     def __init__(self, key, display_name, default_collapsed, compact_modes, parent=None):
         super().__init__(key, display_name, default_collapsed, compact_modes, parent)
@@ -90,81 +165,31 @@ class CombatControlsSection(Section):
         skill_widget.setLayout(skill_row)
         grid.addWidget(skill_widget, 0, 1)
 
-        # ── Row 1: Skill params (context-sensitive, hidden unless needed) ──
+        # ── Row 1: Skill params (registry-driven, hidden unless needed) ───
         self._params_widget = QWidget()
         params_layout = QVBoxLayout(self._params_widget)
         params_layout.setContentsMargins(0, 0, 0, 0)
         params_layout.setSpacing(4)
 
-        # MO_FINGEROFFENSIVE — spirit sphere count (mirrors Self Buffs "Spirit Spheres")
-        self._param_spheres = QWidget()
-        sp_row = QHBoxLayout(self._param_spheres)
-        sp_row.setContentsMargins(0, 0, 0, 0)
-        sp_lbl = QLabel("Spirit Spheres:")
-        sp_lbl.setObjectName("combat_field_label")
-        sp_row.addWidget(sp_lbl)
-        self._param_spheres_combo = NoWheelCombo()
-        for n in range(1, 6):
-            self._param_spheres_combo.addItem(f"{n}", userData=n)
-        sp_row.addWidget(self._param_spheres_combo)
-        sp_row.addStretch()
-        params_layout.addWidget(self._param_spheres)
+        # One container per skill; each container holds the skill's _ParamWidgets.
+        self._skill_param_containers: dict[str, QWidget] = {}
+        # Flat map key → _ParamWidget for value access in collect_into / load_build.
+        self._param_rows: dict[str, _ParamWidget] = {}
 
-        # KN_CHARGEATK — distance tier dropdown
-        self._param_chargeatk = QWidget()
-        ca_row = QHBoxLayout(self._param_chargeatk)
-        ca_row.setContentsMargins(0, 0, 0, 0)
-        ca_lbl = QLabel("Distance:")
-        ca_lbl.setObjectName("combat_field_label")
-        ca_row.addWidget(ca_lbl)
-        self._param_chargeatk_combo = NoWheelCombo()
-        self._param_chargeatk_combo.addItem("1–3 tiles  (×100%)", userData=1)
-        self._param_chargeatk_combo.addItem("4–6 tiles  (×200%)", userData=4)
-        self._param_chargeatk_combo.addItem("7+ tiles   (×300%)", userData=7)
-        ca_row.addWidget(self._param_chargeatk_combo)
-        ca_row.addStretch()
-        params_layout.addWidget(self._param_chargeatk)
-
-        # MC_CARTREVOLUTION — cart weight %
-        self._param_cartrev = QWidget()
-        cr_row = QHBoxLayout(self._param_cartrev)
-        cr_row.setContentsMargins(0, 0, 0, 0)
-        cr_lbl = QLabel("Cart weight:")
-        cr_lbl.setObjectName("combat_field_label")
-        cr_row.addWidget(cr_lbl)
-        self._param_cartrev_spin = NoWheelSpin()
-        self._param_cartrev_spin.setRange(0, 100)
-        self._param_cartrev_spin.setSingleStep(10)
-        self._param_cartrev_spin.setSuffix(" %")
-        self._param_cartrev_spin.setFixedWidth(72)
-        cr_row.addWidget(self._param_cartrev_spin)
-        cr_row.addStretch()
-        params_layout.addWidget(self._param_cartrev)
-
-        # MO_EXTREMITYFIST — current SP
-        self._param_extremityfist = QWidget()
-        ef_row = QHBoxLayout(self._param_extremityfist)
-        ef_row.setContentsMargins(0, 0, 0, 0)
-        ef_lbl = QLabel("Current SP:")
-        ef_lbl.setObjectName("combat_field_label")
-        ef_row.addWidget(ef_lbl)
-        self._param_ef_spin = NoWheelSpin()
-        self._param_ef_spin.setRange(0, 9999)
-        self._param_ef_spin.setFixedWidth(72)
-        ef_row.addWidget(self._param_ef_spin)
-        ef_row.addStretch()
-        params_layout.addWidget(self._param_extremityfist)
-
-        # TK_JUMPKICK — combo + running toggles
-        self._param_jumpkick = QWidget()
-        jk_row = QHBoxLayout(self._param_jumpkick)
-        jk_row.setContentsMargins(0, 0, 0, 0)
-        self._param_jk_combo = QCheckBox("Combo Attack")
-        self._param_jk_running = QCheckBox("Running (TK_RUN)")
-        jk_row.addWidget(self._param_jk_combo)
-        jk_row.addWidget(self._param_jk_running)
-        jk_row.addStretch()
-        params_layout.addWidget(self._param_jumpkick)
+        for skill_name, specs in SKILL_PARAM_REGISTRY.items():
+            container = QWidget()
+            container_layout = QHBoxLayout(container)
+            container_layout.setContentsMargins(0, 0, 0, 0)
+            container_layout.setSpacing(12)
+            for spec in specs:
+                pw = _ParamWidget(spec)
+                pw.changed.connect(self._emit_changed)
+                self._param_rows[spec.key] = pw
+                container_layout.addWidget(pw)
+            container_layout.addStretch()
+            container.setVisible(False)
+            self._skill_param_containers[skill_name] = container
+            params_layout.addWidget(container)
 
         self._params_widget.setVisible(False)
         grid.addWidget(self._params_widget, 1, 1)
@@ -234,13 +259,7 @@ class CombatControlsSection(Section):
         self._search_edit.textChanged.connect(self._on_search_changed)
         self._target_list.itemClicked.connect(self._on_target_selected)
         self._browse_btn.clicked.connect(self._open_browse)
-        # Skill param widgets
-        self._param_spheres_combo.currentIndexChanged.connect(self._on_spheres_changed)
-        self._param_chargeatk_combo.currentIndexChanged.connect(self._emit_changed)
-        self._param_cartrev_spin.valueChanged.connect(self._emit_changed)
-        self._param_ef_spin.valueChanged.connect(self._emit_changed)
-        self._param_jk_combo.stateChanged.connect(self._emit_changed)
-        self._param_jk_running.stateChanged.connect(self._emit_changed)
+        # Param widget connections are wired inside the registry loop above.
 
     # ── Skill filter ──────────────────────────────────────────────────────
 
@@ -416,21 +435,13 @@ class CombatControlsSection(Section):
                 self._target_display.setText("None selected")
 
     def _update_skill_params_ui(self) -> None:
-        """Show/hide the correct skill params sub-widget for the currently selected skill."""
+        """Show the param container for the current skill; hide all others."""
         idx = self._skill_combo.currentIndex()
         s = self._skill_combo.itemData(idx) if idx >= 0 else None
         skill_name = s.get("name", "") if s else ""
-
-        sub_map = {
-            "MO_FINGEROFFENSIVE": self._param_spheres,
-            "KN_CHARGEATK":       self._param_chargeatk,
-            "MC_CARTREVOLUTION":  self._param_cartrev,
-            "MO_EXTREMITYFIST":   self._param_extremityfist,
-            "TK_JUMPKICK":        self._param_jumpkick,
-        }
-        for name, w in sub_map.items():
-            w.setVisible(name == skill_name)
-        self._params_widget.setVisible(skill_name in sub_map)
+        for name, container in self._skill_param_containers.items():
+            container.setVisible(name == skill_name)
+        self._params_widget.setVisible(skill_name in self._skill_param_containers)
 
     def _on_skill_changed(self) -> None:
         self._sync_level_widget()
@@ -454,11 +465,6 @@ class CombatControlsSection(Section):
 
     def _emit_changed(self) -> None:
         self.combat_settings_changed.emit()
-
-    def _on_spheres_changed(self) -> None:
-        self._emit_changed()
-        n = self._param_spheres_combo.currentData() or 1
-        self.spirit_spheres_changed.emit(n)
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -506,23 +512,28 @@ class CombatControlsSection(Section):
             self._selected_mob_id = None
             self._target_display.setText("None selected")
 
-        # Skill params: mirror sphere count from Self Buffs; reset others to defaults.
-        spheres = build.active_status_levels.get(
-            "MO_SPIRITBALL", build.mastery_levels.get("MO_CALLSPIRITS", 1)
-        )
-        self._param_spheres_combo.setCurrentIndex(max(0, spheres - 1))
-        self._param_chargeatk_combo.setCurrentIndex(0)  # 1-3 tiles
-        self._param_cartrev_spin.setValue(0)
-        self._param_ef_spin.setValue(0)
-        self._param_jk_combo.setChecked(False)
-        self._param_jk_running.setChecked(False)
+        # Initialise each param widget from build state.
+        # Specs with default_from_build use that callable; others restore from
+        # build.skill_params (falling back to spec.default for fresh builds).
+        for skill_name, specs in SKILL_PARAM_REGISTRY.items():
+            for spec in specs:
+                if spec.default_from_build is not None:
+                    val = spec.default_from_build(build)
+                else:
+                    val = build.skill_params.get(spec.key, spec.default)
+                self._param_rows[spec.key].set_value(val)
+
         self._repopulate_skill_combo(build.job_id, preserve_selection=False)
 
-    def set_spirit_spheres(self, n: int) -> None:
-        """Update the sphere count combo without re-emitting spirit_spheres_changed."""
-        self._param_spheres_combo.blockSignals(True)
-        self._param_spheres_combo.setCurrentIndex(max(0, n - 1))
-        self._param_spheres_combo.blockSignals(False)
+    def set_param_value(self, key: str, value: Any) -> None:
+        """Set a param widget by key without triggering a recalc.
+
+        Used by main_window to sync mirrored params (e.g. sphere count from
+        Self Buffs) without causing a double-recalc.
+        """
+        pw = self._param_rows.get(key)
+        if pw is not None:
+            pw.set_value(value)
 
     def update_job(self, job_id: int) -> None:
         """Called by main_window when the job changes. Repopulates the skill combo."""
@@ -532,10 +543,7 @@ class CombatControlsSection(Section):
     def collect_into(self, build: PlayerBuild) -> None:
         build.target_mob_id = self._selected_mob_id if self._target_type == "mob" else None
         build.skill_params = {
-            "MO_FINGEROFFENSIVE_spheres": self._param_spheres_combo.currentData(),
-            "KN_CHARGEATK_dist":          self._param_chargeatk_combo.currentData(),
-            "MC_CARTREVOLUTION_pct":      self._param_cartrev_spin.value(),
-            "MO_EXTREMITYFIST_sp":        self._param_ef_spin.value(),
-            "TK_JUMPKICK_combo":          self._param_jk_combo.isChecked(),
-            "TK_JUMPKICK_running":        self._param_jk_running.isChecked(),
+            spec.key: self._param_rows[spec.key].value()
+            for specs in SKILL_PARAM_REGISTRY.values()
+            for spec in specs
         }
